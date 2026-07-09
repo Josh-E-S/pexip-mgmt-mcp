@@ -23,6 +23,11 @@ Configuration, Status, History, and Command.
 > connects only to the Pexip Management Node you configure (plus your own
 > identity provider when you use OIDC). It never sends your data anywhere else.
 
+### ▶ Just want it running? **[Jump to Quick start ↓](#quick-start)**
+
+Two no-clone paths, both under 5 minutes: **Claude Desktop** (double-click a
+bundle, fill in a form) or **Claude Code** (one command). Step-by-step below.
+
 Ask in plain English; the server does the plumbing:
 
 - _"Alice's standup is going long — kick the late joiners and lock the
@@ -118,12 +123,16 @@ src/pexip_mcp/
 
 ## Install
 
-> **Status:** packaging is wired up but **nothing is published yet** — publish is
-> deliberately gated on tagging a release after real-node testing. The commands
-> below are the intended install paths; until then, use the from-source
-> [Quick start](#quick-start).
+> **Status:** **live on PyPI** — `uvx pexip-mgmt-mcp` works today. The Claude
+> Desktop bundle ([packaging/mcpb/](packaging/mcpb/)) is attached to
+> [Releases](https://github.com/Josh-E-S/pexip-mgmt-mcp/releases) as a
+> prebuilt **macOS** `.mcpb`; it is platform-specific, so Windows/Linux users
+> build their own with `./packaging/mcpb/build.sh`. The Docker/GHCR image and
+> marketplace listings (official MCP Registry, Docker MCP Catalog) are tag-gated
+> and staged in `server.json` / `packaging/`. New here? Follow the
+> [Quick start](#quick-start) instead — this section is the channel overview.
 
-- **`uvx` (Python, zero-clone)** — once on PyPI:
+- **`uvx` (Python, zero-clone)** — from PyPI:
   ```bash
   uvx pexip-mgmt-mcp --healthcheck
   ```
@@ -148,6 +157,72 @@ Distribution channels (PyPI + the GHCR image via the `docker` workflow) are
 
 ## Quick start
 
+Pick the path that matches your client. You'll need your Pexip **Management Node
+hostname**, an **admin username**, and its **password** for any of them.
+
+Both easy paths start **read-only** — the server can list and report but cannot
+change anything until you explicitly enable writes (see step notes). Start there,
+confirm it connects, then decide.
+
+### Option A — Claude Desktop (one-click, no terminal)
+
+The friendliest path — no cloning, no JSON, no command line.
+
+1. **Get the bundle.** Download the `.mcpb` for your operating system from the
+   [latest release](https://github.com/Josh-E-S/pexip-mgmt-mcp/releases/latest).
+   > **Platform note:** the `.mcpb` vendors native binaries (`cryptography`), so
+   > it is **platform-specific** — download the one built for your OS. The
+   > prebuilt bundle is currently **macOS only**. On **Windows or Linux**, build
+   > your own on that machine: `./packaging/mcpb/build.sh` drops a ready-to-
+   > install `.mcpb` in `packaging/mcpb/`.
+2. **Install it.** Double-click the `.mcpb` file. Claude Desktop opens an install
+   dialog showing the tool and its permissions.
+3. **Fill in the form.** Enter your Management Node **host**, **username**, and
+   **password**. Leave **read-only** on for now. Click install.
+4. **Try it.** In Claude Desktop, ask: _"List the VMRs on my Pexip node"_ or
+   _"Show me the Pexip system status."_
+
+> To enable writes later, reinstall (or edit the server in Claude Desktop's
+> settings) and turn **read-only** off.
+
+<!-- Screenshot: Claude Desktop .mcpb install dialog + config form goes here -->
+
+### Option B — Claude Code (one command)
+
+Best if you already use the `claude` CLI. Uses the published PyPI package via
+`uvx`, so there's nothing to clone.
+
+1. **Install `uv`** (skip if you already have it):
+   ```bash
+   curl -LsSf https://astral.sh/uv/install.sh | sh
+   ```
+2. **Add the server** (`-s user` makes it available in every project):
+   ```bash
+   claude mcp add pexip-mgmt -s user \
+     -e PEXIP_HOST=manager.example.com \
+     -e PEXIP_USERNAME=admin \
+     -e PEXIP_PASSWORD=your-admin-password \
+     -- uvx pexip-mgmt-mcp
+   ```
+3. **Confirm it connects:**
+   ```bash
+   claude mcp list
+   # pexip-mgmt   ✓ connected
+   ```
+4. **Try it.** In any `claude` session, ask: _"Show me the Pexip system status"_
+   — or run `/mcp` to browse the exposed tools.
+
+> Read-only by default. To enable the write/control tools, add
+> `-e PEXIP_READ_ONLY=false` to the command above (re-run `claude mcp add` to
+> update). Your credentials are stored in Claude Code's user config
+> (`~/.claude.json`).
+
+<!-- Screenshot: `claude mcp list` showing ✓ connected goes here -->
+
+### Option C — From source (development)
+
+For hacking on the server itself:
+
 ```bash
 git clone https://github.com/Josh-E-S/pexip-mgmt-mcp.git
 cd pexip-mgmt-mcp
@@ -159,7 +234,7 @@ uv run python -m pexip_mcp --healthcheck
 # OK: connected to manager.example.com as admin, schema fetched
 ```
 
-### Wire into Claude Desktop / Claude Code
+Wire a source checkout into any MCP host with a JSON config:
 
 ```json
 {
