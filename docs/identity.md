@@ -16,8 +16,8 @@ keep them separate:
 - **Boundary B — client → server.** How an MCP client authenticates *to this
   server* over the `--http` transport. That's what this document covers.
 
-> **stdio needs none of this.** When the server runs over stdio (Claude Desktop
-> or `uvx pexip-mgmt-mcp`), there is no network listener and no
+> **stdio needs none of this.** When the server runs over stdio (Claude Desktop,
+> the MCPB bundle, or `uvx pexip-mgmt-mcp`), there is no network listener and no
 > Boundary B — the client *is* the local process. Boundary B only applies to the
 > `--http` transport.
 

@@ -121,6 +121,14 @@ src/pexip_mcp/
   ```bash
   uvx pexip-mgmt-mcp --healthcheck
   ```
+- **Claude Desktop (one-click bundle)** — the friendliest path for non-developers:
+  build a `.mcpb` and double-click to install; a form collects host + credentials
+  (no JSON, no terminal). Unlike the published channels, this **works today**:
+  ```bash
+  npm install -g @anthropic-ai/mcpb   # one-time
+  ./packaging/mcpb/build.sh           # → packaging/mcpb/pexip-mgmt-mcp.mcpb
+  ```
+  See [packaging/mcpb/](packaging/mcpb/). Platform-specific — build on the OS you'll install on.
 - **Docker (self-hosted HTTP transport)** — run alongside your Infinity:
   ```bash
   cp .env.example .env   # fill in PEXIP_* incl. PEXIP_MCP_TOKEN
@@ -128,8 +136,9 @@ src/pexip_mcp/
   ```
   See [DEPLOY.md](DEPLOY.md) for the Cloudflare Tunnel + Access posture.
 Distribution channels (PyPI + the GHCR image via the `docker` workflow) are
-**tag-gated** — see `.github/workflows/`. Marketplace listings (official MCP
-Registry, Docker MCP Catalog) are staged in `server.json` and `packaging/`.
+**tag-gated** — see `.github/workflows/`. The Claude Desktop bundle
+([packaging/mcpb/](packaging/mcpb/)) builds locally today. Marketplace listings
+(official MCP Registry, Docker MCP Catalog) are staged in `server.json` and `packaging/`.
 
 ## Quick start
 

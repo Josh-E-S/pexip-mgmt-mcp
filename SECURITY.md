@@ -25,8 +25,8 @@ surface. Treat it with the same care as the admin credentials it uses.
 - **Credentials.** The server authenticates to the Management Node with either a
   local admin username/password (`basic`) or an OAuth2 client (`oauth2`, JWT
   bearer assertion). Supply them via environment variables / secret storage —
-  never commit them. The registry manifests mark the password and OAuth2
-  private key as secret fields.
+  never commit them. The MCPB and registry manifests mark the password and
+  OAuth2 private key as secret fields.
 - **Least privilege.** The credential's Pexip role determines what the server
   can do. Create a scoped Administrator Role for the server rather than reusing
   a full superuser, especially when enabling writes.

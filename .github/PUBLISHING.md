@@ -54,7 +54,22 @@ Draft descriptor: [`packaging/docker-mcp-registry/server.yaml`](packaging/docker
   `mcp/pexip-mgmt-mcp` on Docker Hub and lists it in Docker Desktop's MCP
   Toolkit. Choose **Docker-built** (they build) vs **community-built** (you do).
 
-## 4. Passive directories
+## 4. Claude Desktop (MCPB bundle)
+
+Bundle: [`packaging/mcpb/build.sh`](packaging/mcpb/) vendors the deps and packs a
+`.mcpb` the user double-clicks to install (a form collects host + credentials —
+no JSON). Builds locally today, no registry required:
+
+```bash
+npm install -g @anthropic-ai/mcpb
+./packaging/mcpb/build.sh
+```
+
+Platform-specific (vendors native deps) — build one per target OS. Optionally
+submit the `.mcpb` to the directory at https://desktopextensions.com, or just
+share the file directly.
+
+## 5. Passive directories
 
 mcp.so, PulseMCP, and Glama largely auto-index public GitHub MCP servers and the
 official registry — a clean README + a registry entry generally gets you listed
