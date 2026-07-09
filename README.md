@@ -269,9 +269,10 @@ steps for chains where server-side name resolution makes a lookup legitimate
 but unnecessary. See [evals/README.md](evals/README.md) for the case format
 and how to add scenarios.
 
-Current state (2026-07-06): **the full suite passes — 708 passed, 0 failures**
-across all four layers (206 unit + 332 deterministic evals + LLM-graded + live),
-87% coverage. Reproduce the full run with `uv run pytest tests/ evals/ --llm --live`.
+Current state (2026-07-08): **the full suite passes — 698 passed, 12 skipped,
+0 failures** across all four layers (208 unit + 332 deterministic evals +
+LLM-graded + live), 86% coverage. The skips are env-gated live cases (e.g. no
+dial target set). Reproduce the full run with `uv run pytest tests/ evals/ --llm --live`.
 
 ## Skills SDK
 
