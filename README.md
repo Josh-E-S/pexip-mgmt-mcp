@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="https://raw.githubusercontent.com/Josh-E-S/pexip-mgmt-mcp/main/.github/logo.png" alt="Infinity MCP" width="200">
+</p>
+
 # MCP Server for Pexip Infinity
 
 [![CI](https://github.com/Josh-E-S/pexip-mgmt-mcp/actions/workflows/ci.yml/badge.svg)](https://github.com/Josh-E-S/pexip-mgmt-mcp/actions/workflows/ci.yml)
