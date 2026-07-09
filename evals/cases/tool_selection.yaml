@@ -1,0 +1,641 @@
+# Tool selection eval cases
+# Each case: a natural-language prompt and the expected tool(s) the agent should pick.
+# match types: exact (only these tools), subset (at least these), ordered_subset (in order)
+
+# --- Configuration API: VMR operations ---
+
+- id: list-vmrs
+  prompt: "Show me all the virtual meeting rooms"
+  expected_tools: [list_vmrs]
+  match: exact
+  tags: [config, single-step]
+
+- id: get-vmr-by-name
+  prompt: "Get the details of the VMR called AllHands"
+  expected_tools: [get_vmr]
+  match: exact
+  tags: [config, single-step]
+
+- id: create-vmr-simple
+  prompt: "Create a new VMR called Engineering Standup with host PIN 123456"
+  expected_tools: [create_vmr]
+  match: subset
+  tags: [config, single-step]
+
+- id: update-vmr-description
+  prompt: "Change the description of the Boardroom VMR to 'Executive meetings only'"
+  expected_tools: [update_vmr]
+  match: exact
+  tags: [config, single-step]
+
+- id: delete-vmr
+  prompt: "Delete the VMR called temp-test-room"
+  expected_tools: [delete_vmr]
+  match: exact
+  tags: [config, single-step]
+
+- id: search-vmr-substring
+  prompt: "Find all VMRs with 'standup' in the name"
+  expected_tools: [list_vmrs]
+  match: exact
+  tags: [config, single-step]
+
+- id: add-alias-to-vmr
+  prompt: "Add the alias meet.alice@company.com to the AllHands VMR"
+  expected_tools: [add_vmr_alias]
+  match: exact
+  tags: [config, single-step]
+
+- id: list-aliases-for-vmr
+  prompt: "What aliases does the Boardroom VMR have?"
+  expected_tools: [list_aliases]
+  match: exact
+  tags: [config, single-step]
+
+- id: delete-alias
+  prompt: "Remove alias 42 from the system"
+  expected_tools: [delete_alias]
+  match: exact
+  tags: [config, single-step]
+
+# --- Configuration API: End users ---
+
+- id: list-end-users
+  prompt: "List all end users in the directory"
+  expected_tools: [list_end_users]
+  match: exact
+  tags: [config, single-step]
+
+- id: create-end-user
+  prompt: "Add a new user with email alice@company.com, first name Alice, last name Smith"
+  expected_tools: [create_end_user]
+  match: exact
+  tags: [config, single-step]
+
+- id: get-end-user
+  prompt: "Look up the end user bob@company.com"
+  expected_tools: [get_end_user]
+  match: exact
+  tags: [config, single-step]
+
+# --- Configuration API: Devices ---
+
+- id: list-devices
+  prompt: "Show me all registered devices"
+  expected_tools: [list_devices]
+  match: exact
+  tags: [config, single-step]
+
+- id: create-device
+  prompt: "Register a new SIP device with alias conf-room-1@company.com"
+  expected_tools: [create_device]
+  match: exact
+  tags: [config, single-step]
+
+# --- Configuration API: Gateway rules ---
+
+- id: list-gateway-rules
+  prompt: "Show the dial plan rules"
+  expected_tools: [list_gateway_rules]
+  match: exact
+  tags: [config, single-step]
+
+- id: create-gateway-rule
+  prompt: "Add a gateway rule that matches numbers starting with 9 and routes them via SIP"
+  expected_tools: [create_gateway_rule]
+  match: subset
+  tags: [config, single-step]
+
+# --- Configuration API: Infrastructure ---
+
+- id: list-locations
+  prompt: "What system locations are configured?"
+  expected_tools: [list_locations]
+  match: exact
+  tags: [config, single-step]
+
+- id: list-conferencing-nodes
+  prompt: "List all Conferencing Nodes"
+  expected_tools: [list_conferencing_nodes]
+  match: exact
+  tags: [config, single-step]
+
+# --- Configuration API: Settings-dict resources ---
+
+- id: list-sip-proxies
+  prompt: "Show me the SIP proxies"
+  expected_tools: [list_resources]
+  match: exact
+  tags: [config, single-step]
+
+- id: list-turn-servers
+  prompt: "What TURN servers are configured?"
+  expected_tools: [list_resources]
+  match: exact
+  tags: [config, single-step]
+
+- id: global-settings
+  prompt: "Show me the global platform settings"
+  expected_tools: [get_global_settings]
+  match: exact
+  tags: [config, single-step]
+
+- id: list-ivr-themes
+  prompt: "What IVR branding themes are available?"
+  expected_tools: [list_ivr_themes]
+  match: exact
+  tags: [config, single-step]
+
+- id: list-roles
+  prompt: "What admin roles exist?"
+  expected_tools: [list_resources]
+  match: exact
+  tags: [config, single-step]
+
+# --- Configuration API: Schema introspection ---
+
+- id: schema-vmr
+  prompt: "What fields does a VMR have?"
+  expected_tools: [get_resource_schema]
+  match: exact
+  tags: [config, single-step]
+
+- id: schema-gateway-rule
+  prompt: "Show me the schema for gateway routing rules"
+  expected_tools: [get_resource_schema]
+  match: exact
+  tags: [config, single-step]
+
+# --- Status API ---
+
+- id: active-conferences
+  prompt: "Are there any meetings happening right now?"
+  expected_tools: [list_active_conferences]
+  match: exact
+  tags: [status, single-step]
+
+- id: active-participants
+  prompt: "Who is in the AllHands meeting right now?"
+  expected_tools: [list_active_participants]
+  match: exact
+  tags: [status, single-step]
+
+- id: participant-quality
+  prompt: "How is Bob's call quality right now?"
+  expected_tools: [get_participant_quality]
+  # subset: get_participant_quality resolves the display name itself, but
+  # finding Bob via list_active_participants first is also legitimate.
+  match: subset
+  mock_returns:
+    list_active_participants:
+      objects:
+        - {id: "part-uuid-bob", display_name: "Bob", role: "chair", conference: "Standup"}
+      meta: {total_count: 1}
+  tags: [status, single-step]
+
+- id: alarms
+  prompt: "Are there any active alarms on the platform?"
+  expected_tools: [list_alarms]
+  match: exact
+  tags: [status, single-step]
+
+- id: licensing
+  prompt: "What's the current licensing status?"
+  expected_tools: [get_licensing_status]
+  match: exact
+  tags: [status, single-step]
+
+- id: node-status
+  prompt: "Check the status of all Conferencing Nodes"
+  expected_tools: [list_node_status]
+  match: exact
+  tags: [status, single-step]
+
+# --- History API ---
+
+- id: call-history
+  prompt: "Show me the call history from today"
+  expected_tools: [list_history_conferences]
+  # subset: listing the history is required; adding a summarize_calls overview
+  # alongside it is a harmless bonus, not a wrong selection.
+  match: subset
+  tags: [history, single-step]
+
+- id: summarize-calls-direction
+  prompt: "How many inbound vs outbound calls did we have today?"
+  expected_tools: [summarize_calls]
+  match: exact
+  tags: [history, single-step]
+
+- id: summarize-calls-quality
+  prompt: "What was the call quality breakdown for the past week?"
+  expected_tools: [summarize_calls]
+  match: exact
+  tags: [history, single-step]
+
+- id: participant-history
+  prompt: "Show the participant history for today's calls"
+  expected_tools: [list_history_participants]
+  match: exact
+  tags: [history, single-step]
+
+- id: alarm-history
+  prompt: "What alarms have fired recently?"
+  expected_tools: [list_alarm_history]
+  # subset: checking current alarms (list_alarms) alongside history is harmless.
+  match: subset
+  tags: [history, single-step]
+
+# --- Command API: single-step ---
+
+- id: mute-participant
+  prompt: "Mute participant abc-123"
+  expected_tools: [mute_participant]
+  match: exact
+  tags: [command, single-step]
+
+- id: lock-conference
+  prompt: "Lock conference def-456"
+  expected_tools: [lock_conference]
+  match: exact
+  tags: [command, single-step]
+
+- id: dial-out
+  prompt: "Dial sip:alice@company.com into the AllHands conference"
+  expected_tools: [dial_participant]
+  match: exact
+  tags: [command, single-step]
+
+# --- Multi-step tool selection ---
+
+- id: kick-alice
+  prompt: "Kick Alice from the standup meeting"
+  # The server resolves the participant NAME -> UUID, so disconnecting "Alice"
+  # is a single call — no need to list participants first. subset still passes
+  # if the model also lists defensively.
+  expected_tools:
+    - disconnect_participant
+  match: subset
+  mock_returns:
+    list_active_participants:
+      objects:
+        - {id: "part-uuid-alice", display_name: "Alice", role: "guest", conference: "Standup"}
+      meta: {total_count: 1}
+  tags: [command, single-step]
+
+- id: create-vmr-with-alias
+  prompt: "Create a VMR called 'Board Meeting' with host PIN 123456 and add the alias board@company.com"
+  expected_tools:
+    - create_vmr
+  match: subset
+  tags: [config, multi-step]
+
+- id: vmr-lifecycle-check
+  prompt: "Check if the TestRoom VMR exists, if not create it"
+  # any_of: listing with a name filter and fetching by name are equally valid
+  # existence checks — either proves the model checked before creating.
+  expected_tools:
+    - list_vmrs
+    - get_vmr
+  match: any_of
+  tags: [config, multi-step]
+
+# ===========================================================================
+# Persona: Live meeting operator — day-to-day, in-call moderation
+# ===========================================================================
+
+- id: unmute-participant
+  prompt: "Unmute participant abc-123"
+  expected_tools: [unmute_participant]
+  match: exact
+  tags: [command, operator, single-step]
+
+- id: unlock-conference
+  prompt: "Unlock conference def-456 so people can join again"
+  expected_tools: [unlock_conference]
+  match: exact
+  tags: [command, operator, single-step]
+
+- id: mute-all-guests
+  prompt: "Mute all the guests in conference def-456, leave the hosts alone"
+  expected_tools: [mute_guests]
+  match: exact
+  tags: [command, operator, single-step]
+
+- id: unmute-all-guests
+  prompt: "Let the guests talk again in conference def-456"
+  expected_tools: [unmute_guests]
+  match: exact
+  tags: [command, operator, single-step]
+
+- id: promote-to-host
+  prompt: "Promote participant xyz-789 to host"
+  expected_tools: [set_participant_role]
+  match: exact
+  tags: [command, operator, single-step]
+
+- id: admit-from-lobby
+  prompt: "Admit participant abc-123 who's waiting in the lobby"
+  expected_tools: [unlock_participant]
+  match: exact
+  tags: [command, operator, single-step]
+
+- id: change-layout-guest
+  prompt: "Switch the guest view in conference def-456 to nine equal tiles"
+  expected_tools: [set_conference_layout]
+  match: exact
+  tags: [command, operator, single-step]
+
+- id: whos-muted
+  prompt: "Who is currently muted in the AllHands meeting?"
+  expected_tools: [list_active_participants]
+  match: exact
+  tags: [status, operator, single-step]
+
+- id: end-the-meeting
+  prompt: "End the standup meeting right now, drop everyone"
+  # The server resolves the conference name itself, so disconnecting directly
+  # is ideal; listing first (before a destructive command) is also fine —
+  # the mock lets that path reach the disconnect.
+  expected_tools:
+    - disconnect_conference
+  match: subset
+  mock_returns:
+    list_active_conferences:
+      objects:
+        - {id: "conf-uuid-standup", name: "Standup", service_type: "conference"}
+      meta: {total_count: 1}
+  tags: [command, operator, multi-step, destructive]
+
+# ===========================================================================
+# Persona: VMR provisioning admin — rooms, aliases, dial-in bots, invites
+# ===========================================================================
+
+- id: add-automatic-participant
+  prompt: "Auto-dial the recording bot rec@lab.local into the Boardroom VMR whenever it starts"
+  expected_tools: [add_automatic_participant]
+  match: exact
+  tags: [config, provisioning, single-step]
+
+- id: list-automatic-participants
+  prompt: "What automatic dial-outs are configured on the Boardroom VMR?"
+  expected_tools: [list_automatic_participants]
+  match: exact
+  tags: [config, provisioning, single-step]
+
+- id: remove-automatic-participant
+  prompt: "Remove automatic participant 12 from the Boardroom"
+  expected_tools: [delete_automatic_participant]
+  match: exact
+  tags: [config, provisioning, single-step]
+
+- id: send-vmr-welcome-email
+  prompt: "Send the provisioning welcome email for VMR 42 to its owner"
+  expected_tools: [send_conference_email]
+  match: exact
+  tags: [command, provisioning, single-step]
+
+- id: resend-device-email
+  prompt: "Resend the device provisioning email for device 7"
+  expected_tools: [send_device_email]
+  match: exact
+  tags: [command, provisioning, single-step]
+
+# ===========================================================================
+# Persona: User & device administrator
+# ===========================================================================
+
+- id: update-end-user-title
+  prompt: "Update bob@company.com — his new title is Director of Sales"
+  expected_tools: [update_end_user]
+  match: exact
+  tags: [config, users, single-step]
+
+- id: delete-end-user
+  prompt: "Remove the end user carol@company.com from the directory"
+  expected_tools: [delete_end_user]
+  match: exact
+  tags: [config, users, single-step]
+
+- id: search-users-by-email
+  prompt: "Find all users with 'sales' in their email address"
+  expected_tools: [list_end_users]
+  match: exact
+  tags: [config, users, single-step]
+
+- id: get-device
+  prompt: "Show me the details of the device conf-room-1@company.com"
+  expected_tools: [get_device]
+  match: exact
+  tags: [config, devices, single-step]
+
+- id: update-device-disable-h323
+  prompt: "Turn off H.323 on device conf-room-1@company.com"
+  expected_tools: [update_device]
+  match: exact
+  tags: [config, devices, single-step]
+
+- id: delete-device
+  prompt: "Deregister device old-polycom@company.com"
+  expected_tools: [delete_device]
+  match: exact
+  tags: [config, devices, single-step]
+
+- id: search-devices-by-owner
+  prompt: "Which devices are owned by alice@company.com?"
+  expected_tools: [list_devices]
+  match: exact
+  tags: [config, devices, single-step]
+
+# ===========================================================================
+# Persona: Dial plan / routing administrator (incl. settings-dict resources)
+# ===========================================================================
+
+- id: disable-gateway-rule
+  prompt: "Disable the gateway rule called 'PSTN Breakout' for now"
+  expected_tools: [update_gateway_rule]
+  match: exact
+  tags: [config, routing, single-step]
+
+- id: delete-gateway-rule
+  prompt: "Delete the gateway rule named 'Old Teams Route'"
+  expected_tools: [delete_gateway_rule]
+  match: exact
+  tags: [config, routing, single-step]
+
+- id: list-teams-connectors
+  prompt: "Show me the configured Microsoft Teams Connectors"
+  expected_tools: [list_resources]
+  match: exact
+  tags: [config, routing, integrations, single-step]
+
+- id: list-policy-profiles
+  prompt: "List the external policy profiles"
+  expected_tools: [list_resources]
+  match: exact
+  tags: [config, routing, single-step]
+
+- id: add-dns-server
+  prompt: "Add a DNS server at 10.0.0.53"
+  expected_tools: [create_resource]
+  # subset: checking the schema before a create is the documented protocol for
+  # the generic CRUD tools — what matters is that the create happens.
+  match: subset
+  mock_returns:
+    get_resource_schema:
+      fields:
+        address: {type: "string", nullable: false, help_text: "IP address of the DNS server"}
+        description: {type: "string", nullable: true, help_text: "Optional description"}
+  tags: [config, infrastructure, single-step]
+
+- id: update-syslog-server
+  prompt: "Point the syslog server named 'central-log' at 10.0.0.99 instead"
+  expected_tools: [update_resource]
+  # subset: update_resource resolves the name itself, but looking the server up
+  # first is legitimate read-before-write behavior.
+  match: subset
+  mock_returns:
+    list_resources:
+      objects:
+        - {id: 3, name: "central-log", address: "10.0.0.50", port: 514}
+      meta: {total_count: 1}
+    get_resource:
+      {id: 3, name: "central-log", address: "10.0.0.50", port: 514}
+    get_resource_schema:
+      fields:
+        name: {type: "string", nullable: false}
+        address: {type: "string", nullable: false, help_text: "Syslog server address"}
+        port: {type: "integer", nullable: false}
+  tags: [config, infrastructure, single-step]
+
+# ===========================================================================
+# Persona: Reporting / CDR analyst
+# ===========================================================================
+
+- id: history-participants-bad-quality
+  prompt: "List participants from this week's calls that had bad quality"
+  expected_tools: [list_history_participants]
+  match: exact
+  tags: [history, reporting, single-step]
+
+- id: get-history-conference
+  prompt: "Pull up the full call record for history conference 9001"
+  expected_tools: [get_history_conference]
+  match: exact
+  tags: [history, reporting, single-step]
+
+- id: summarize-by-location-report
+  prompt: "Break down last month's call volume by system location"
+  expected_tools: [summarize_calls]
+  match: exact
+  tags: [history, reporting, single-step]
+
+- id: registration-history
+  prompt: "Show the endpoint registration history for the past day"
+  expected_tools: [list_registration_history]
+  match: exact
+  tags: [history, reporting, single-step]
+
+# ===========================================================================
+# Persona: Platform health / monitoring (NOC / on-call)
+# ===========================================================================
+
+- id: location-statistics
+  prompt: "How much capacity is in use in the 'Primary' location right now?"
+  expected_tools: [get_location_statistics]
+  match: exact
+  tags: [status, monitoring, single-step]
+
+- id: list-conferencing-nodes-monitoring
+  prompt: "List all the Conferencing Nodes and where they live"
+  expected_tools: [list_conferencing_nodes]
+  match: exact
+  tags: [status, monitoring, single-step]
+
+- id: management-node-status
+  prompt: "Is the Management Node healthy?"
+  expected_tools: [list_management_node_status]
+  match: exact
+  tags: [status, monitoring, single-step]
+
+- id: cloud-node-inventory
+  prompt: "Show me the dynamic cloud bursting nodes"
+  expected_tools: [list_cloud_nodes]
+  match: exact
+  tags: [status, monitoring, single-step]
+
+- id: teams-node-status
+  prompt: "What's the status of the Teams Connector nodes?"
+  expected_tools: [list_teams_node_status]
+  match: exact
+  tags: [status, monitoring, integrations, single-step]
+
+- id: current-registrations
+  prompt: "Which endpoints are currently registered?"
+  expected_tools: [list_registrations]
+  match: exact
+  tags: [status, monitoring, single-step]
+
+# ===========================================================================
+# Persona: LDAP / directory sync administrator
+# ===========================================================================
+
+- id: create-ldap-source
+  prompt: "Set up an LDAP sync source called 'Corp AD' against ldap://ad.corp.local with base DN dc=corp,dc=local"
+  expected_tools: [create_ldap_source]
+  match: exact
+  tags: [config, ldap, single-step]
+
+- id: list-ldap-sources
+  prompt: "What LDAP sync sources are configured?"
+  expected_tools: [list_ldap_sources]
+  match: exact
+  tags: [config, ldap, single-step]
+
+- id: trigger-ldap-sync
+  prompt: "Kick off an LDAP sync for conference sync template 3"
+  expected_tools: [sync_conference_ldap]
+  match: exact
+  tags: [command, ldap, single-step]
+
+# ===========================================================================
+# Persona: Room / One-Touch-Join (MJX) administrator
+# ===========================================================================
+
+- id: mjx-endpoint-status
+  prompt: "Are the One-Touch Join room endpoints online?"
+  expected_tools: [list_mjx_endpoint_status]
+  match: exact
+  tags: [status, mjx, single-step]
+
+- id: mjx-meeting-status
+  prompt: "Show today's One-Touch Join scheduled meetings"
+  expected_tools: [list_mjx_meeting_status]
+  match: exact
+  tags: [status, mjx, single-step]
+
+# ===========================================================================
+# Persona: Integrations administrator (webhooks / event sinks)
+# ===========================================================================
+
+# ===========================================================================
+# Persona: Platform maintenance / backup (higher-privilege ops)
+# ===========================================================================
+
+- id: create-backup
+  prompt: "Take a configuration backup of the platform"
+  expected_tools: [backup_create]
+  match: exact
+  tags: [command, maintenance, single-step]
+
+- id: take-diagnostic-snapshot
+  prompt: "Grab a diagnostic system snapshot for support"
+  expected_tools: [take_snapshot]
+  match: exact
+  tags: [command, maintenance, single-step]
+
+- id: list-system-backups
+  prompt: "What system backups do we have?"
+  expected_tools: [list_resources]
+  match: exact
+  tags: [config, maintenance, single-step]

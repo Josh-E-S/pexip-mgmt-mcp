@@ -1,0 +1,66 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
+  "name": "io.github.josh-e-s/pexip-mgmt-mcp",
+  "description": "Read and operate a Pexip Infinity deployment via the Management API: VMRs, devices, dial plan, policy, live call control, status and CDR reporting.",
+  "version": "0.1.0",
+  "repository": {
+    "url": "https://github.com/Josh-E-S/pexip-mgmt-mcp",
+    "source": "github"
+  },
+  "packages": [
+    {
+      "registryType": "pypi",
+      "registryBaseUrl": "https://pypi.org",
+      "identifier": "pexip-mgmt-mcp",
+      "version": "0.1.0",
+      "runtimeHint": "uvx",
+      "transport": { "type": "stdio" },
+      "environmentVariables": [
+        {
+          "name": "PEXIP_HOST",
+          "description": "Management Node hostname or IP (no scheme).",
+          "isRequired": true
+        },
+        {
+          "name": "PEXIP_AUTH_MODE",
+          "description": "Authentication mode.",
+          "default": "basic",
+          "choices": ["basic", "oauth2"]
+        },
+        {
+          "name": "PEXIP_USERNAME",
+          "description": "Admin username (basic auth)."
+        },
+        {
+          "name": "PEXIP_PASSWORD",
+          "description": "Admin password (basic auth).",
+          "isSecret": true
+        },
+        {
+          "name": "PEXIP_OAUTH2_CLIENT_ID",
+          "description": "OAuth2 Client ID (oauth2 auth)."
+        },
+        {
+          "name": "PEXIP_OAUTH2_PRIVATE_KEY",
+          "description": "OAuth2 ES256 private key, PEM (oauth2 auth).",
+          "isSecret": true
+        },
+        {
+          "name": "PEXIP_VERIFY_TLS",
+          "description": "Verify the Management Node TLS certificate.",
+          "default": "true"
+        },
+        {
+          "name": "PEXIP_READ_ONLY",
+          "description": "Expose only read tools; remove all write/control tools at startup. Defaults to true (secure by default) — set to false to enable the mutating admin surface.",
+          "default": "true"
+        },
+        {
+          "name": "PEXIP_ALLOW_SECURITY_RESOURCES",
+          "description": "When false (default), generic CRUD refuses to mutate security-critical resources (SSH keys, admin roles/permissions, auth/SSO, TLS/CA certs). Only relevant when PEXIP_READ_ONLY=false.",
+          "default": "false"
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,20 @@
+{
+  "name": "pexip-mgmt",
+  "description": "Claude Code skills + bundled MCP server for operating a Pexip Infinity deployment via its four admin APIs (Configuration, Status, History, Command) plus event sinks, external policy, and room-system integration. Operator runbooks + developer reference for the pexip-mgmt MCP server.",
+  "version": "0.1.0",
+  "author": {
+    "name": "Josh Estrada"
+  },
+  "license": "MIT",
+  "repository": "https://github.com/josh-e-s/pexip-mgmt-mcp",
+  "keywords": [
+    "pexip",
+    "pexip-infinity",
+    "pexip-management-api",
+    "mcp",
+    "agent-skills",
+    "video-conferencing",
+    "vmr",
+    "cdr"
+  ]
+}

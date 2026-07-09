@@ -1,0 +1,60 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+# Cancel superseded runs on the same ref to save CI minutes.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+# Least privilege: CI only needs to read the checked-out code.
+permissions:
+  contents: read
+
+jobs:
+  test:
+    name: lint + test (py${{ matrix.python-version }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        # Floor (requires-python = ">=3.11") through the current stable release.
+        python-version: ["3.11", "3.12", "3.13", "3.14"]
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v7
+        with:
+          enable-cache: true
+
+      - name: Set up Python ${{ matrix.python-version }}
+        run: uv python install ${{ matrix.python-version }}
+
+      - name: Install project + dev dependencies
+        # --locked fails the build if uv.lock is stale, keeping CI reproducible.
+        run: uv sync --locked --python ${{ matrix.python-version }}
+
+      - name: Ruff (lint)
+        run: uv run ruff check .
+
+      - name: Pytest (full suite + 80% coverage gate)
+        run: uv run pytest -q --cov-fail-under=80
+
+  audit:
+    name: dependency audit
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v7
+        with:
+          enable-cache: true
+
+      - name: Audit dependencies for known vulnerabilities
+        run: uvx pip-audit

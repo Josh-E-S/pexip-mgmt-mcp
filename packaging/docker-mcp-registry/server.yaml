@@ -1,0 +1,48 @@
+# DRAFT entry for the Docker MCP Catalog (https://github.com/docker/mcp-registry).
+#
+# This is NOT consumed from here — submission means forking docker/mcp-registry,
+# placing this at servers/pexip-mgmt-mcp/server.yaml, and opening a PR. Prefer
+# generating/validating it with their tooling (`task create` / `task wizard`),
+# which also produces tools.json. Treat this as a starting point.
+#
+# `icon` and `source.commit` must be filled in before submitting. Confirm a
+# valid `meta.category` against the catalog's accepted set.
+name: pexip-mgmt-mcp
+image: mcp/pexip-mgmt-mcp
+type: server
+meta:
+  category: productivity
+  tags:
+    - pexip
+    - video-conferencing
+    - infrastructure
+    - conferencing
+about:
+  title: Pexip Infinity Management
+  description: >-
+    Read and operate a Pexip Infinity deployment via the Management API: VMRs,
+    devices, dial plan, policy, live call control, status and CDR reporting.
+  icon: https://raw.githubusercontent.com/Josh-E-S/pexip-mgmt-mcp/main/.github/icon.png
+source:
+  project: https://github.com/Josh-E-S/pexip-mgmt-mcp
+  commit: REPLACE_WITH_RELEASE_COMMIT_SHA
+config:
+  description: Connect to your Pexip Management Node.
+  secrets:
+    - name: pexip-mgmt-mcp.password
+      env: PEXIP_PASSWORD
+      example: your-admin-password
+    - name: pexip-mgmt-mcp.oauth2_private_key
+      env: PEXIP_OAUTH2_PRIVATE_KEY
+      example: "-----BEGIN PRIVATE KEY-----...-----END PRIVATE KEY-----"
+  env:
+    - name: PEXIP_HOST
+      example: manager.example.com
+    - name: PEXIP_AUTH_MODE
+      example: basic
+    - name: PEXIP_USERNAME
+      example: admin
+    - name: PEXIP_OAUTH2_CLIENT_ID
+      example: your-client-id
+    - name: PEXIP_VERIFY_TLS
+      example: "true"

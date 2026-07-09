@@ -1,0 +1,23 @@
+{
+  "mcpServers": {
+    "pexip-mgmt": {
+      "command": "uv",
+      "args": [
+        "--directory",
+        "${PEXIP_MCP_DIR:-../pexip-mgmt-mcp}",
+        "run",
+        "python",
+        "-m",
+        "pexip_mcp"
+      ],
+      "env": {
+        "PEXIP_HOST": "${PEXIP_HOST}",
+        "PEXIP_USERNAME": "${PEXIP_USERNAME}",
+        "PEXIP_PASSWORD": "${PEXIP_PASSWORD}",
+        "PEXIP_VERIFY_TLS": "${PEXIP_VERIFY_TLS:-true}",
+        "PEXIP_TIMEOUT": "${PEXIP_TIMEOUT:-30}",
+        "PEXIP_MAX_RETRIES": "${PEXIP_MAX_RETRIES:-3}"
+      }
+    }
+  }
+}

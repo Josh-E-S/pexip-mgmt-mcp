@@ -1,0 +1,252 @@
+# Error handling eval cases
+# Tests that the agent handles API errors gracefully — surfacing useful
+# messages instead of crashing or retrying blindly.
+
+- id: vmr-not-found
+  prompt: "Get the VMR called nonexistent-room-xyz"
+  tool: get_vmr
+  tool_params: {vmr: "nonexistent-room-xyz"}
+  mock_sequence:
+    - method: GET
+      url_suffix: /conference/
+      status: 200
+      body:
+        meta: {total_count: 0, limit: 2, offset: 0}
+        objects: []
+  expect_error:
+    type: PexipError
+    status: 404
+  tags: [config, error]
+
+- id: vmr-ambiguous-name
+  prompt: "Get the VMR called Meeting"
+  tool: get_vmr
+  tool_params: {vmr: "Meeting"}
+  mock_sequence:
+    - method: GET
+      url_suffix: /conference/
+      status: 200
+      body:
+        meta: {total_count: 2, limit: 2, offset: 0}
+        objects:
+          - {id: 1, name: "Meeting", resource_uri: "/api/admin/configuration/v1/conference/1/"}
+          - {id: 2, name: "Meeting", resource_uri: "/api/admin/configuration/v1/conference/2/"}
+  expect_error:
+    type: PexipError
+    status: 409
+  tags: [config, error]
+
+- id: update-vmr-no-fields
+  prompt: "Update the VMR with id 5 but don't change anything"
+  tool: update_vmr
+  tool_params: {vmr: 5}
+  mock_sequence: []
+  expect_error:
+    type: PexipError
+    status: 400
+  tags: [config, error]
+
+- id: delete-nonexistent-vmr
+  prompt: "Delete VMR with id 99999"
+  tool: delete_vmr
+  tool_params: {vmr: 99999}
+  mock_sequence:
+    - method: DELETE
+      url_suffix: /conference/99999/
+      status: 404
+      body: {error: "Not found"}
+  expect_error:
+    type: PexipError
+    status: 404
+  tags: [config, error]
+
+- id: disconnect-already-gone
+  prompt: "Disconnect participant that already left"
+  tool: disconnect_participant
+  tool_params: {participant_id: "99999999-aaaa-bbbb-cccc-dddddddddddd"}
+  mock_sequence:
+    - method: POST
+      url_suffix: /participant/disconnect/
+      status: 404
+      body: {error: "Participant not found"}
+  expect_success:
+    key: note
+    value: "already disconnected"
+  tags: [command, error, idempotent]
+
+- id: disconnect-conference-already-ended
+  prompt: "Disconnect everyone from a conference that already ended"
+  tool: disconnect_conference
+  tool_params: {conference_id: "cccccccc-1111-2222-3333-444444444444"}
+  mock_sequence:
+    - method: POST
+      url_suffix: /conference/disconnect/
+      status: 404
+      body: {error: "Conference not found"}
+  expect_success:
+    key: note
+    value: "conference already ended"
+  tags: [command, error, idempotent]
+
+- id: invalid-role
+  prompt: "Set participant abc-123 to role 'moderator'"
+  tool: set_participant_role
+  tool_params: {participant_id: "88888888-aaaa-bbbb-cccc-eeeeeeeeeeee", role: "moderator"}
+  mock_sequence: []
+  expect_error:
+    type: PexipError
+    status: 400
+  tags: [command, error, validation]
+
+- id: set-layout-no-layout
+  prompt: "Change the conference layout without specifying which layout"
+  tool: set_conference_layout
+  tool_params: {conference_id: "conf-uuid-1"}
+  mock_sequence: []
+  expect_error:
+    type: PexipError
+    status: 400
+  tags: [command, error, validation]
+
+- id: invalid-schema-resource
+  prompt: "Get the schema for a resource that doesn't exist"
+  tool: get_resource_schema
+  tool_params: {resource: "not_a_real_resource"}
+  mock_sequence:
+    - method: GET
+      url_suffix: /not_a_real_resource/schema/
+      status: 404
+      body: {error: "Not found"}
+  expect_error:
+    type: PexipError
+    status: 404
+  tags: [config, error]
+
+- id: summarize-invalid-group-by
+  prompt: "Summarize calls grouped by an invalid field"
+  tool: summarize_calls
+  tool_params:
+    start_time: "2026-01-01T00:00:00"
+    end_time: "2026-01-02T00:00:00"
+    group_by: "invalid_field"
+  mock_sequence: []
+  expect_error:
+    type: PexipError
+    status: 400
+  tags: [history, error, validation]
+
+# --- Live command errors ---
+
+- id: mute-participant-gone
+  prompt: "Mute a participant who already left"
+  tool: mute_participant
+  tool_params: {participant_id: "99999999-aaaa-bbbb-cccc-dddddddddddd"}
+  mock_sequence:
+    - method: POST
+      url_suffix: /participant/mute/
+      status: 404
+      body: {error: "Participant not found"}
+  expect_error:
+    type: PexipError
+    status: 404
+  tags: [command, error]
+
+- id: transfer-to-missing-conference
+  prompt: "Transfer a participant into a conference alias that doesn't exist"
+  tool: transfer_participant
+  tool_params: {participant_id: "88888888-aaaa-bbbb-cccc-eeeeeeeeeeee", conference_alias: "no-such-room"}
+  mock_sequence:
+    - method: POST
+      url_suffix: /participant/transfer/
+      status: 404
+      body: {error: "Conference not found"}
+  expect_error:
+    type: PexipError
+    status: 404
+  tags: [command, error]
+
+- id: transfer-invalid-role
+  prompt: "Transfer participant abc-123 to Breakout-1 as a 'moderator'"
+  tool: transfer_participant
+  tool_params: {participant_id: "88888888-aaaa-bbbb-cccc-eeeeeeeeeeee", conference_alias: "Breakout-1", role: "moderator"}
+  mock_sequence: []
+  expect_error:
+    type: PexipError
+    status: 400
+  tags: [command, error, validation]
+
+# --- Config lookup errors ---
+
+- id: end-user-not-found
+  prompt: "Look up the end user nobody@company.com"
+  tool: get_end_user
+  tool_params: {user: "nobody@company.com"}
+  mock_sequence:
+    - method: GET
+      url_suffix: /end_user/
+      status: 200
+      body:
+        meta: {total_count: 0, limit: 2, offset: 0}
+        objects: []
+  expect_error:
+    type: PexipError
+    status: 404
+  tags: [config, error, users]
+
+- id: device-not-found
+  prompt: "Get the device ghost-endpoint@company.com"
+  tool: get_device
+  tool_params: {device: "ghost-endpoint@company.com"}
+  mock_sequence:
+    - method: GET
+      url_suffix: /device/
+      status: 200
+      body:
+        meta: {total_count: 0, limit: 2, offset: 0}
+        objects: []
+  expect_error:
+    type: PexipError
+    status: 404
+  tags: [config, error, devices]
+
+# --- Generic CRUD validation errors (client-side, no HTTP) ---
+
+- id: get-resource-unknown-name
+  prompt: "Get a resource of a type that doesn't exist"
+  tool: get_resource
+  tool_params: {resource: "not_a_real_resource", id: 1}
+  mock_sequence: []
+  expect_error:
+    type: PexipError
+    status: 400
+  tags: [config, error, validation]
+
+- id: list-resources-unknown-name
+  prompt: "List a resource type that isn't in the registry"
+  tool: list_resources
+  tool_params: {resource: "bogus_thing"}
+  mock_sequence: []
+  expect_error:
+    type: PexipError
+    status: 400
+  tags: [config, error, validation]
+
+- id: create-resource-empty-settings
+  prompt: "Create a DNS server but provide no fields"
+  tool: create_resource
+  tool_params: {resource: "dns_server", settings: {}}
+  mock_sequence: []
+  expect_error:
+    type: PexipError
+    status: 400
+  tags: [config, error, validation]
+
+- id: update-resource-empty-settings
+  prompt: "Update the SMTP server but change nothing"
+  tool: update_resource
+  tool_params: {resource: "smtp_server", id: 1, settings: {}}
+  mock_sequence: []
+  expect_error:
+    type: PexipError
+    status: 400
+  tags: [config, error, validation]

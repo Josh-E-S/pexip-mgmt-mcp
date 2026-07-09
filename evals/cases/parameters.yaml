@@ -1,0 +1,285 @@
+# Parameter correctness eval cases
+# Tests that the agent passes the right field names, types, and values.
+# Used in two modes:
+#   Deterministic: validates expected params match tool signatures
+#   LLM (--llm): sends prompt to Claude and checks actual parameter values
+
+- id: create-vmr-with-pin
+  prompt: "Create a VMR called 'Board Meeting' with host PIN 123456 and guest PIN 567890"
+  expected_tool: create_vmr
+  expected_params:
+    name: "Board Meeting"
+    pin: "123456"
+    guest_pin: "567890"
+  tags: [config, params]
+
+- id: create-vmr-with-guests
+  prompt: "Create a VMR called 'Open Office Hours' with host PIN 123456 that allows guests"
+  expected_tool: create_vmr
+  expected_params:
+    name: "Open Office Hours"
+    pin: "123456"
+    allow_guests: true
+  tags: [config, params]
+
+- id: create-vmr-with-layout
+  prompt: "Create a VMR called 'Webinar' with host PIN 123456 and host view set to one_main_zero_pips"
+  expected_tool: create_vmr
+  expected_params:
+    name: "Webinar"
+    pin: "123456"
+    host_view: "one_main_zero_pips"
+  tags: [config, params]
+
+- id: update-vmr-tag
+  prompt: "Tag the Sales-Standup VMR with 'sales-team'"
+  expected_tool: update_vmr
+  expected_params:
+    tag: "sales-team"
+  params_present: [vmr]
+  tags: [config, params]
+
+- id: create-end-user-full
+  prompt: "Add user alice@company.com — first name Alice, last name Smith, title VP Engineering"
+  expected_tool: create_end_user
+  expected_params:
+    primary_email_address: "alice@company.com"
+    first_name: "Alice"
+    last_name: "Smith"
+    title: "VP Engineering"
+  tags: [config, params]
+
+- id: create-gateway-rule-sip
+  prompt: "Add a gateway rule called 'PSTN Breakout' matching ^9 with priority 100 using SIP"
+  expected_tool: create_gateway_rule
+  expected_params:
+    name: "PSTN Breakout"
+    match_string: "^9"
+    priority: 100
+    outgoing_protocol: "sip"
+  tags: [config, params]
+
+
+- id: summarize-by-quality
+  prompt: "Summarize today's calls grouped by quality"
+  expected_tool: summarize_calls
+  expected_params:
+    group_by: "call_quality"
+  params_present: [start_time, end_time]
+  tags: [history, params]
+
+- id: summarize-by-protocol
+  prompt: "Break down this week's calls by protocol"
+  expected_tool: summarize_calls
+  expected_params:
+    group_by: "protocol"
+  params_present: [start_time, end_time]
+  tags: [history, params]
+
+- id: summarize-by-location
+  prompt: "Show call volume by system location for the past 24 hours"
+  expected_tool: summarize_calls
+  expected_params:
+    group_by: "system_location"
+  params_present: [start_time, end_time]
+  tags: [history, params]
+
+- id: dial-sip-participant
+  prompt: "Dial sip:bob@partner.com into the AllHands conference using SIP"
+  expected_tool: dial_participant
+  expected_params:
+    conference_alias: "AllHands"
+    destination: "sip:bob@partner.com"
+    protocol: "sip"
+  tags: [command, params]
+
+- id: transfer-with-role
+  prompt: "Move participant abc-123 to Breakout-1 as a guest"
+  expected_tool: transfer_participant
+  expected_params:
+    participant_id: "abc-123"
+    conference_alias: "Breakout-1"
+    role: "guest"
+  tags: [command, params]
+
+- id: set-role-chair
+  prompt: "Make participant xyz-789 a host"
+  expected_tool: set_participant_role
+  expected_params:
+    participant_id: "xyz-789"
+    role: "chair"
+  tags: [command, params]
+
+- id: set-conference-layout
+  prompt: "Set the AllHands conference layout to 4 equal tiles for hosts"
+  expected_tool: set_conference_layout
+  expected_params:
+    host_layout: "four_mains_zero_pips"
+  params_present: [conference_id]
+  tags: [command, params]
+
+- id: list-history-time-window
+  prompt: "Show call history from January 1 to January 31 2026"
+  expected_tool: list_history_conferences
+  expected_params:
+    start_time: "2026-01-01T00:00:00"
+  # end_time boundary is ambiguous ("to January 31" can mean 01-31 or 02-01 to
+  # include all of the 31st); only require that an end bound is present.
+  params_present: [start_time, end_time]
+  tags: [history, params]
+
+# --- VMR provisioning params ---
+
+- id: create-vmr-guest-view
+  prompt: "Create a VMR called 'Town Hall' with host PIN 123456 where guests see one main speaker (one_main_zero_pips)"
+  expected_tool: create_vmr
+  expected_params:
+    name: "Town Hall"
+    pin: "123456"
+    guest_view: "one_main_zero_pips"
+  tags: [config, provisioning, params]
+
+- id: update-vmr-change-pin
+  prompt: "Change the host PIN on the Boardroom VMR to 9090"
+  expected_tool: update_vmr
+  expected_params:
+    pin: "9090"
+  params_present: [vmr]
+  tags: [config, provisioning, params]
+
+- id: add-alias-with-description
+  prompt: "Add alias townhall@company.com to the 'Town Hall' VMR, described as 'primary dial-in'"
+  expected_tool: add_vmr_alias
+  expected_params:
+    alias: "townhall@company.com"
+    description: "primary dial-in"
+  params_present: [vmr]
+  tags: [config, provisioning, params]
+
+- id: automatic-participant-recorder
+  prompt: "On the Boardroom VMR, auto-dial rec@lab.local as a guest over SIP and keep the conference alive"
+  expected_tool: add_automatic_participant
+  expected_params:
+    alias: "rec@lab.local"
+    role: "guest"
+    protocol: "sip"
+    keep_conference_alive: "always"
+  params_present: [vmr]
+  tags: [config, provisioning, params]
+
+# --- User & device params ---
+
+- id: update-end-user-department
+  prompt: "Update bob@company.com — set department to Finance and title to Controller"
+  expected_tool: update_end_user
+  expected_params:
+    department: "Finance"
+    title: "Controller"
+  params_present: [user]
+  tags: [config, users, params]
+
+- id: create-device-sip-only
+  prompt: "Register a device with alias lobby-phone@company.com owned by facilities@company.com, SIP enabled but H.323 disabled"
+  expected_tool: create_device
+  expected_params:
+    alias: "lobby-phone@company.com"
+    primary_owner_email_address: "facilities@company.com"
+    enable_sip: true
+    enable_h323: false
+  tags: [config, devices, params]
+
+# --- Dial plan / routing params ---
+
+- id: update-gateway-rule-disable
+  prompt: "Disable the gateway rule named 'PSTN Breakout'"
+  expected_tool: update_gateway_rule
+  expected_params:
+    enable: false
+  params_present: [rule]
+  tags: [config, routing, params]
+
+- id: create-gateway-rule-teams
+  prompt: "Add a gateway rule 'Teams CVI' matching ^teams: with priority 50, protocol mssip"
+  expected_tool: create_gateway_rule
+  expected_params:
+    name: "Teams CVI"
+    match_string: "^teams:"
+    priority: 50
+    outgoing_protocol: "mssip"
+  tags: [config, routing, params]
+
+- id: create-resource-dns
+  prompt: "Add a DNS server at address 10.0.0.53"
+  expected_tool: create_resource
+  expected_params:
+    resource: "dns_server"
+  params_present: [settings]
+  # The model may check the schema before creating — feed it a realistic one.
+  mock_returns:
+    get_resource_schema:
+      fields:
+        address: {type: "string", nullable: false, help_text: "IP address of the DNS server"}
+        description: {type: "string", nullable: true, help_text: "Optional description"}
+  tags: [config, infrastructure, params]
+
+- id: list-resources-turn
+  prompt: "List the configured TURN servers"
+  expected_tool: list_resources
+  expected_params:
+    resource: "turn_server"
+  tags: [config, infrastructure, params]
+
+# --- Live command params ---
+
+- id: dial-guest-with-name
+  prompt: "Dial sip:vip@partner.com into Boardroom as a guest, show them as 'VIP Guest'"
+  expected_tool: dial_participant
+  expected_params:
+    conference_alias: "Boardroom"
+    destination: "sip:vip@partner.com"
+    role: "guest"
+    remote_display_name: "VIP Guest"
+  tags: [command, operator, params]
+
+- id: layout-guest-nine
+  prompt: "Set the guest layout in the AllHands conference to nine equal tiles"
+  expected_tool: set_conference_layout
+  expected_params:
+    guest_layout: "nine_equal"
+  params_present: [conference_id]
+  tags: [command, operator, params]
+
+# --- Reporting params ---
+
+- id: history-participants-quality-filter
+  prompt: "List participants from this week's calls whose quality was bad"
+  expected_tool: list_history_participants
+  expected_params:
+    call_quality: "3_bad"
+  params_present: [start_time, end_time]
+  tags: [history, reporting, params]
+
+- id: summarize-scoped-to-service-tag
+  prompt: "Summarize this month's calls by direction for the service tagged 'sales-team'"
+  expected_tool: summarize_calls
+  expected_params:
+    group_by: "call_direction"
+    service_tag: "sales-team"
+  params_present: [start_time, end_time]
+  tags: [history, reporting, params]
+
+# --- Monitoring params ---
+
+- id: location-stats-by-name
+  prompt: "Show current media load statistics for the 'Primary' location"
+  expected_tool: get_location_statistics
+  expected_params:
+    location: "Primary"
+  tags: [status, monitoring, params]
+
+- id: nodes-filtered-by-location
+  prompt: "List Conferencing Nodes in the 'Primary' location"
+  expected_tool: list_conferencing_nodes
+  expected_params:
+    location: "Primary"
+  tags: [status, monitoring, params]

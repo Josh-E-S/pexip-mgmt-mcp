@@ -1,0 +1,481 @@
+# Multi-step workflow eval cases
+# Each case defines a prompt, the expected tool chain, and mock returns
+# for each step so the LLM layer can simulate the full conversation.
+#
+# The server resolves conference/participant NAMES to UUIDs itself, so lookup
+# steps that only existed to fetch a UUID are marked `optional: true` — the
+# model may take either the direct-by-name path or the lookup path. Where a
+# param can legitimately be the mocked UUID or the name from the prompt,
+# params_contain lists both acceptable values.
+
+- id: kick-and-lock
+  prompt: "Alice's standup is going long — kick the late joiners and lock the meeting"
+  steps:
+    - tool: list_active_conferences
+      optional: true
+      params_contain: {}
+      returns:
+        objects:
+          - id: "conf-uuid-1"
+            name: "Standup"
+            service_type: "conference"
+            tag: ""
+        meta: {total_count: 1}
+    # Identifying WHO joined late genuinely requires the participant list.
+    - tool: list_active_participants
+      params_contain: {}
+      returns:
+        objects:
+          - id: "part-uuid-alice"
+            display_name: "Alice"
+            role: "chair"
+            protocol: "webrtc"
+            connect_time: "2026-07-02T11:00:04"
+          - id: "part-uuid-bob"
+            display_name: "Bob"
+            role: "guest"
+            protocol: "sip"
+            connect_time: "2026-07-02T11:41:19"
+          - id: "part-uuid-carol"
+            display_name: "Carol"
+            role: "guest"
+            protocol: "webrtc"
+            connect_time: "2026-07-02T11:52:47"
+        meta: {total_count: 3}
+    - tool: disconnect_participant
+      params_contain:
+        participant_id: ["part-uuid-bob", "Bob", "part-uuid-carol", "Carol"]
+      returns: {status: "success"}
+    - tool: disconnect_participant
+      params_contain:
+        participant_id: ["part-uuid-bob", "Bob", "part-uuid-carol", "Carol"]
+      returns: {status: "success"}
+    - tool: lock_conference
+      params_contain:
+        conference_id: ["conf-uuid-1", "Standup", "standup"]
+      returns: {status: "success"}
+  tags: [command, multi-step, destructive]
+
+- id: daily-call-report
+  prompt: "Give me a summary of today's calls broken down by direction and quality"
+  steps:
+    # Either grouping may come first — the harness matches steps in order, so
+    # both steps accept both group_by values (the model won't repeat one).
+    - tool: summarize_calls
+      params_contain: {group_by: ["call_direction", "call_quality"]}
+      returns:
+        summary:
+          inbound: {count: 45, total_duration: 3600}
+          outbound: {count: 12, total_duration: 900}
+        truncated: false
+    - tool: summarize_calls
+      params_contain: {group_by: ["call_direction", "call_quality"]}
+      returns:
+        summary:
+          good: {count: 50, total_duration: 3800}
+          ok: {count: 5, total_duration: 500}
+          bad: {count: 2, total_duration: 200}
+        truncated: false
+  tags: [history, multi-step]
+
+- id: vmr-provisioning
+  prompt: "Create a VMR called 'Engineering Sync', add alias eng-sync@company.com, and set host PIN to 123456"
+  steps:
+    # create_vmr accepts aliases directly, so the ideal path is a single
+    # create call (aliases checked when passed inline) — a separate
+    # add_vmr_alias call afterwards is equally fine.
+    - tool: create_vmr
+      params_contain:
+        name: "Engineering Sync"
+        pin: "123456"
+        aliases: ["['eng-sync@company.com']", "eng-sync@company.com"]
+      returns:
+        id: 42
+        name: "Engineering Sync"
+        service_type: "conference"
+        resource_uri: "/api/admin/configuration/v1/conference/42/"
+    - tool: add_vmr_alias
+      optional: true
+      params_contain:
+        alias: "eng-sync@company.com"
+      returns:
+        id: 99
+        alias: "eng-sync@company.com"
+  tags: [config, multi-step]
+
+- id: quality-audit
+  prompt: "Check Bob's live call quality — if it's bad, tell me what's wrong"
+  steps:
+    - tool: list_active_participants
+      optional: true
+      params_contain: {}
+      returns:
+        objects:
+          - id: "part-uuid-bob"
+            display_name: "Bob"
+            role: "chair"
+            protocol: "webrtc"
+            conference: "Standup"
+        meta: {total_count: 1}
+    - tool: get_participant_quality
+      params_contain: {participant_id: ["part-uuid-bob", "Bob"]}
+      returns:
+        participant_id: "part-uuid-bob"
+        call_quality: "3_bad"
+        media_streams:
+          - stream_type: "audio"
+            rx_packet_loss: 12.5
+            rx_jitter: 45
+          - stream_type: "video"
+            rx_packet_loss: 8.2
+            rx_fps: 10
+  tags: [status, multi-step]
+
+- id: find-and-mute-noisy
+  # "mute all the guests" (not "find and mute each one") — muting guests
+  # individually would also be valid admin behavior, but this case tests the
+  # bulk mute_guests operation, so the prompt asks for exactly that.
+  prompt: "Someone in the AllHands is making noise — mute all the guests"
+  steps:
+    - tool: list_active_conferences
+      optional: true
+      params_contain: {}
+      returns:
+        objects:
+          - id: "conf-uuid-ah"
+            name: "AllHands"
+            service_type: "conference"
+        meta: {total_count: 1}
+    - tool: mute_guests
+      params_contain: {conference_id: ["conf-uuid-ah", "AllHands"]}
+      returns: {status: "success"}
+  tags: [command, multi-step]
+
+- id: transfer-to-breakout
+  prompt: "Move Bob from AllHands to the Breakout-1 room"
+  steps:
+    - tool: list_active_participants
+      optional: true
+      params_contain: {}
+      returns:
+        objects:
+          - id: "part-uuid-bob"
+            display_name: "Bob"
+            role: "guest"
+        meta: {total_count: 1}
+    - tool: transfer_participant
+      params_contain:
+        participant_id: ["part-uuid-bob", "Bob"]
+        conference_alias: "Breakout-1"
+      returns: {status: "success"}
+  tags: [command, multi-step]
+
+- id: node-health-check
+  prompt: "Check the health of all Conferencing Nodes — list their status and any alarms"
+  steps:
+    - tool: list_node_status
+      params_contain: {}
+      returns:
+        objects:
+          - name: "cn01.lab.local"
+            status: "active"
+          - name: "cn02.lab.local"
+            status: "active"
+        meta: {total_count: 2}
+    - tool: list_alarms
+      params_contain: {}
+      returns:
+        objects: []
+        meta: {total_count: 0}
+  tags: [status, multi-step]
+
+- id: cleanup-test-vmrs
+  prompt: "Delete all VMRs with 'test' in the name"
+  steps:
+    - tool: list_vmrs
+      params_contain: {name_contains: "test"}
+      returns:
+        objects:
+          - id: 10
+            name: "test-room-1"
+            resource_uri: "/api/admin/configuration/v1/conference/10/"
+          - id: 11
+            name: "test-room-2"
+            resource_uri: "/api/admin/configuration/v1/conference/11/"
+        meta: {total_count: 2}
+    - tool: delete_vmr
+      params_contain: {}
+      returns: {deleted: true, id: 10}
+    - tool: delete_vmr
+      params_contain: {}
+      returns: {deleted: true, id: 11}
+  tags: [config, multi-step, destructive]
+
+- id: end-user-vmr-assignment
+  prompt: "Look up alice@company.com and show me which VMR she owns"
+  steps:
+    - tool: get_end_user
+      params_contain: {}
+      returns:
+        id: 5
+        primary_email_address: "alice@company.com"
+        first_name: "Alice"
+        last_name: "Smith"
+    - tool: list_vmrs
+      params_contain: {}
+      returns:
+        objects: []
+        meta: {total_count: 0}
+  tags: [config, multi-step]
+
+- id: conference-disconnect-all
+  prompt: "End the AllHands meeting — disconnect everyone"
+  steps:
+    - tool: list_active_conferences
+      optional: true
+      params_contain: {}
+      returns:
+        objects:
+          - id: "conf-uuid-ah"
+            name: "AllHands"
+            service_type: "conference"
+        meta: {total_count: 1}
+    - tool: disconnect_conference
+      params_contain: {conference_id: ["conf-uuid-ah", "AllHands"]}
+      returns: {status: "success"}
+  tags: [command, multi-step, destructive]
+
+# ===========================================================================
+# Persona: VMR provisioning admin — full room build-out
+# ===========================================================================
+
+- id: provision-room-end-to-end
+  prompt: >
+    Set up a new room: create a VMR called 'Exec Briefing' with host PIN 2468,
+    add the alias exec-briefing@company.com, and email the owner the details.
+  steps:
+    # create_vmr accepts aliases directly, so the ideal path is a single
+    # create call (aliases checked when passed inline) — a separate
+    # add_vmr_alias call afterwards is equally fine.
+    - tool: create_vmr
+      params_contain:
+        name: "Exec Briefing"
+        pin: "2468"
+        aliases: ["['exec-briefing@company.com']", "exec-briefing@company.com"]
+      returns:
+        id: 77
+        name: "Exec Briefing"
+        service_type: "conference"
+        resource_uri: "/api/admin/configuration/v1/conference/77/"
+    - tool: add_vmr_alias
+      optional: true
+      params_contain:
+        alias: "exec-briefing@company.com"
+      returns: {id: 201, alias: "exec-briefing@company.com"}
+    - tool: send_conference_email
+      params_contain: {conference_id: 77}
+      returns: {status: "success"}
+  tags: [config, provisioning, multi-step]
+
+- id: decommission-room
+  prompt: "Decommission the 'temp-event' VMR — remove its auto dial-out then delete the room"
+  steps:
+    - tool: list_automatic_participants
+      params_contain: {vmr: "temp-event"}
+      returns:
+        objects:
+          - id: 15
+            alias: "rec@lab.local"
+            resource_uri: "/api/admin/configuration/v1/automatic_participant/15/"
+        meta: {total_count: 1}
+    - tool: delete_automatic_participant
+      params_contain: {participant_id: 15}
+      returns: {deleted: true, id: 15}
+    - tool: delete_vmr
+      params_contain: {vmr: "temp-event"}
+      returns: {deleted: true, id: 88}
+  tags: [config, provisioning, multi-step, destructive]
+
+# ===========================================================================
+# Persona: User & device onboarding
+# ===========================================================================
+
+- id: onboard-user-and-desk-device
+  prompt: >
+    Onboard dana@company.com (first name Dana, last name Lee) and register her
+    desk device dana-desk@company.com owned by that same address.
+  steps:
+    - tool: create_end_user
+      params_contain:
+        primary_email_address: "dana@company.com"
+        first_name: "Dana"
+        last_name: "Lee"
+      returns:
+        id: 33
+        primary_email_address: "dana@company.com"
+    - tool: create_device
+      params_contain:
+        alias: "dana-desk@company.com"
+        primary_owner_email_address: "dana@company.com"
+      returns:
+        id: 44
+        alias: "dana-desk@company.com"
+  tags: [config, users, devices, multi-step]
+
+# ===========================================================================
+# Persona: Live meeting operator — moderation sequences
+# ===========================================================================
+
+- id: presentation-mode
+  prompt: >
+    The AllHands is starting the keynote — mute all guests and lock the room so
+    no one else wanders in.
+  steps:
+    - tool: list_active_conferences
+      optional: true
+      params_contain: {}
+      returns:
+        objects:
+          - id: "conf-uuid-ah"
+            name: "AllHands"
+            service_type: "conference"
+        meta: {total_count: 1}
+    - tool: mute_guests
+      params_contain: {conference_id: ["conf-uuid-ah", "AllHands"]}
+      returns: {status: "success"}
+    - tool: lock_conference
+      params_contain: {conference_id: ["conf-uuid-ah", "AllHands"]}
+      returns: {status: "success"}
+  tags: [command, operator, multi-step]
+
+- id: promote-and-unmute-presenter
+  prompt: "In the standup, make Carol a host and unmute her so she can present"
+  steps:
+    - tool: list_active_participants
+      optional: true
+      params_contain: {}
+      returns:
+        objects:
+          - id: "part-carol"
+            display_name: "Carol"
+            role: "guest"
+        meta: {total_count: 1}
+    - tool: set_participant_role
+      params_contain:
+        participant_id: ["part-carol", "Carol"]
+        role: "chair"
+      returns: {status: "success"}
+    - tool: unmute_participant
+      params_contain: {participant_id: ["part-carol", "Carol"]}
+      returns: {status: "success"}
+  tags: [command, operator, multi-step]
+
+- id: breakout-two-people
+  prompt: "Move Bob and Carol from AllHands into the Breakout-1 room"
+  steps:
+    - tool: list_active_participants
+      optional: true
+      params_contain: {}
+      returns:
+        objects:
+          - {id: "part-bob", display_name: "Bob", role: "guest"}
+          - {id: "part-carol", display_name: "Carol", role: "guest"}
+        meta: {total_count: 2}
+    # Either transfer may come first — both steps accept both people.
+    - tool: transfer_participant
+      params_contain:
+        participant_id: ["part-bob", "Bob", "part-carol", "Carol"]
+        conference_alias: "Breakout-1"
+      returns: {status: "success"}
+    - tool: transfer_participant
+      params_contain:
+        participant_id: ["part-bob", "Bob", "part-carol", "Carol"]
+        conference_alias: "Breakout-1"
+      returns: {status: "success"}
+  tags: [command, operator, multi-step]
+
+# ===========================================================================
+# Persona: NOC / on-call — health checks and triage
+# ===========================================================================
+
+- id: morning-health-check
+  prompt: >
+    Do the morning platform check: any active alarms, are all Conferencing
+    Nodes up, and what's our licensing headroom?
+  steps:
+    - tool: list_alarms
+      params_contain: {}
+      returns: {objects: [], meta: {total_count: 0}}
+    - tool: list_node_status
+      params_contain: {}
+      returns:
+        objects:
+          - {name: "cn01.lab.local", status: "active"}
+          - {name: "cn02.lab.local", status: "active"}
+        meta: {total_count: 2}
+    - tool: get_licensing_status
+      params_contain: {}
+      returns: {port_count: 100, ports_used: 12}
+  tags: [status, monitoring, multi-step]
+
+- id: capacity-before-event
+  prompt: "Before the all-company webinar, check spare capacity in the Primary location"
+  steps:
+    - tool: list_locations
+      optional: true
+      params_contain: {}
+      returns:
+        objects:
+          - {id: 1, name: "Primary"}
+        meta: {total_count: 1}
+    - tool: get_location_statistics
+      params_contain: {location: ["Primary", "1"]}
+      returns: {media_tokens_used: 20, media_tokens_total: 200}
+  tags: [status, monitoring, multi-step]
+
+# ===========================================================================
+# Persona: CDR analyst — investigate a bad call
+# ===========================================================================
+
+- id: investigate-bad-call
+  prompt: >
+    We got a complaint about poor quality this morning — find the bad-quality
+    participants from today and pull the detailed record for the first one.
+  steps:
+    - tool: list_history_participants
+      params_contain: {call_quality: "3_bad"}
+      returns:
+        objects:
+          - id: "hist-part-1"
+            display_name: "Eve"
+            call_quality: "3_bad"
+            resource_uri: "/api/admin/history/v1/participant/hist-part-1/"
+        meta: {total_count: 1}
+    - tool: get_history_participant
+      params_contain: {participant_id: "hist-part-1"}
+      returns:
+        id: "hist-part-1"
+        call_quality: "3_bad"
+        packet_loss: 9.4
+  tags: [history, reporting, multi-step]
+
+# ===========================================================================
+# Persona: Routing admin — quick dial-plan change
+# ===========================================================================
+
+- id: disable-a-routing-rule
+  prompt: "Find the gateway rule for PSTN and turn it off"
+  steps:
+    - tool: list_gateway_rules
+      params_contain: {name_contains: "PSTN"}
+      returns:
+        objects:
+          - id: 5
+            name: "PSTN Breakout"
+            enable: true
+            resource_uri: "/api/admin/configuration/v1/gateway_routing_rule/5/"
+        meta: {total_count: 1}
+    - tool: update_gateway_rule
+      params_contain: {enable: false}
+      returns: {id: 5, enable: false}
+  tags: [config, routing, multi-step]

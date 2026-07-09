@@ -1,0 +1,28 @@
+name: release
+
+# Publishes the package to PyPI — runs ONLY on a version tag (v*), so nothing
+# is published until you deliberately tag a release after testing.
+#
+# Setup required once on PyPI: configure a Trusted Publisher for this repo
+# (PyPI > project > Publishing) so the OIDC token below is accepted — no API
+# token secret needed. Until then, this workflow simply won't have anywhere to
+# publish, which is fine while testing.
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: read
+  id-token: write # OIDC for PyPI Trusted Publishing
+
+jobs:
+  pypi:
+    runs-on: ubuntu-latest
+    environment: pypi
+    steps:
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v7
+      - name: Build sdist + wheel
+        run: uv build
+      - name: Publish to PyPI
+        uses: pypa/gh-action-pypi-publish@release/v1

@@ -1,0 +1,54 @@
+{
+  "_comment": "Valid layout enum values for set_conference_layout (host_layout / guest_layout). These are Pexip's stock layout codes. Some Pexip versions ship additional custom layouts uploaded via the admin UI — call get_resource_schema('conference') and inspect host_view / guest_view enum values to be sure.",
+  "layouts": [
+    {
+      "name": "one_main_zero_pips",
+      "description": "Single main speaker, no pips. 'Speaker mode' equivalent."
+    },
+    {
+      "name": "one_main_seven_pips",
+      "description": "Main speaker + 7 pips along the bottom."
+    },
+    {
+      "name": "two_mains_zero_pips",
+      "description": "Two main panes side by side."
+    },
+    {
+      "name": "two_mains_seven_pips",
+      "description": "Two mains + 7 pips. Common 'presenter + presentation' layout."
+    },
+    {
+      "name": "two_mains_twenty_one_pips",
+      "description": "Two mains + 21 pips, for larger audiences."
+    },
+    {
+      "name": "four_mains_zero_pips",
+      "description": "2x2 grid of equal mains."
+    },
+    {
+      "name": "four_mains_seven_pips",
+      "description": "2x2 grid + 7 pips."
+    },
+    {
+      "name": "nine_equal",
+      "description": "3x3 grid. 'Hollywood Squares'."
+    },
+    {
+      "name": "sixteen_equal",
+      "description": "4x4 grid."
+    },
+    {
+      "name": "twenty_five_equal",
+      "description": "5x5 grid."
+    },
+    {
+      "name": "ac_presentation_in_mix",
+      "description": "Adaptive composition with presentation inline."
+    },
+    {
+      "name": "ac_presentation_in_focus",
+      "description": "Adaptive composition with presentation focused."
+    }
+  ],
+  "_note": "Layout availability and naming depends on Pexip Infinity version. For an exhaustive, version-correct list call get_resource_schema('conference') and read the 'host_view' / 'guest_view' enum values."
+}

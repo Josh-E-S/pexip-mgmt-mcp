@@ -1,0 +1,60 @@
+{
+  "_comment": "Common disconnect_reason strings on history.participant records. The exact set varies between Pexip versions — call get_resource_schema on the participant resource (history namespace) to be sure. Use these for the `disconnect_reason=` filter on list_history_participants or for grouping with summarize_calls(group_by='disconnect_reason').",
+  "reasons": [
+    {
+      "value": "Call disconnected",
+      "meaning": "Normal hangup. Either side cleanly ended the call.",
+      "category": "normal"
+    },
+    {
+      "value": "Participant disconnected",
+      "meaning": "Specifically the remote participant ended the call.",
+      "category": "normal"
+    },
+    {
+      "value": "Conference terminated",
+      "meaning": "The conference itself ended while this leg was still connected (e.g. admin called conference/disconnect).",
+      "category": "normal"
+    },
+    {
+      "value": "Call rejected",
+      "meaning": "Far end rejected the call attempt (busy, declined, rule deny).",
+      "category": "failure"
+    },
+    {
+      "value": "Call failed",
+      "meaning": "Generic call setup or in-call failure (codec mismatch, network drop).",
+      "category": "failure"
+    },
+    {
+      "value": "API",
+      "meaning": "Disconnect was triggered by an API call (participant/disconnect or conference/disconnect).",
+      "category": "admin"
+    },
+    {
+      "value": "Authentication failed",
+      "meaning": "Wrong PIN or other credential check failed.",
+      "category": "failure"
+    },
+    {
+      "value": "Connection timed out",
+      "meaning": "No keep-alive within Pexip's window. Often network problem.",
+      "category": "failure"
+    },
+    {
+      "value": "ICE failure",
+      "meaning": "WebRTC ICE negotiation failed — usually a NAT / firewall problem on the client side.",
+      "category": "failure"
+    },
+    {
+      "value": "Locked conference",
+      "meaning": "Caller tried to join while the meeting was locked and got dropped from the waiting room.",
+      "category": "normal"
+    }
+  ],
+  "_query_hints": {
+    "all_failures": "Use list_history_participants with disconnect_reason__in=Call+failed,Call+rejected,Connection+timed+out (Pexip supports Tastypie __in filters).",
+    "by_reason_chart": "Use summarize_calls(group_by='disconnect_reason', ...) for a single grouped report.",
+    "filter_single": "Use list_history_participants(disconnect_reason='Call failed', ...) for individual records."
+  }
+}
