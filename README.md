@@ -15,9 +15,9 @@ Configuration, Status, History, and Command.
 > **Disclaimer:** This is an independent, community-built project. It is **not
 > affiliated with, endorsed by, or sponsored by Pexip**. "Pexip" and "Pexip
 > Infinity" are trademarks of their respective owners; this tool simply uses
-> Pexip's public Management API. It sends **no telemetry or analytics** and
-> connects only to the Pexip Management Node you configure (and, in OIDC mode,
-> your own identity provider) — nothing phones home.
+> Pexip's public Management API. It sends **no telemetry or analytics**, and it
+> connects only to the Pexip Management Node you configure (plus your own
+> identity provider when you use OIDC). It never sends your data anywhere else.
 
 Ask in plain English; the server does the plumbing:
 

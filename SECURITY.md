@@ -30,7 +30,7 @@ surface. Treat it with the same care as the admin credentials it uses.
 - **No telemetry.** The server sends no analytics or usage data and makes no
   external calls except to the Pexip Management Node you configure (and, in
   OIDC mode, your identity provider's JWKS endpoint). It runs entirely within
-  your environment — nothing phones home.
+  your environment and contacts no other servers.
 - **Least privilege.** The credential's Pexip role determines what the server
   can do. Create a scoped Administrator Role for the server rather than reusing
   a full superuser, especially when enabling writes.

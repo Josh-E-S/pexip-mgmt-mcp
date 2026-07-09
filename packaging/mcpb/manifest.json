@@ -4,7 +4,7 @@
   "display_name": "Pexip Infinity Management",
   "version": "0.1.0",
   "description": "Read and operate a Pexip Infinity deployment from Claude.",
-  "long_description": "MCP server wrapping the Pexip Infinity Management API: VMRs, aliases, devices, users, dial plan and policy, live call control, status and CDR reporting. Supports basic (local admin) or OAuth2 authentication. Independent, community-built project — not affiliated with, endorsed by, or sponsored by Pexip. Sends no telemetry and connects only to the Pexip Management Node you configure.",
+  "long_description": "MCP server wrapping the Pexip Infinity Management API: VMRs, aliases, devices, users, dial plan and policy, live call control, status and CDR reporting. Supports basic (local admin) or OAuth2 authentication. Independent, community-built project. Not affiliated with, endorsed by, or sponsored by Pexip. Sends no telemetry and connects only to the Pexip Management Node you configure.",
   "author": { "name": "Josh-E-S" },
   "homepage": "https://github.com/Josh-E-S/pexip-mgmt-mcp",
   "documentation": "https://github.com/Josh-E-S/pexip-mgmt-mcp#readme",
