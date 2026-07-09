@@ -1,0 +1,86 @@
+{
+  "manifest_version": "0.2",
+  "name": "pexip-mgmt-mcp",
+  "display_name": "Pexip Infinity Management",
+  "version": "0.1.0",
+  "description": "Read and operate a Pexip Infinity deployment from Claude.",
+  "long_description": "MCP server wrapping the Pexip Infinity Management API: VMRs, aliases, devices, users, dial plan and policy, live call control, status and CDR reporting. Supports basic (local admin) or OAuth2 authentication.",
+  "author": { "name": "Josh-E-S" },
+  "homepage": "https://github.com/Josh-E-S/pexip-mgmt-mcp",
+  "documentation": "https://github.com/Josh-E-S/pexip-mgmt-mcp#readme",
+  "license": "MIT",
+  "server": {
+    "type": "python",
+    "entry_point": "server/main.py",
+    "mcp_config": {
+      "command": "python",
+      "args": ["${__dirname}/server/main.py"],
+      "env": {
+        "PYTHONPATH": "${__dirname}/server/lib",
+        "PEXIP_HOST": "${user_config.pexip_host}",
+        "PEXIP_AUTH_MODE": "${user_config.auth_mode}",
+        "PEXIP_USERNAME": "${user_config.username}",
+        "PEXIP_PASSWORD": "${user_config.password}",
+        "PEXIP_OAUTH2_CLIENT_ID": "${user_config.oauth2_client_id}",
+        "PEXIP_OAUTH2_PRIVATE_KEY": "${user_config.oauth2_private_key}",
+        "PEXIP_VERIFY_TLS": "${user_config.verify_tls}",
+        "PEXIP_READ_ONLY": "${user_config.read_only}"
+      }
+    }
+  },
+  "user_config": {
+    "pexip_host": {
+      "type": "string",
+      "title": "Management Node host",
+      "description": "Hostname or IP of the Pexip Management Node (no scheme).",
+      "required": true
+    },
+    "auth_mode": {
+      "type": "string",
+      "title": "Auth mode",
+      "description": "'basic' (admin username/password) or 'oauth2'.",
+      "default": "basic",
+      "required": false
+    },
+    "username": {
+      "type": "string",
+      "title": "Admin username (basic auth)",
+      "description": "Required when Auth mode is 'basic'.",
+      "required": false
+    },
+    "password": {
+      "type": "string",
+      "title": "Admin password (basic auth)",
+      "description": "Required when Auth mode is 'basic'.",
+      "sensitive": true,
+      "required": false
+    },
+    "oauth2_client_id": {
+      "type": "string",
+      "title": "OAuth2 Client ID",
+      "description": "Required when Auth mode is 'oauth2'.",
+      "required": false
+    },
+    "oauth2_private_key": {
+      "type": "string",
+      "title": "OAuth2 Private key (ES256 PEM)",
+      "description": "Required when Auth mode is 'oauth2'. Shown once on client creation.",
+      "sensitive": true,
+      "required": false
+    },
+    "verify_tls": {
+      "type": "boolean",
+      "title": "Verify TLS certificate",
+      "description": "Turn off only for self-signed lab nodes.",
+      "default": true,
+      "required": false
+    },
+    "read_only": {
+      "type": "boolean",
+      "title": "Read-only mode",
+      "description": "Expose only read tools; remove all write/control tools at startup. On by default (secure by default) — turn off to enable the mutating admin surface.",
+      "default": true,
+      "required": false
+    }
+  }
+}
