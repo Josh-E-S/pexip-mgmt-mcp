@@ -26,7 +26,13 @@ cp "$HERE/manifest.json" "$BUILD/manifest.json"
 cp "$HERE/main.py" "$BUILD/server/main.py"
 
 # Vendor the package + all runtime deps into server/lib for a self-contained bundle.
-python -m pip install "$ROOT" --target "$BUILD/server/lib" --upgrade
+# Prefer python3 (macOS/Linux often lack a bare `python`); override with PYTHON=...
+PYTHON="${PYTHON:-$(command -v python3 || command -v python)}"
+if [[ -z "$PYTHON" ]]; then
+  echo "error: no python3/python on PATH — install Python 3 first" >&2
+  exit 1
+fi
+"$PYTHON" -m pip install "$ROOT" --target "$BUILD/server/lib" --upgrade
 
 cd "$BUILD"
 if command -v mcpb >/dev/null 2>&1; then
