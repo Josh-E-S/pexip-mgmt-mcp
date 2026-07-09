@@ -24,6 +24,7 @@ mkdir -p "$BUILD/server/lib"
 
 cp "$HERE/manifest.json" "$BUILD/manifest.json"
 cp "$HERE/main.py" "$BUILD/server/main.py"
+cp "$ROOT/.github/icon.png" "$BUILD/icon.png"   # extension icon shown in Claude Desktop
 
 # Vendor the package + all runtime deps into server/lib for a self-contained bundle.
 # Prefer python3 (macOS/Linux often lack a bare `python`); override with PYTHON=...
