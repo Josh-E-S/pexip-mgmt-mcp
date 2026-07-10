@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="https://raw.githubusercontent.com/Josh-E-S/pexip-mgmt-mcp/main/.github/social-preview.png" alt="Infinity MCP" width="480">
+  <img src="https://raw.githubusercontent.com/Josh-E-S/pexip-mgmt-mcp/main/.github/social-preview.png" alt="Infinity MCP" width="100%">
 </p>
 
 # MCP Server for Pexip Infinity
