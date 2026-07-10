@@ -25,8 +25,9 @@ Configuration, Status, History, and Command.
 
 ### ▶ Just want it running? **[Jump to Quick start ↓](#quick-start)**
 
-Two no-clone paths, both under 5 minutes: **Claude Desktop** (double-click a
-bundle, fill in a form) or **Claude Code** (one command). Step-by-step below.
+Run it today from source, or build the one-click Claude Desktop bundle locally.
+Prebuilt, zero-install packages (PyPI `uvx`, a downloadable bundle) are staged
+and go live once the project is cleared for public release. Step-by-step below.
 
 Ask in plain English; the server does the plumbing:
 
@@ -123,19 +124,20 @@ src/pexip_mcp/
 
 ## Install
 
-> **Status:** **live on PyPI** — `uvx pexip-mgmt-mcp` works today. The Claude
-> Desktop bundle ([packaging/mcpb/](packaging/mcpb/)) is attached to
-> [Releases](https://github.com/Josh-E-S/pexip-mgmt-mcp/releases) as a
-> prebuilt **macOS** `.mcpb`; it is platform-specific, so Windows/Linux users
-> build their own with `./packaging/mcpb/build.sh`. The Docker/GHCR image and
-> marketplace listings (official MCP Registry, Docker MCP Catalog) are tag-gated
-> and staged in `server.json` / `packaging/`. New here? Follow the
-> [Quick start](#quick-start) instead — this section is the channel overview.
+> **Status:** packaging is fully wired up, but the project is **not yet
+> published** — public distribution is **paused pending team approval to
+> open-source**. The channels below describe the intended install paths; the
+> ones that depend on publishing are **commented out in this file, ready to
+> re-enable on release**. Until then, run from source via the
+> [Quick start](#quick-start) or build the Claude Desktop bundle locally.
 
-- **`uvx` (Python, zero-clone)** — from PyPI:
+- **`uvx` (Python, zero-clone)** — _paused; goes live once published to PyPI:_
+  <!-- Re-enable on publish:
   ```bash
   uvx pexip-mgmt-mcp --healthcheck
   ```
+  -->
+  Until then, use the from-source [Quick start](#quick-start).
 - **Claude Desktop (one-click bundle)** — the friendliest path for non-developers:
   build a `.mcpb` and double-click to install; a form collects host + credentials
   (no JSON, no terminal). Unlike the published channels, this **works today**:
@@ -160,21 +162,32 @@ Distribution channels (PyPI + the GHCR image via the `docker` workflow) are
 Pick the path that matches your client. You'll need your Pexip **Management Node
 hostname**, an **admin username**, and its **password** for any of them.
 
-Both easy paths start **read-only** — the server can list and report but cannot
-change anything until you explicitly enable writes (see step notes). Start there,
+The server starts **read-only** — it can list and report but cannot change
+anything until you explicitly enable writes (see step notes). Start there,
 confirm it connects, then decide.
 
-### Option A — Claude Desktop (one-click, no terminal)
+> **Heads-up:** zero-install distribution (PyPI `uvx`, a downloadable Desktop
+> bundle) is **paused pending approval to publish**. Until then, **Option A**
+> (build the Desktop bundle locally) and **Option C** (from source) are the
+> ready-to-use paths; **Option B** is stubbed for when publishing goes live.
 
-The friendliest path — no cloning, no JSON, no command line.
+### Option A — Claude Desktop (one-click install, built locally for now)
 
-1. **Get the bundle.** Download the `.mcpb` for your operating system from the
-   [latest release](https://github.com/Josh-E-S/pexip-mgmt-mcp/releases/latest).
+Once published, this is the no-terminal path for non-developers (double-click,
+fill in a form). Until a prebuilt bundle is released, you build the `.mcpb` once,
+then install it by double-clicking.
+
+1. **Build the bundle** (one-time):
+   ```bash
+   npm install -g @anthropic-ai/mcpb   # one-time
+   ./packaging/mcpb/build.sh           # → packaging/mcpb/pexip-mgmt-mcp.mcpb
+   ```
    > **Platform note:** the `.mcpb` vendors native binaries (`cryptography`), so
-   > it is **platform-specific** — download the one built for your OS. The
-   > prebuilt bundle is currently **macOS only**. On **Windows or Linux**, build
-   > your own on that machine: `./packaging/mcpb/build.sh` drops a ready-to-
-   > install `.mcpb` in `packaging/mcpb/`.
+   > build it on the **same OS** you'll install on.
+   <!-- Re-enable on publish — replace the build step above with a download:
+   Download the `.mcpb` for your OS from the latest release:
+   https://github.com/Josh-E-S/pexip-mgmt-mcp/releases/latest
+   (prebuilt bundles are platform-specific — grab the one for your OS). -->
 2. **Install it.** Double-click the `.mcpb` file. Claude Desktop opens an install
    dialog showing the tool and its permissions.
 3. **Fill in the form.** Enter your Management Node **host**, **username**, and
@@ -187,11 +200,16 @@ The friendliest path — no cloning, no JSON, no command line.
 
 <!-- Screenshot: Claude Desktop .mcpb install dialog + config form goes here -->
 
-### Option B — Claude Code (one command)
+### Option B — Claude Code (one command) — _paused until published_
 
-Best if you already use the `claude` CLI. Uses the published PyPI package via
-`uvx`, so there's nothing to clone.
+> ⏳ **This zero-clone path needs the package on PyPI**, which is on hold pending
+> approval. **For now, use [Option C](#option-c--from-source-development)** — a
+> source checkout works with Claude Code too: point the `claude mcp add` launch
+> command at your checkout, e.g.
+> `-- uv --directory /absolute/path/to/pexip-mgmt-mcp run python -m pexip_mcp`.
+> The zero-clone one-liner below goes live once publishing is approved.
 
+<!-- Re-enable on publish:
 1. **Install `uv`** (skip if you already have it):
    ```bash
    curl -LsSf https://astral.sh/uv/install.sh | sh
@@ -217,7 +235,11 @@ Best if you already use the `claude` CLI. Uses the published PyPI package via
 > update). Your credentials are stored in Claude Code's user config
 > (`~/.claude.json`).
 
-<!-- Screenshot: `claude mcp list` showing ✓ connected goes here -->
+Screenshot: `claude mcp list` showing ✓ connected goes here
+-->
+
+Read-only stays the default on the from-source path too; add
+`-e PEXIP_READ_ONLY=false` to the `claude mcp add` command to enable writes.
 
 ### Option C — From source (development)
 
