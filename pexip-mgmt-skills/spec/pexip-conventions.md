@@ -46,10 +46,6 @@ Predictable section order so a reader can scan:
 ## When to use
 <3-5 bullets, concrete.>
 
-## Recipes
-### <Recipe 1 verb-y title>
-### <Recipe 2 verb-y title>
-
 ## Field gotchas / safety notes
 <one or both, depending on the skill>
 

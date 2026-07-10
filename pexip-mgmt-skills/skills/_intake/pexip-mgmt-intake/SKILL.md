@@ -165,7 +165,6 @@ Plan:
 
   Skill(s) to load:
   - pexip-operations → reporting.md      (CDR / summarize_calls patterns)
-  - recipes/daily-call-report.md         (end-to-end recipe for this exact use case)
 
   First step:
   Test the report by calling summarize_calls(start_time, end_time,

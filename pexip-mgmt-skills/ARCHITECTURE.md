@@ -35,7 +35,6 @@ pexip-mgmt-skills/
 │   ├── events/                   # Event sinks / webhooks
 │   ├── policy/                   # External Policy API
 │   └── room-integration/         # MJX / room systems
-├── recipes/                      # Multi-skill workflows
 └── scripts/                      # Repo-wide tooling
 ```
 
@@ -61,8 +60,8 @@ Larger skills add sibling files (no subdirectories — flat is easier to navigat
 ```
 my-skill/
 ├── SKILL.md          # Entry point — short, links to siblings.
-├── recipe-a.md       # Detail doc, loaded on demand.
-├── recipe-b.md
+├── detail-a.md       # Detail doc, loaded on demand.
+├── detail-b.md
 ├── cheatsheet.json   # Reference data.
 └── helper.sh         # Optional script.
 ```
@@ -145,16 +144,6 @@ Every SKILL.md ends with a section pointing at:
 2. The **source file** in the MCP server (e.g., `src/pexip_mcp/tools/conference.py`) if applicable
 
 This lets a human (or another agent) verify the skill against ground truth quickly.
-
-## Recipes vs. skills
-
-A **skill** teaches knowledge. A **recipe** is a runnable, end-to-end workflow that composes several skills.
-
-- Recipes live in `recipes/<name>.md`, not under `skills/`.
-- A recipe is invoked the same way a skill is in Claude Code (slash command), but its content is explicitly step-by-step ("first run X, then if Y, run Z").
-- Recipes can reference skills inline: "See `pexip-operations/safety.md` for the confirmation rules before the disconnect step."
-
-Pattern borrowed from Google Workspace's [50 curated recipes](https://github.com/googleworkspace/cli).
 
 ## Validation
 

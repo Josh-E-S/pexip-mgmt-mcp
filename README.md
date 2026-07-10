@@ -61,7 +61,7 @@ To enable writes later, edit the server in Claude Desktop's settings and turn
 
 For Claude Code, Cursor, or any MCP host that takes a JSON server config. Install
 the CLI once (`pipx install pexip-mgmt-mcp`, available on release), then add the
-server:
+server. Use **OAuth2** for production:
 
 ```json
 {
@@ -70,22 +70,32 @@ server:
       "command": "pexip-mgmt-mcp",
       "env": {
         "PEXIP_HOST": "pexip-mgr.example.com",
-        "PEXIP_USERNAME": "admin",
-        "PEXIP_PASSWORD": "..."
+        "PEXIP_AUTH_MODE": "oauth2",
+        "PEXIP_OAUTH2_CLIENT_ID": "your-client-id",
+        "PEXIP_OAUTH2_PRIVATE_KEY": "-----BEGIN PRIVATE KEY-----\n...\n-----END PRIVATE KEY-----\n"
       }
     }
   }
 }
 ```
 
-- **OAuth2 (recommended for production):** the example above uses basic auth for
-  brevity, which suits dev/lab only. For production set `PEXIP_AUTH_MODE=oauth2`,
-  `PEXIP_OAUTH2_CLIENT_ID`, and `PEXIP_OAUTH2_PRIVATE_KEY` in `env` instead of the
-  username/password. See [Configuration](#configuration).
+For **dev/lab**, use basic auth instead: swap the `PEXIP_AUTH_MODE` /
+`PEXIP_OAUTH2_*` keys for `"PEXIP_USERNAME": "admin"` and `"PEXIP_PASSWORD": "..."`.
+See [Configuration](#configuration) for all options.
+
 - **Enable writes:** add `"PEXIP_READ_ONLY": "false"` to `env` (read-only is the
   default).
 - **Claude Code shortcut** (instead of hand-editing JSON):
   ```bash
+  # OAuth2 (recommended for production)
+  claude mcp add pexip-mgmt \
+    -e PEXIP_HOST=pexip-mgr.example.com \
+    -e PEXIP_AUTH_MODE=oauth2 \
+    -e PEXIP_OAUTH2_CLIENT_ID=your-client-id \
+    -e PEXIP_OAUTH2_PRIVATE_KEY="$(cat oauth2_private_key.pem)" \
+    -- pexip-mgmt-mcp
+
+  # basic auth (dev/lab only)
   claude mcp add pexip-mgmt \
     -e PEXIP_HOST=pexip-mgr.example.com \
     -e PEXIP_USERNAME=admin \
@@ -109,8 +119,8 @@ server:
   See [Testing](#testing) for the full dev workflow.
 
 Distribution channels (PyPI, the GHCR Docker image, and marketplace listings for
-the official MCP Registry / Docker MCP Catalog) are staged in `.github/workflows/`,
-`server.json`, and `packaging/`, and go live on release.
+the official MCP Registry / Docker MCP Catalog) are staged and planned for a
+future release.
 
 ## Contents
 
@@ -118,7 +128,6 @@ the official MCP Registry / Docker MCP Catalog) are staged in `.github/workflows
 - [Coverage](#coverage)
 - [How it fits together](#how-it-fits-together)
 - [Configuration](#configuration)
-- [Design notes](#design-notes)
 - [Quality: the eval suite](#quality-the-eval-suite)
 - [Skills SDK](#skills-sdk)
 - [Testing](#testing)
@@ -135,11 +144,12 @@ the official MCP Registry / Docker MCP Catalog) are staged in `.github/workflows
 The full catalog with per-tool annotations and parameters is in
 [TOOLS.md](TOOLS.md) (regenerate with `uv run python scripts/generate_tools_md.py`).
 
-**Optimized for tool use.** A naive wrapper of this API would expose 400+ tools
-and bloat every request. Instead, high-traffic resources (VMRs, users, devices,
-rules) get dedicated typed tools, and the ~70 remaining configuration resources
-share five generic CRUD tools backed by a resource registry, which cuts token use
-and improves tool selection (verified by the [eval suite](#quality-the-eval-suite)).
+**This MCP server is designed to optimize tool use.** High-traffic resources
+(VMRs, users, devices, rules) get dedicated typed tools; the ~70 remaining
+configuration resources share five generic CRUD tools backed by a resource
+registry. That keeps the catalog at 122 tools, which lowers per-request token use
+and improves the agent's tool selection (verified by the
+[eval suite](#quality-the-eval-suite)).
 
 ## How it fits together
 
@@ -251,30 +261,6 @@ Then set `PEXIP_AUTH_MODE=oauth2`, `PEXIP_OAUTH2_CLIENT_ID`, and
 <!-- Screenshot: Pexip admin UI, Users & Devices > OAuth2 Clients -->
 
 
-## Design notes
-
-- **Names work everywhere, including live calls.** Command and Status tools
-  accept a conference name or participant display name and resolve it to the
-  runtime UUID server-side ("lock the All Hands", "mute Bob", one call, no
-  lookup dance). Config tools resolve VMR / location / node / rule names the
-  same way; end users resolve by `primary_email_address`. No match raises a
-  404 with guidance; an ambiguous name raises a 409 so the agent must
-  disambiguate before acting, so a name never silently targets the wrong person.
-- **MCP tool annotations on every tool.** `readOnlyHint`, `destructiveHint`,
-  and `idempotentHint` are set so MCP clients can warn before destructive
-  operations. Read-only tools are auto-approvable; update / delete / command
-  tools carry `destructiveHint=True` so clients can prompt before invoking.
-- **Token-frugal by design.** Auto-pagination with explicit caps and a
-  `truncated` flag (`fetch_all=True` walks pages server-side, capped at 5,000
-  records, 10,000 for history); `summarize_calls` aggregates CDRs server-side
-  and returns grouped counts + durations instead of dumping records into the
-  context window.
-- **Schema introspection.** `get_resource_schema(resource)` fetches the live
-  JSON schema from the node, so the agent self-corrects field names and
-  discovers enum values without hand-coded knowledge going stale.
-- **429-aware HTTP client.** Honors `Retry-After`; falls back to exponential
-  backoff (1s, 2s, 4s, capped at 30s).
-
 ## Quality: the eval suite
 
 The [`evals/`](evals/) suite measures whether an LLM can drive these tools
@@ -323,10 +309,6 @@ Currently ships 9 skills across 6 domains:
 | events | `pexip-event-sinks` | both, configure Pexip's webhook push-event destinations |
 | policy | `pexip-external-policy` | developer: external policy server config (via generic CRUD) |
 | room-integration | `pexip-mjx` | both, One-Touch Join |
-
-Plus 5 ready-to-run [recipes](./pexip-mgmt-skills/recipes/): daily call
-reports, kick-and-lock playbooks, bad-quality audits, VMR provisioning,
-webhook collector bootstrap.
 
 See [`pexip-mgmt-skills/README.md`](./pexip-mgmt-skills/README.md) for the
 install instructions and

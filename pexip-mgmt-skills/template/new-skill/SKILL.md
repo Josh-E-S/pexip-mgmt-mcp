@@ -19,22 +19,6 @@ FIXME — one paragraph: what this skill covers and why it exists. Aim for one o
 - FIXME — adjacent thing handled by another skill (name it)
 - FIXME — out of scope
 
-## Recipes
-
-### FIXME — first common workflow
-
-```
-FIXME — step 1 (concrete tool call or command)
-FIXME — step 2
-FIXME — step 3
-```
-
-Notes on what to watch for.
-
-### FIXME — second common workflow
-
-…
-
 ## Field gotchas
 
 - FIXME — Pexip API quirk #1

@@ -15,12 +15,6 @@ All notable changes to this package. Follows [Keep a Changelog](https://keepacha
   - `pexip-event-sinks` (webhook push-event configuration and receiver patterns).
   - `pexip-external-policy` (external policy server config via generic CRUD, plus receiver-side guidance).
   - `pexip-mjx` (One-Touch Join for room systems).
-- Recipes:
-  - `daily-call-report` — pull a daily usage report via `summarize_calls` and format as Markdown.
-  - `kick-and-lock-meeting` — live ops playbook with safety prompts.
-  - `audit-bad-quality-calls` — quality forensics over a time window.
-  - `provision-team-vmr` — new VMR + aliases + automatic participant in one flow.
-  - `webhook-collector-bootstrap` — event sink setup guide + secure receiver skeleton.
 - Scripts: `install.sh`, `validate-skills.py`, `new-skill.sh`.
 
 ## [0.1.0] — TBD

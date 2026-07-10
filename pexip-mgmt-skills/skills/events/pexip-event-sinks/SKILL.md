@@ -63,8 +63,6 @@ A separate HTTP listener at the URL you registered. Minimum requirements:
 5. **Tolerate batches.** With `bulk_support=true` the body is an array of events, not a single event.
 6. **Idempotency.** Pexip retries — dedupe by event `id` / `call_id`.
 
-The recipe `recipes/webhook-collector-bootstrap.md` walks through a minimal secure receiver, an idempotent queue write, and a reconciliation job that fills gaps from the History API.
-
 ## Security notes
 
 - **Lock the receiver down.** Basic auth over HTTPS at minimum; ideally also IP-allowlist the Conferencing/Management nodes. The receiver ingests live meeting metadata — treat it as sensitive.
@@ -79,4 +77,3 @@ The recipe `recipes/webhook-collector-bootstrap.md` walks through a minimal secu
   - Event sink overview: https://docs.pexip.com/admin/event_sink.htm
   - Configuration API (event_sink resource): https://docs.pexip.com/api_manage/api_configuration.htm
 - **MCP server:** intentionally exposes no event-sink tools (see the rationale above). Reporting on the events you collect is done with `pexip-history-api` / `pexip-operations/reporting.md`.
-- **Related recipe:** `recipes/webhook-collector-bootstrap.md` — the secure receiver skeleton.

@@ -17,7 +17,6 @@ pexip-mgmt-skills/
 │   ├── events/                   Event sinks + webhook patterns
 │   ├── policy/                   External Policy API
 │   └── room-integration/         MJX / One-Touch Join
-├── recipes/                      Multi-skill workflows ready to run
 └── scripts/                      Install / validate / scaffold tooling
 ```
 
@@ -87,20 +86,6 @@ export PEXIP_PASSWORD=...
 ```
 
 If you don't have the MCP server installed, skills still load (the *knowledge* is useful as docs) but tool calls won't have implementations.
-
-## Recipes
-
-Multi-step workflows that compose several skills. Run them by name:
-
-```
-/pexip-mgmt:recipe daily-call-report
-/pexip-mgmt:recipe kick-and-lock-meeting
-/pexip-mgmt:recipe audit-bad-quality-calls
-/pexip-mgmt:recipe provision-team-vmr
-/pexip-mgmt:recipe webhook-collector-bootstrap
-```
-
-See `recipes/` for the full list.
 
 ## Roadmap
 

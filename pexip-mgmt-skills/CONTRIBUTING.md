@@ -55,12 +55,6 @@ A consistent shape readers can predict:
 
 <3-5 bullets, concrete.>
 
-## Recipes
-### <verb-y title>
-<step-by-step or code block>
-### <another>
-<…>
-
 ## Field gotchas / safety notes
 <…>
 
@@ -81,10 +75,6 @@ The Phase-2 list from `README.md`'s roadmap is the priority queue for new skills
 - Expand the thinner runbooks with more worked examples: `pexip-event-sinks`, `pexip-external-policy`, `pexip-mjx`
 
 Pick from the queue or propose a new one in an issue first.
-
-## Recipe contributions
-
-Recipes (multi-skill workflows) live in `recipes/<name>.md`. They're shorter than skills — typically one page — and reference skills inline. See existing recipes for the shape.
 
 ## Code style for scripts
 
