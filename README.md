@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="https://raw.githubusercontent.com/Josh-E-S/pexip-mgmt-mcp/main/.github/social-preview.png" alt="Infinity MCP" width="100%">
+  <img src="https://raw.githubusercontent.com/Josh-E-S/pexip-mgmt-mcp/main/.github/banner.png" alt="Infinity MCP" width="100%">
 </p>
 
 # MCP Server for Pexip Infinity
@@ -51,7 +51,9 @@ The simplest path: no terminal, no JSON.
 To enable writes later, edit the server in Claude Desktop's settings and turn
 **read-only** off.
 
-<!-- Screenshot: Claude Desktop .mcpb install dialog + config form -->
+<p align="center">
+  <img src=".github/example-mcpb-config.png" alt="Claude Desktop Extensions settings for pexip-mgmt-mcp, showing the Management Node host, Auth mode, basic and OAuth2 credential fields, Verify TLS and Read-only toggles, and the per-tool permissions list" width="640">
+</p>
 
 ### ② Manual config: Claude Code & other MCP hosts
 
