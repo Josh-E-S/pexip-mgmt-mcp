@@ -1,0 +1,17 @@
+flowchart LR
+    subgraph Agent["MCP client"]
+        A["Claude Desktop / Claude Code /<br/>any MCP host"]
+    end
+    subgraph Server["pexip-mgmt-mcp"]
+        B["FastMCP<br/>122 tools + annotations"]
+        C["Name → UUID resolution<br/>read-only mode<br/>auto-pagination"]
+        D["Async HTTP client<br/>basic / OAuth2 JWT<br/>429-aware retry"]
+    end
+    subgraph Pexip["Pexip Infinity Management Node"]
+        E["Configuration API"]
+        F["Status API"]
+        G["History API"]
+        H["Command API"]
+    end
+    A -- "stdio / HTTP + bearer" --> B --> C --> D
+    D --> E & F & G & H

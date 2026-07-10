@@ -13,7 +13,7 @@
 
 MCP (Model Context Protocol) server for the **Pexip Infinity Management API**. It
 gives an LLM-based agent everything it needs to manage and operate a Pexip
-Infinity deployment in plain language. It exposes **122 curated tools** covering
+Infinity deployment, exposing **122 curated tools** and covering
 all four admin API categories: Configuration, Status, History, and Command.
 
 > **Disclaimer:** This is an independent, community-built project. It is **not
@@ -33,10 +33,6 @@ recommended only for **dev/lab** environments. See
 The server starts **read-only** by default: it can list and report, but every
 create / update / delete / control tool is removed from the catalog until you
 explicitly enable writes. Connect first, confirm it works, then decide.
-
-> **Note:** prebuilt packages are **not yet published**. The one-click bundle and
-> the published CLI below ship on release; until then, build the bundle or run
-> from source (see [Other ways to run](#other-ways-to-run)).
 
 ### ① Claude Desktop: one-click install
 
@@ -59,9 +55,18 @@ To enable writes later, edit the server in Claude Desktop's settings and turn
 
 ### ② Manual config: Claude Code & other MCP hosts
 
-For Claude Code, Cursor, or any MCP host that takes a JSON server config. Install
-the CLI once (`pipx install pexip-mgmt-mcp`, available on release), then add the
-server. Use **OAuth2** for production:
+For Claude Code, Cursor, or any MCP host that takes a JSON server config.
+
+**1. Install the server** (needs Python 3.11+):
+
+```bash
+git clone https://github.com/Josh-E-S/pexip-mgmt-mcp.git
+cd pexip-mgmt-mcp
+pipx install .          # installs the `pexip-mgmt-mcp` command on your PATH
+```
+
+**2. Add it to your MCP host** by pointing its config at the `pexip-mgmt-mcp`
+command. Use **OAuth2** for production:
 
 ```json
 {
@@ -107,8 +112,11 @@ See [Configuration](#configuration) for all options.
 
 ### Other ways to run
 
-- **Docker (self-hosted HTTP transport):** run alongside your Infinity; serves
-  on `127.0.0.1:8000`, front it with a tunnel/proxy. See [DEPLOY.md](DEPLOY.md).
+- **Docker (self-hosted HTTP transport):** run the container alongside your
+  Infinity, serving on `127.0.0.1:8000`. For **lab/dev**, fronting it with a
+  tunnel or proxy is fine. For **production**, run it as a proper service behind
+  a hardened reverse proxy (TLS, authentication, access control) on a managed
+  host, not a dev tunnel. See [DEPLOY.md](DEPLOY.md).
 - **From source (developers):** clone the repo, then:
   ```bash
   pip install -e .
@@ -117,10 +125,6 @@ See [Configuration](#configuration) for all options.
   # OK: connected to pexip-mgr.example.com as admin, schema fetched
   ```
   See [Testing](#testing) for the full dev workflow.
-
-Distribution channels (PyPI, the GHCR Docker image, and marketplace listings for
-the official MCP Registry / Docker MCP Catalog) are staged and planned for a
-future release.
 
 ## Contents
 
@@ -153,25 +157,11 @@ and improves the agent's tool selection (verified by the
 
 ## How it fits together
 
-```mermaid
-flowchart LR
-    subgraph Agent["MCP client"]
-        A["Claude Desktop / Claude Code /<br/>any MCP host"]
-    end
-    subgraph Server["pexip-mgmt-mcp"]
-        B["FastMCP<br/>122 tools + annotations"]
-        C["Name → UUID resolution<br/>read-only mode<br/>auto-pagination"]
-        D["Async HTTP client<br/>basic / OAuth2 JWT<br/>429-aware retry"]
-    end
-    subgraph Pexip["Pexip Infinity Management Node"]
-        E["Configuration API"]
-        F["Status API"]
-        G["History API"]
-        H["Command API"]
-    end
-    A -- "stdio / HTTP + bearer" --> B --> C --> D
-    D --> E & F & G & H
-```
+<!-- Diagram source: .github/architecture.mmd
+     Regenerate: npx -y @mermaid-js/mermaid-cli -i .github/architecture.mmd -o .github/architecture.png -b white -s 2 -->
+<p align="center">
+  <img src=".github/architecture.png" alt="An MCP client talks to pexip-mgmt-mcp over stdio or HTTP; the server resolves names, enforces read-only mode, and calls the four Pexip Management APIs: Configuration, Status, History, and Command" width="100%">
+</p>
 
 Source layout:
 
