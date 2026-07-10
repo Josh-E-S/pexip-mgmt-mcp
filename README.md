@@ -27,7 +27,7 @@ Configuration, Status, History, and Command.
 
 Run it today from source, or build the one-click Claude Desktop bundle locally.
 Prebuilt, zero-install packages (PyPI `uvx`, a downloadable bundle) are staged
-and go live once the project is cleared for public release. Step-by-step below.
+for an upcoming release. Step-by-step below.
 
 Ask in plain English; the server does the plumbing:
 
@@ -125,13 +125,12 @@ src/pexip_mcp/
 ## Install
 
 > **Status:** packaging is fully wired up, but the project is **not yet
-> published** — public distribution is **paused pending team approval to
-> open-source**. The channels below describe the intended install paths; the
-> ones that depend on publishing are **commented out in this file, ready to
-> re-enable on release**. Until then, run from source via the
+> published**. The channels below describe the intended install paths; the ones
+> that depend on publishing are **commented out in this file, ready to re-enable
+> on release**. Until then, run from source via the
 > [Quick start](#quick-start) or build the Claude Desktop bundle locally.
 
-- **`uvx` (Python, zero-clone)** — _paused; goes live once published to PyPI:_
+- **`uvx` (Python, zero-clone)** — _not yet published; re-enable once on PyPI:_
   <!-- Re-enable on publish:
   ```bash
   uvx pexip-mgmt-mcp --healthcheck
@@ -167,9 +166,9 @@ anything until you explicitly enable writes (see step notes). Start there,
 confirm it connects, then decide.
 
 > **Heads-up:** zero-install distribution (PyPI `uvx`, a downloadable Desktop
-> bundle) is **paused pending approval to publish**. Until then, **Option A**
-> (build the Desktop bundle locally) and **Option C** (from source) are the
-> ready-to-use paths; **Option B** is stubbed for when publishing goes live.
+> bundle) is **not yet published**. Until then, **Option A** (build the Desktop
+> bundle locally) and **Option C** (from source) are the ready-to-use paths;
+> **Option B** is stubbed for when publishing goes live.
 
 ### Option A — Claude Desktop (one-click install, built locally for now)
 
@@ -200,14 +199,14 @@ then install it by double-clicking.
 
 <!-- Screenshot: Claude Desktop .mcpb install dialog + config form goes here -->
 
-### Option B — Claude Code (one command) — _paused until published_
+### Option B — Claude Code (one command) — _not yet published_
 
-> ⏳ **This zero-clone path needs the package on PyPI**, which is on hold pending
-> approval. **For now, use [Option C](#option-c--from-source-development)** — a
+> ⏳ **This zero-clone path needs the package on PyPI**, which isn't published
+> yet. **For now, use [Option C](#option-c--from-source-development)** — a
 > source checkout works with Claude Code too: point the `claude mcp add` launch
 > command at your checkout, e.g.
 > `-- uv --directory /absolute/path/to/pexip-mgmt-mcp run python -m pexip_mcp`.
-> The zero-clone one-liner below goes live once publishing is approved.
+> The zero-clone one-liner below goes live once the package is published.
 
 <!-- Re-enable on publish:
 1. **Install `uv`** (skip if you already have it):
