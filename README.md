@@ -131,6 +131,7 @@ See [Configuration](#configuration) for all options.
 - [Quick start](#quick-start)
 - [Coverage](#coverage)
 - [How it fits together](#how-it-fits-together)
+- [Examples](#examples)
 - [Configuration](#configuration)
 - [Quality: the eval suite](#quality-the-eval-suite)
 - [Skills SDK](#skills-sdk)
@@ -183,6 +184,28 @@ src/pexip_mcp/
         automatic_participant.py, infrastructure.py, ldap.py,
         ivr_theme.py, global_settings.py   # dedicated typed CRUD per resource
 ```
+
+## Examples
+
+Real Claude Desktop conversations against a lab Pexip node.
+
+**A status question, answered directly:**
+
+<p align="center">
+  <img src=".github/example-call-summary.png" alt="Claude Desktop: user asks how many calls this week; Claude reports 12 calls, all inbound, with total and average duration, and offers to break it down further" width="800">
+</p>
+
+**Config inventory across multiple resources in one ask:**
+
+<p align="center">
+  <img src=".github/example-inventory.png" alt="Claude Desktop: user asks for a count and details of VMRs, users, and devices; Claude lists each VMR with aliases, description, tag, and view settings" width="800">
+</p>
+
+**CDRs turned into an interactive dashboard, not a data dump:**
+
+<p align="center">
+  <img src=".github/example-dashboard.png" alt="Claude Desktop: user asks for interactive graphs of Infinity usage; Claude builds a dashboard with stat cards, a call-quality donut chart, a disconnect-reasons bar chart, a call timeline, and a written analysis of the traffic pattern" width="800">
+</p>
 
 ## Configuration
 
@@ -248,8 +271,9 @@ attach an Administrator Role, per Pexip's
 Then set `PEXIP_AUTH_MODE=oauth2`, `PEXIP_OAUTH2_CLIENT_ID`, and
 `PEXIP_OAUTH2_PRIVATE_KEY`.
 
-<!-- Screenshot: Pexip admin UI, Users & Devices > OAuth2 Clients -->
-
+<p align="center">
+  <img src=".github/oauth2-client-setup.png" alt="Pexip admin UI: Users & Devices > OAuth2 Clients, showing the Client ID, Client name, Role, and Private key fields" width="640">
+</p>
 
 ## Quality: the eval suite
 
