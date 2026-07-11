@@ -2,7 +2,9 @@
   <img src="https://raw.githubusercontent.com/Josh-E-S/pexip-mgmt-mcp/main/.github/banner.png" alt="Infinity MCP" width="100%">
 </p>
 
-# MCP Server for Pexip Infinity
+<h1 align="center">
+MCP Server for Pexip Infinity
+</h1>
 
 [![CI](https://github.com/Josh-E-S/pexip-mgmt-mcp/actions/workflows/ci.yml/badge.svg)](https://github.com/Josh-E-S/pexip-mgmt-mcp/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
