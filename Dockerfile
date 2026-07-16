@@ -13,7 +13,7 @@
 # Base image pinned by digest for reproducible builds (tag + digest so it stays
 # readable and Dependabot's docker ecosystem can bump both). Digest is for the
 # multi-arch python:3.14-slim index.
-FROM python:3.14-slim@sha256:b877e50bd90de10af8d82c57a022fc2e0dc731c5320d762a27986facfc3355c1 AS builder
+FROM python:3.14-slim@sha256:d3400aa122fa42cf0af0dbe8ec3091b047eac5c8f7e3539f7135e86d855dc015 AS builder
 
 RUN pip install --no-cache-dir uv
 
@@ -23,7 +23,7 @@ COPY src/ ./src/
 RUN uv pip install --system --no-cache .
 
 
-FROM python:3.14-slim@sha256:b877e50bd90de10af8d82c57a022fc2e0dc731c5320d762a27986facfc3355c1
+FROM python:3.14-slim@sha256:d3400aa122fa42cf0af0dbe8ec3091b047eac5c8f7e3539f7135e86d855dc015
 # Copy the whole lib tree (not a version-pinned site-packages path) so a base
 # image bump doesn't silently break this COPY when the python3.X directory
 # name changes.
