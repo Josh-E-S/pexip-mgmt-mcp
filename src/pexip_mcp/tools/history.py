@@ -194,12 +194,8 @@ async def summarize_calls(
 ) -> dict[str, Any]:
     """Summarize / report on call history — grouped counts and totals over a window.
 
-    USE THIS for any "summarize", "report", "breakdown", "how many calls by X",
-    "stats", or "totals" request. Returns aggregated counts + durations grouped
-    by a field — NOT individual records. Prefer this over
-    list_history_conferences / list_history_participants whenever the user wants
-    aggregates rather than a raw list; it walks pagination internally and is far
-    cheaper on context and tool calls than fetching individual records.
+    Returns aggregated counts and durations grouped by one field, not individual
+    records; it walks pagination internally, so it is far cheaper than listing.
 
     Args:
         start_time: Lower bound (inclusive) on start_time. UTC ISO 8601 required.
@@ -214,16 +210,9 @@ async def summarize_calls(
         max_records: Hard cap on participants fetched. Defaults to 10,000
             (the platform retention limit).
 
-    Returns:
-        {
-          "total_calls": int,
-          "total_duration_seconds": int,
-          "average_duration_seconds": float,
-          "time_range": {"start": ..., "end": ...},
-          "group_by": str,
-          "groups": {<key>: {"count": int, "duration_seconds": int}, ...},
-          "truncated": bool   # true if max_records was hit before exhausting results
-        }
+    Returns total_calls, total_duration_seconds, average_duration_seconds,
+    time_range, group_by, groups ({key: {count, duration_seconds}}) and
+    truncated (true if max_records was hit before the window was exhausted).
     """
     if group_by not in _GROUP_BY_FIELDS:
         raise PexipError(

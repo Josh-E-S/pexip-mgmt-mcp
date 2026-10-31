@@ -187,7 +187,12 @@ def test_platform_tools_exposed_when_allowed():
 
     server = _server_with_platform_and_normal_tools()
     settings = PexipSettings(
-        host="h", username="u", password="p", read_only=False, allow_platform_tools=True
+        host="h",
+        username="u",
+        password="p",
+        read_only=False,
+        allow_platform_tools=True,
+        toolsets="all",  # the platform toolset is off by default
     )
     apply_startup_policy(server, settings)
     names = {t.name for t in server._tool_manager.list_tools()}

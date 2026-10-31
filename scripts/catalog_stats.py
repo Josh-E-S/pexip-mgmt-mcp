@@ -33,6 +33,8 @@ REPO_ROOT = Path(__file__).parent.parent
 sys.path.insert(0, str(REPO_ROOT / "src"))
 sys.path.insert(0, str(REPO_ROOT))
 
+from pexip_mcp.tools._catalog import TOOLSET_OF  # noqa: E402
+
 from evals.catalog import (  # noqa: E402
     DEFAULT_EVAL_MODEL,
     has_real_output_schema,
@@ -128,6 +130,10 @@ def build_report(
     by_category: dict[str, int] = {}
     for d in defs:
         by_category[d["category"]] = by_category.get(d["category"], 0) + 1
+    by_toolset: dict[str, int] = {}
+    for d in defs:
+        ts = TOOLSET_OF.get(d["name"].removeprefix("pexip_"), "(none)")
+        by_toolset[ts] = by_toolset.get(ts, 0) + 1
 
     desc_lens = [len(d["description"]) for d in defs]
     param_counts = [len(d["input_schema"].get("properties", {})) for d in defs]
@@ -158,6 +164,7 @@ def build_report(
         "catalog_scope": "as_deployed (PEXIP_* policy applied)" if as_deployed else "full",
         "tool_count": len(defs),
         "by_category": by_category,
+        "by_toolset": dict(sorted(by_toolset.items())),
         "catalog_tokens": {
             "exact_anthropic": exact,
             "estimate_chars_div_3_5": est,
@@ -187,6 +194,7 @@ def print_summary(r: dict[str, Any]) -> None:
     )
     print(f"catalog: {r['catalog_scope']}")
     print(f"tools: {r['tool_count']}  {r['by_category']}")
+    print(f"by toolset: {r['by_toolset']}")
     print(f"catalog tokens: {tok_str}")
     print("by module:")
     for m, v in r["by_module"].items():

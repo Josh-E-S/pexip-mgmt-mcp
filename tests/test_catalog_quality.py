@@ -126,11 +126,6 @@ def test_descriptions_meet_length_floor():
     assert not short, short
 
 
-@pytest.mark.xfail(
-    strict=True,
-    raises=AssertionError,
-    reason="phase 3: describe_resources replaces inline registry",
-)
 def test_descriptions_meet_length_ceiling():
     long = [t.name for t in TOOLS if len(t.description or "") > 1500]
     assert not long, long

@@ -401,6 +401,23 @@ GUIDANCE: dict[str, Guidance] = {
         "a dedicated delete tool exists for the resource type.",
         docs=CONFIG_API,
     ),
+    # ── Discovery and health (discovery.py, health.py) ───────────────────────
+    "describe_resources": _g(
+        "you are unsure which tool or resource name covers a request, the user asks what "
+        "the server can do, or a tool you expected is missing (it reports enabled toolsets).",
+        "you already know the tool; call it directly.",
+        examples=[
+            {"query": "teams"},
+            {"api": "status", "detail": "names"},
+            {"query": "sip proxy", "detail": "full"},
+        ],
+    ),
+    "get_platform_health": _g(
+        "the user asks whether the platform is OK, healthy, or has problems right now; it "
+        "replaces four separate calls with one summary and a verdict.",
+        "the user wants one specific list (list_alarms, list_node_status, "
+        "get_licensing_status) or historical health (list_alarm_history).",
+    ),
     # ── Schema (schema.py) ───────────────────────────────────────────────────
     "get_resource_schema": _g(
         "you are about to create or update a resource and are unsure of its field names, "

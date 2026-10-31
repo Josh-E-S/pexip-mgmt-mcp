@@ -138,6 +138,24 @@ class PexipSettings(BaseSettings):
         "header are always accepted.",
     )
 
+    toolsets: str = Field(
+        default="default",
+        description="Which toolsets to expose: 'default', 'all', or a comma list that may "
+        "include 'default' (e.g. 'default,dialplan'). Toolsets: core (always), rooms, "
+        "directory, config, live, health, history (default on); dialplan, platform (off). "
+        "Fewer tools means cheaper requests and better tool selection.",
+    )
+    tools: str = Field(
+        default="",
+        description="Comma-separated individual tools to expose in addition to the chosen "
+        "toolsets (bare or pexip_-prefixed names). Read-only and platform gates still apply.",
+    )
+    deny_tools: str = Field(
+        default="",
+        description="Comma-separated tools to remove regardless of toolsets (bare or "
+        "pexip_-prefixed names).",
+    )
+
     allow_security_resources: bool = Field(
         default=False,
         description="When false (the default), the generic create/update/delete_resource "
@@ -210,6 +228,14 @@ class PexipSettings(BaseSettings):
     @staticmethod
     def _csv(value: str) -> list[str]:
         return [v.strip() for v in value.split(",") if v.strip()]
+
+    @property
+    def tools_list(self) -> list[str]:
+        return self._csv(self.tools)
+
+    @property
+    def deny_tools_list(self) -> list[str]:
+        return self._csv(self.deny_tools)
 
     @property
     def mcp_allowed_hosts_list(self) -> list[str]:

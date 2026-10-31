@@ -54,6 +54,7 @@ def server_env(monkeypatch):
     monkeypatch.setenv("PEXIP_PASSWORD", "secret")
     monkeypatch.setenv("PEXIP_READ_ONLY", "false")
     monkeypatch.setenv("PEXIP_ALLOW_PLATFORM_TOOLS", "true")
+    monkeypatch.setenv("PEXIP_TOOLSETS", "all")
     # The SDK's StreamableHTTPSessionManager may only be run once per instance,
     # and the shared FastMCP singleton caches it; drop the cache so each test that
     # enters the lifespan gets a fresh manager.

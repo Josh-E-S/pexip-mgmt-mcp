@@ -6,6 +6,7 @@ Usage:
 Run this whenever tools are added, removed, or re-annotated so the
 catalog document never drifts from the code.
 """
+
 from __future__ import annotations
 
 import inspect

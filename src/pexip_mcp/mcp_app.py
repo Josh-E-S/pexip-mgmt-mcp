@@ -37,6 +37,7 @@ from mcp.server.fastmcp import FastMCP
 
 from pexip_mcp.client import PexipClient
 from pexip_mcp.config import PexipSettings
+from pexip_mcp.tools._catalog import TOOLSET_OF, resolve_toolsets
 from pexip_mcp.tools._guidance import GUIDANCE, render_description
 from pexip_mcp.tools._shaping import finalize_result
 
@@ -122,6 +123,8 @@ class PexipMCP(FastMCP):
             meta = dict(kwargs.pop("meta", None) or {})
             if guidance and guidance.get("examples"):
                 meta.setdefault("input_examples", guidance["examples"])
+            if base_name in TOOLSET_OF:
+                meta.setdefault("toolset", TOOLSET_OF[base_name])
 
             # functools.wraps keeps the signature, annotations and docstring, so
             # FastMCP still builds the schema and injects Context from `fn`.
@@ -153,6 +156,9 @@ class AppContext:
     # When False, the generic CRUD tools refuse to mutate security-critical
     # resources (SSH keys, roles, auth/SSO, certs). See resource_crud.py.
     allow_security_resources: bool = False
+    # Toolsets enabled in this deployment (see tools/_catalog.py); reported by
+    # pexip_describe_resources so a missing tool can be explained.
+    toolsets: frozenset[str] = frozenset()
 
 
 # Use _tool_is_read_only to tell a read tool apart from a write/control tool by its annotation.
@@ -196,6 +202,34 @@ def enforce_platform_gate(mcp_instance: FastMCP) -> list[str]:
     for name in removed:
         manager.remove_tool(name)
     return sorted(removed)
+
+
+# Use enforce_toolsets to keep only the tools in the enabled toolsets (plus PEXIP_TOOLS, minus PEXIP_DENY_TOOLS).
+def enforce_toolsets(mcp_instance: FastMCP, settings: PexipSettings) -> tuple[set[str], list[str]]:
+    """Apply PEXIP_TOOLSETS / PEXIP_TOOLS / PEXIP_DENY_TOOLS; return (enabled toolsets, removed names).
+
+    A tool that belongs to no toolset is kept and logged, so a newly added tool
+    cannot silently disappear; the catalog lint requires every tool to have one.
+    Deny always wins. Idempotent.
+    """
+    enabled = resolve_toolsets(settings.toolsets)
+    explicit = {t.removeprefix(TOOL_PREFIX) for t in settings.tools_list}
+    denied = {t.removeprefix(TOOL_PREFIX) for t in settings.deny_tools_list}
+    manager = mcp_instance._tool_manager
+    removed: list[str] = []
+    for name in list(manager._tools):
+        bare = name.removeprefix(TOOL_PREFIX)
+        toolset = TOOLSET_OF.get(bare)
+        if toolset is None and bare not in denied:
+            log.warning(
+                "Tool %s belongs to no toolset; keeping it. Add it to tools/_catalog.py.", name
+            )
+            continue
+        keep = (toolset in enabled or bare in explicit) and bare not in denied
+        if not keep:
+            manager.remove_tool(name)
+            removed.append(name)
+    return enabled, sorted(removed)
 
 
 # Use enforce_read_only to strip every mutating tool from the catalog when read-only mode is on.
@@ -268,6 +302,13 @@ def apply_startup_policy(server: FastMCP, settings: PexipSettings) -> None:
                 "PEXIP_ALLOW_SECURITY_RESOURCES=true — generic CRUD may now mutate "
                 "SSH keys, admin roles/permissions, auth/SSO, and TLS/CA certificates."
             )
+    enabled, trimmed = enforce_toolsets(server, settings)
+    log.info(
+        "Toolsets enabled: %s (%d tools exposed, %d outside the selection removed)",
+        ", ".join(sorted(enabled)),
+        len(server._tool_manager._tools),
+        len(trimmed),
+    )
 
 
 # Use lifespan to manage the server's full lifecycle: Startup, Run, Shutdown.
@@ -283,6 +324,7 @@ async def lifespan(server: FastMCP) -> AsyncIterator[AppContext]:
         yield AppContext(
             pexip=client,
             allow_security_resources=settings.allow_security_resources,
+            toolsets=frozenset(resolve_toolsets(settings.toolsets)),
         )
     finally:
         # 3. SHUTDOWN: When the server is turned off, cleanly close network connections.

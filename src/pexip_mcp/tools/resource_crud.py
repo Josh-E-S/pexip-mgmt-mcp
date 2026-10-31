@@ -263,45 +263,19 @@ async def list_resources(
 ) -> ListResult:
     """List any Pexip configuration resource that has no dedicated tool.
 
-    This is the catch-all listing tool. Supported resources by area:
-
-    - Admin auth & roles: authentication, role, ldap_role, permission,
-      adfs_auth_server, adfs_auth_server_domain, identity_provider,
-      identity_provider_group, user_group, user_group_entity_mapping.
-    - Integrations & signaling: teams_proxy (Microsoft Teams Connectors),
-      azure_tenant (Teams CVI tenant), gms_access_token, gms_gateway_token
-      (Google Meet), ms_exchange_connector, exchange_domain, sip_proxy,
-      sip_credential, mssip_proxy, h323_gatekeeper, turn_server, stun_server,
-      policy_server, policy_profile, break_in_allow_list_address,
-      telehealth_profile.
-    - Scheduling & sync: registration, conference_sync_template,
-      ldap_sync_field, scheduled_conference, scheduled_alias,
-      recurring_conference.
-    - Media library: media_library_entry, media_library_playlist,
-      media_library_playlist_entry.
-    - Platform & certificates: management_vm, licence, licence_request,
-      media_processing_server, diagnostic_graphs, ca_certificate,
-      tls_certificate, certificate_signing_request.
-    - MJX / One-Touch Join: mjx_integration, mjx_endpoint, mjx_endpoint_group,
-      mjx_meeting_processing_rule, mjx_exchange_deployment,
-      mjx_exchange_autodiscover_url, mjx_graph_deployment,
-      mjx_google_deployment.
-    - System infrastructure: dns_server, ntp_server, http_proxy,
-      syslog_server, snmp_network_management_system, smtp_server,
-      static_route, ssh_authorized_key.
-    - Backups & upgrades: system_backup (existing system backups), autobackup
-      (backup schedule), upgrade, software_bundle, software_bundle_revision,
-      scheduled_scaling.
-    - Web app: webapp_alias, webapp_branding, external_webapp_host.
-
-    Call get_resource_schema(resource) to discover filterable fields.
+    Catch-all for the ~80 generic configuration resources (SIP/H.323 proxies,
+    TURN/STUN, Teams/Google integrations, MJX, DNS/NTP/syslog/SMTP, certificates,
+    admin roles, backups, policy, web app hosting). Find the exact resource name
+    with pexip_describe_resources(query=...) and its filterable fields with
+    pexip_get_resource_schema(resource).
 
     Args:
-        resource: API resource name from the list above (e.g. "sip_proxy",
-            "system_backup", "teams_proxy", "dns_server").
+        resource: API resource name, e.g. "sip_proxy", "system_backup",
+            "teams_proxy", "dns_server".
         name_contains: Case-insensitive substring match on the name field.
         filters: Additional query filters as key-value pairs (e.g.
-            {"enable": true}). Keys must match the resource's field names.
+            {"enable": true}); a key is a field name with at most one lookup
+            suffix such as address__icontains.
         limit: Max results per page (default 20).
         offset: Pagination offset.
         response_format: "concise" (default) returns the high-signal fields of each

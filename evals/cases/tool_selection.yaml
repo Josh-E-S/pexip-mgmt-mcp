@@ -639,3 +639,29 @@
   expected_tools: [pexip_list_resources]
   match: exact
   tags: [config, maintenance, single-step]
+
+# --- Discovery and health (phase 3 tools) ---
+
+- id: platform-health-overview
+  prompt: "Is the Pexip platform healthy right now?"
+  expected_tools: [pexip_get_platform_health]
+  match: any_of
+  tags: [status, operator, health, single-step]
+
+- id: platform-anything-wrong
+  prompt: "Quick check: anything wrong with the platform at the moment?"
+  expected_tools: [pexip_get_platform_health, pexip_list_alarms]
+  match: any_of
+  tags: [status, operator, health, single-step]
+
+- id: discover-teams-resources
+  prompt: "Which tools or resources do you have for Microsoft Teams integration?"
+  expected_tools: [pexip_describe_resources]
+  match: subset
+  tags: [config, discovery, single-step]
+
+- id: discover-what-can-you-do
+  prompt: "What kinds of Pexip resources can you manage from here?"
+  expected_tools: [pexip_describe_resources]
+  match: subset
+  tags: [discovery, single-step]

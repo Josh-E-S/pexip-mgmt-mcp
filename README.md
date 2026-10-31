@@ -163,6 +163,29 @@ registry. That keeps the catalog at 122 tools, which lowers per-request token us
 and improves the agent's tool selection (verified by the
 [eval suite](#quality-the-eval-suite)).
 
+## Toolsets
+
+Fewer tools in a session means cheaper requests and better tool selection, so the
+catalog is grouped into toolsets and a deployment chooses which to expose with
+`PEXIP_TOOLSETS`. `core` is always on; `dialplan` and `platform` are opt-in.
+
+| Toolset | Default | Contents |
+|---|---|---|
+| `core` | always | `pexip_describe_resources` (searchable catalog + which toolsets are on), `pexip_get_resource_schema`, `pexip_get_platform_health` |
+| `rooms` | on | VMRs, dial aliases, automatic participants, IVR themes |
+| `directory` | on | end users, devices, live registrations |
+| `config` | on | generic CRUD over every other configuration resource, LDAP sources, global settings |
+| `live` | on | active conferences and participants, participant quality, all live call control |
+| `health` | on | alarms, licensing, node and location status, registrations, integration status |
+| `history` | on | `pexip_summarize_calls`, CDRs, past alarms / registrations / node events |
+| `dialplan` | off | gateway routing rules, locations, Conferencing Node configuration |
+| `platform` | off | backup / restore / upgrade / certificate commands (also gated by `PEXIP_ALLOW_PLATFORM_TOOLS`), provisioning emails, LDAP template sync |
+
+`PEXIP_TOOLS` adds individual tools and `PEXIP_DENY_TOOLS` removes them whatever the
+toolsets say. Read-only mode and the platform gate apply first. The MCP resources
+`pexip://registry` (the catalog) and `pexip://schema/{resource}` (a live
+configuration schema) are always available.
+
 ## Responses
 
 List tools return Pexip's own `{objects, meta}` envelope, with additions an agent
@@ -249,6 +272,9 @@ environment). See [.env.example](.env.example) for an annotated template.
 | `PEXIP_MAX_RESPONSE_BYTES` | `50000` | Byte cap on list results (measured on the JSON text block; the wire carries it twice, as text plus structured content). Lists are cut to fit, with `meta.truncated` and a `meta.hint` on how to narrow. Single records are returned whole |
 | `PEXIP_READ_ONLY` | `true` | Expose only read tools; remove all write/control tools. **On by default;** set `false` to enable writes |
 | `PEXIP_ALLOW_SECURITY_RESOURCES` | `false` | Allow generic CRUD to mutate security-critical resources (SSH keys, roles, auth, certs). Only relevant when writes are enabled |
+| `PEXIP_TOOLSETS` | `default` | Which toolsets to expose: `default`, `all`, or a comma list that may include `default` (e.g. `default,dialplan`). See [Toolsets](#toolsets) |
+| `PEXIP_TOOLS` | unset | Individual tools to add on top of the toolsets (bare or `pexip_` names) |
+| `PEXIP_DENY_TOOLS` | unset | Tools to remove regardless of toolsets |
 | `PEXIP_LEGACY_TOOL_NAMES` | `false` | Also register the pre-0.3 unprefixed tool names (`list_vmrs`) as aliases of the `pexip_*` names. Doubles the catalog; use only while migrating configs, skills, or eval cases |
 | `PEXIP_ALLOW_PLATFORM_TOOLS` | `false` | Expose platform-lifecycle command tools (backup/restore, upgrade, cert import, software upload, cloud-node start, snapshot). Removed at startup unless enabled, even with writes on |
 | `PEXIP_MCP_AUTH_MODE` | `token` | How HTTP clients authenticate to this server: `token` (static bearer) or `oauth` (OIDC). Only affects `--http`. See [docs/identity.md](docs/identity.md) |

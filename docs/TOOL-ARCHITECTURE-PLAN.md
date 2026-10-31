@@ -221,6 +221,15 @@ Still to do for phase 0: run `--llm` three times and `--live` once against the l
 - Not done: resolving foreign-key URIs to names in concise mode. It needs the phase 3 catalog (which field points at which resource) and an extra lookup per distinct FK; deferred to phase 3.
 - `docs/review/MANUAL-REVIEW-QUEUE.md` lists the 12 important-but-unverified tools for lab checks.
 
+### Phase 3 status (31 Oct 2026): done, except per-request HTTP selection
+
+- `tools/_catalog.py`: nine toolsets (core always on; dialplan and platform off by default) with every tool in exactly one; STATUS_REGISTRY and HISTORY_REGISTRY describing all 31 status/history resources (filters, dedicated tools, keywords) for discovery now and the phase 4 generic tools next.
+- `PEXIP_TOOLSETS` / `PEXIP_TOOLS` / `PEXIP_DENY_TOOLS` enforced in `apply_startup_policy` after the read-only and platform gates; each tool's `_meta.toolset` says where it belongs; an unknown toolset name fails startup; a tool outside any toolset is kept and logged (the lint forbids it).
+- `pexip_describe_resources` (searchable catalog across all three APIs with the tool for each resource, plus enabled toolsets) and the MCP resources `pexip://registry` and `pexip://schema/{resource}`. The `pexip_list_resources` description no longer inlines the registry (2.2k chars to 1.4k).
+- `pexip_get_platform_health`: alarms by level, licensing, node sync/load, live usage, one verdict.
+- Counts today: `all` 124, `default` 105, `rooms,live` 35. The default is still high because `health` holds the 33-tool status long tail; phase 4 folds it.
+- Not done: per-request toolset selection on the HTTP transport (`X-Pexip-Toolsets` header / `/x/{toolset}` path). FastMCP 1.x keeps one global tool registry per process, so this needs either one server instance per toolset combination or SDK v2's per-request listing; deferred to phase 6 with the SDK migration. Also deferred: `PEXIP_DENY_RESOURCES` for the generic CRUD registry, and per-toolset OIDC scopes.
+
 ### Re-sequencing after the 31 Oct reviews (`docs/review/`)
 
 - **Pulled into phase 1 and done:** pure-ASGI auth gates replacing `BaseHTTPMiddleware`; OIDC sessions bound to the principal that opened them (closes the audit-attribution / session-riding finding); non-ASCII `Authorization` header is a 401 not a 500; `PEXIP_MCP_PUBLIC_URL` for the RFC 9728 challenge; `PEXIP_MCP_ALLOWED_HOSTS` / `_ORIGINS` for DNS-rebinding protection behind a tunnel; `create` preset carries `destructiveHint`; `list_resources` filter keys validated (no `format`/pagination overrides, no relation spans); redaction covers `keydata`, `*_token`, `api_key`, `psk`, `*_community`, `shared_secret`; device/LDAP/global-settings create and update returns redacted for parity with reads; eval scorecard emitter.

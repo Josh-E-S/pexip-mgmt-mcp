@@ -216,9 +216,17 @@ def test_registry_has_all_expected_resources():
 # ── docstring inventory stays in sync with the registry ─────────────────────
 
 
-def test_list_resources_docstring_names_every_registry_resource():
-    """The list_resources docstring is the LLM's only way to discover which
-    resources the generic CRUD tools cover — every registry key must be in it."""
+def test_list_resources_points_at_discovery_and_catalog_names_every_resource():
+    """Discovery (pexip_describe_resources / pexip://registry) is how the model
+    finds generic resources; the docstring stays short and points there, and the
+    catalog must name every registry key."""
+    from pexip_mcp.tools import discovery
+
     doc = resource_crud.list_resources.__doc__ or ""
-    missing = [name for name in resource_crud.RESOURCE_REGISTRY if name not in doc]
-    assert not missing, f"list_resources docstring is missing: {missing}"
+    assert "describe_resources" in doc
+    assert len(doc) < 1200, (
+        "keep the list_resources description short; the catalog lives in discovery"
+    )
+    in_catalog = {e["resource"] for e in discovery.catalog_entries() if e["api"] == "configuration"}
+    missing = [name for name in resource_crud.RESOURCE_REGISTRY if name not in in_catalog]
+    assert not missing, f"catalog is missing: {missing}"

@@ -1,6 +1,6 @@
 # Tool Catalog
 
-Auto-generated reference of all 122 tools exposed by the pexip-mgmt-mcp server (46 Configuration, 39 Status, 14 History, 23 Command).
+Auto-generated reference of all 124 tools exposed by the pexip-mgmt-mcp server (48 Configuration, 39 Status, 14 History, 23 Command).
 
 Regenerate with: `uv run python scripts/generate_tools_md.py`
 
@@ -25,6 +25,7 @@ Regenerate with: `uv run python scripts/generate_tools_md.py`
 | `pexip_delete_ldap_source` | Delete LDAP sync source | ❌ | ✅ | ✅ | source |
 | `pexip_delete_resource` | Delete configuration resource | ❌ | ✅ | ✅ | resource, id |
 | `pexip_delete_vmr` | Delete VMR | ❌ | ✅ | ✅ | vmr |
+| `pexip_describe_resources` | Describe resources and tools | ✅ | ❌ | ✅ | api?, query?, detail? |
 | `pexip_dial_participant` | Dial out to add a participant | ❌ | ✅ | ❌ | conference_alias, destination, protocol?, call_type?, role?, system_location?, streaming?, remote_display_name?, dtmf_sequence? |
 | `pexip_disconnect_conference` | End a conference (disconnect everyone) | ❌ | ✅ | ✅ | conference |
 | `pexip_disconnect_participant` | Disconnect (kick) a participant | ❌ | ✅ | ✅ | participant, conference? |
@@ -60,6 +61,7 @@ Regenerate with: `uv run python scripts/generate_tools_md.py`
 | `pexip_get_node_statistics` | Get node load statistics | ✅ | ❌ | ✅ | node |
 | `pexip_get_node_status` | Get node status | ✅ | ❌ | ✅ | node |
 | `pexip_get_participant_quality` | Get live participant quality | ✅ | ❌ | ✅ | participant, conference? |
+| `pexip_get_platform_health` | Get platform health summary | ✅ | ❌ | ✅ |  |
 | `pexip_get_registration_alias` | Get registered alias | ✅ | ❌ | ✅ | registration_alias_id |
 | `pexip_get_registration_history` | Get registration history | ✅ | ❌ | ✅ | entry_id |
 | `pexip_get_resource` | Get configuration resource | ✅ | ❌ | ✅ | resource, id |

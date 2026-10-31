@@ -283,3 +283,12 @@
   expected_params:
     location: "Primary"
   tags: [status, monitoring, params]
+
+- id: describe-resources-query
+  prompt: "Find me the resource and tool for SIP proxies"
+  expected_tool: pexip_describe_resources
+  expected_params:
+    query: "sip proxy"
+  acceptable_alternatives:
+    query: ["sip", "sip_proxy", "proxy", "sip proxies"]
+  tags: [discovery, params]
