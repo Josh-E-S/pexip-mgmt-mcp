@@ -64,8 +64,8 @@ PEXIP_EVAL_DIAL_TARGET="sip:test@lab.local" uv run pytest evals/ --llm --live
 All LLM layers run short **multi-turn conversations**: the prompt goes to
 Claude with the full tool catalog, each tool call is answered with a mocked
 result, and grading happens on the finished transcript. This lets legitimate
-protocols complete before scoring — e.g. `get_resource_schema` before
-`create_resource`, or listing participants before a destructive command.
+protocols complete before scoring — e.g. `pexip_get_resource_schema` before
+`pexip_create_resource`, or listing participants before a destructive command.
 
 ## Test cases
 
@@ -132,11 +132,11 @@ and tagged so you can run one slice at a time (`-k <tag>`):
     # `optional: true` marks a lookup the model MAY make but doesn't have to —
     # the server resolves names to UUIDs itself, so listing first is
     # legitimate but unnecessary. The matcher accepts either path.
-    - tool: list_active_conferences
+    - tool: pexip_list_active_conferences
       optional: true
       params_contain: {}
       returns: {objects: [{id: "conf-uuid-1", name: "Standup"}], meta: {total_count: 1}}
-    - tool: lock_conference
+    - tool: pexip_lock_conference
       # A list value means any-of: the model may pass the UUID from the
       # lookup OR the name from the prompt (resolved server-side).
       params_contain: {conference_id: ["conf-uuid-1", "Standup"]}
@@ -154,7 +154,7 @@ and tagged so you can run one slice at a time (`-k <tag>`):
     field_name: "expected_value"
   params_present: [field_that_must_exist]
   # Optional, same semantics as tool_selection: feed realistic results to
-  # preparatory calls (e.g. get_resource_schema) before the graded call.
+  # preparatory calls (e.g. pexip_get_resource_schema) before the graded call.
   mock_returns: {}
   tags: [category, ...]
 ```
@@ -175,7 +175,7 @@ active call. Instead of requiring you to manually dial in, the test
 fixture automatically:
 
 1. Creates a temporary VMR (`eval-live-call-room`)
-2. Dials out to `PEXIP_EVAL_DIAL_TARGET` using `dial_participant`
+2. Dials out to `PEXIP_EVAL_DIAL_TARGET` using `pexip_dial_participant`
 3. Waits 5 seconds for the call to connect
 4. Runs status reads (list participants, get quality) and command actions
    (mute, lock, send message, disconnect) — including targeting the

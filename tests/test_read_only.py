@@ -8,6 +8,7 @@ parts in isolation: the config flag parsing and the `enforce_read_only` pruning.
 A throwaway FastMCP instance is built here (rather than mutating the shared
 `mcp` singleton) so removing tools can't leak into other tests.
 """
+
 from __future__ import annotations
 
 import os
@@ -58,6 +59,7 @@ def _server_with_one_tool_per_bucket() -> FastMCP:
 
 # --- config flag ---
 
+
 def test_read_only_defaults_true(clean_env):
     # Secure by default: the mutating admin surface is opt-in.
     s = PexipSettings(host="h", username="u", password="p")
@@ -81,6 +83,7 @@ def test_read_only_parses_false_from_env(clean_env, monkeypatch):
 
 
 # --- enforce_read_only pruning ---
+
 
 def test_enforce_read_only_removes_only_mutating_tools():
     server = _server_with_one_tool_per_bucket()
@@ -111,6 +114,7 @@ def test_enforce_read_only_keeps_read_tools_callable():
 
 # --- apply_startup_policy (shared by stdio + --http paths, F1) ---
 
+
 def test_apply_startup_policy_prunes_when_read_only():
     """The --http path calls this eagerly; read-only default must prune writes."""
     from pexip_mcp.config import PexipSettings
@@ -134,6 +138,7 @@ def test_apply_startup_policy_keeps_writes_when_disabled():
 
 
 # --- platform-lifecycle gate (PEXIP_ALLOW_PLATFORM_TOOLS) ---
+
 
 def _server_with_platform_and_normal_tools() -> FastMCP:
     """Build a server with one platform-lifecycle tool and one ordinary control tool."""
@@ -172,7 +177,7 @@ def test_platform_tools_gated_by_default_when_writes_enabled():
     settings = PexipSettings(host="h", username="u", password="p", read_only=False)
     apply_startup_policy(server, settings)
     names = {t.name for t in server._tool_manager.list_tools()}
-    assert "backup_restore" not in names          # platform gated off by default
+    assert "backup_restore" not in names  # platform gated off by default
     assert {"mute_participant", "list_vmrs"} <= names  # ordinary tools remain
 
 

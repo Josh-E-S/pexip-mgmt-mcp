@@ -5,6 +5,7 @@ Pexip's Management API self-describes — every resource exposes a JSON Schema a
 and help text. This tool exposes that to the LLM so it can discover what a
 resource looks like before trying to CRUD it.
 """
+
 from __future__ import annotations
 
 from typing import Any

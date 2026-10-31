@@ -4,6 +4,7 @@ The `global` resource is a singleton — there is exactly one instance with
 id=1. Use get_resource_schema('global') to discover available fields before
 making updates.
 """
+
 from __future__ import annotations
 
 from typing import Any
@@ -26,9 +27,7 @@ async def get_global_settings(ctx: Context) -> dict[str, Any]:
 
 
 @mcp.tool(annotations=update("Update global platform settings"))
-async def update_global_settings(
-    ctx: Context, updates: dict[str, Any]
-) -> dict[str, Any]:
+async def update_global_settings(ctx: Context, updates: dict[str, Any]) -> dict[str, Any]:
     """Patch one or more fields on the platform-wide global settings.
 
     The `updates` dict is sent as the PATCH body — keys are field names from

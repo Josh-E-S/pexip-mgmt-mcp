@@ -204,6 +204,14 @@ Done on branch `claude/determined-ride-dgr72l`:
 
 Still to do for phase 0: run `--llm` three times and `--live` once against the lab and commit the scorecard (`PEXIP_EVAL_SCORECARD_JSON`); record the Glama tier; diff `RESOURCE_REGISTRY` against the live node's `/api/admin/configuration/v1/` listing.
 
+### Phase 1 status (31 Oct 2026): done
+
+- Every tool is published as `pexip_<function>` by a `FastMCP` subclass (`mcp_app.PexipMCP`); tool modules and Python function names are unchanged. `PEXIP_LEGACY_TOOL_NAMES=true` registers the old names as aliases (244 tools) for migration.
+- `tools/_guidance.py` holds one entry per tool (use when / do not use when / API reference / input examples) applied at registration; sibling names in docstrings and guidance are rewritten to the published form. The catalog lint now asserts the prefix, the 120-char floor, "Use when", input examples on 4+-optional-parameter tools, an API reference on freeform-payload tools, and one type per parameter name.
+- Parameter names disambiguated: live-control tools take `participant` / `conference` (name or UUID); `sync_conference_ldap` takes `template_id`; the provisioning emails take `vmr_id`; `delete_automatic_participant` takes `automatic_participant_id`; `get_cloud_node` / `get_teams_node_status` take `cloud_node_id` / `teams_node_id`; `get_registration_alias` takes `registration_alias_id`; backplane ids accept int or str everywhere.
+- Eval YAML, the error-handling function map, the live suite, TOOLS.md, README, `.env.example`, and the skills package (names, the UUID guidance, `.mcp.json` env passthrough) migrated.
+- Measured cost: the full catalog is ~29.4k estimated tokens, up from ~22.2k (`evals/baseline/2026-10-31-catalog-full-phase1.json`). The guidance block adds roughly 60 tokens per tool. Phases 3 and 4 recover this by cutting the tool count; the LLM eval run (phase 0, your lab) is what shows whether the guidance buys the accuracy it is meant to.
+
 ### Re-sequencing after the 31 Oct reviews (`docs/review/`)
 
 - **Pulled into phase 1 and done:** pure-ASGI auth gates replacing `BaseHTTPMiddleware`; OIDC sessions bound to the principal that opened them (closes the audit-attribution / session-riding finding); non-ASCII `Authorization` header is a 401 not a 500; `PEXIP_MCP_PUBLIC_URL` for the RFC 9728 challenge; `PEXIP_MCP_ALLOWED_HOSTS` / `_ORIGINS` for DNS-rebinding protection behind a tunnel; `create` preset carries `destructiveHint`; `list_resources` filter keys validated (no `format`/pagination overrides, no relation spans); redaction covers `keydata`, `*_token`, `api_key`, `psk`, `*_community`, `shared_secret`; device/LDAP/global-settings create and update returns redacted for parity with reads; eval scorecard emitter.

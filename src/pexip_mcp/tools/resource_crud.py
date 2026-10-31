@@ -8,6 +8,7 @@ Resources with custom typed parameters (VMRs, devices, gateway rules, etc.)
 keep their own dedicated tools — this module covers everything that previously
 used a generic ``settings: dict`` parameter.
 """
+
 from __future__ import annotations
 
 import re
@@ -66,7 +67,10 @@ RESOURCE_REGISTRY: dict[str, dict[str, str]] = {
     "recurring_conference": {"label": "recurring conference", "lookup_field": "name"},
     "media_library_entry": {"label": "media library entry", "lookup_field": "name"},
     "media_library_playlist": {"label": "media library playlist", "lookup_field": "name"},
-    "media_library_playlist_entry": {"label": "media library playlist entry", "lookup_field": "name"},
+    "media_library_playlist_entry": {
+        "label": "media library playlist entry",
+        "lookup_field": "name",
+    },
     # ── Platform infrastructure ──
     "management_vm": {"label": "Management Node", "lookup_field": "name"},
     "licence": {"label": "licence", "lookup_field": "name"},
@@ -82,7 +86,10 @@ RESOURCE_REGISTRY: dict[str, dict[str, str]] = {
     "mjx_endpoint_group": {"label": "MJX endpoint group", "lookup_field": "name"},
     "mjx_meeting_processing_rule": {"label": "MJX meeting processing rule", "lookup_field": "name"},
     "mjx_exchange_deployment": {"label": "MJX Exchange deployment", "lookup_field": "name"},
-    "mjx_exchange_autodiscover_url": {"label": "MJX Exchange autodiscover URL", "lookup_field": "name"},
+    "mjx_exchange_autodiscover_url": {
+        "label": "MJX Exchange autodiscover URL",
+        "lookup_field": "name",
+    },
     "mjx_graph_deployment": {"label": "MJX Graph deployment", "lookup_field": "name"},
     "mjx_google_deployment": {"label": "MJX Google deployment", "lookup_field": "name"},
     # ── System infrastructure ──
@@ -120,9 +127,23 @@ RESOURCE_REGISTRY: dict[str, dict[str, str]] = {
 _FILTER_KEY_RE = re.compile(r"^[a-z][a-z0-9]*(?:_[a-z0-9]+)*(?:__(?P<lookup>[a-z]+))?$")
 _FILTER_LOOKUPS = frozenset(
     {
-        "exact", "iexact", "contains", "icontains", "startswith", "istartswith",
-        "endswith", "iendswith", "in", "gt", "gte", "lt", "lte", "isnull",
-        "regex", "iregex", "range",
+        "exact",
+        "iexact",
+        "contains",
+        "icontains",
+        "startswith",
+        "istartswith",
+        "endswith",
+        "iendswith",
+        "in",
+        "gt",
+        "gte",
+        "lt",
+        "lte",
+        "isnull",
+        "regex",
+        "iregex",
+        "range",
     }
 )
 _RESERVED_FILTER_KEYS = frozenset({"format", "callback", "limit", "offset", "order_by"})
@@ -162,12 +183,7 @@ def _validate_resource(resource: str) -> dict[str, str]:
     if meta is None:
         raise PexipError(
             400,
-            {
-                "resource": [
-                    f"Unknown resource {resource!r}. "
-                    f"Valid resources: {_RESOURCE_LIST_STR}"
-                ]
-            },
+            {"resource": [f"Unknown resource {resource!r}. Valid resources: {_RESOURCE_LIST_STR}"]},
         )
     return meta
 
@@ -204,7 +220,11 @@ def _validate_filters(filters: dict[str, Any]) -> dict[str, Any]:
         ):
             raise PexipError(
                 400,
-                {"filters": [f"Filter {key!r} must be a string, number, boolean, or list of those."]},
+                {
+                    "filters": [
+                        f"Filter {key!r} must be a string, number, boolean, or list of those."
+                    ]
+                },
             )
     return filters
 
@@ -306,9 +326,7 @@ async def get_resource(
     """
     meta = _validate_resource(resource)
     client = get_client(ctx)
-    resolved = await resolve_id_by_field(
-        client, resource, id, field=meta["lookup_field"]
-    )
+    resolved = await resolve_id_by_field(client, resource, id, field=meta["lookup_field"])
     return redact_secrets(await client.get(resource, resolved))
 
 
@@ -364,9 +382,7 @@ async def update_resource(
     if not settings:
         raise PexipError(400, {"settings": ["At least one field is required"]})
     client = get_client(ctx)
-    resolved = await resolve_id_by_field(
-        client, resource, id, field=meta["lookup_field"]
-    )
+    resolved = await resolve_id_by_field(client, resource, id, field=meta["lookup_field"])
     await client.update(resource, resolved, settings)
     return redact_secrets(await client.get(resource, resolved))
 
@@ -387,8 +403,6 @@ async def delete_resource(
     meta = _validate_resource(resource)
     _guard_sensitive(resource, ctx)
     client = get_client(ctx)
-    resolved = await resolve_id_by_field(
-        client, resource, id, field=meta["lookup_field"]
-    )
+    resolved = await resolve_id_by_field(client, resource, id, field=meta["lookup_field"])
     await client.delete(resource, resolved)
     return {"deleted": True, "resource": resource, "id": resolved}

@@ -11,6 +11,7 @@ Layer 2 (--llm flag):
   before scoring. Cases may provide ``mock_returns`` (tool name -> payload)
   for intermediate calls; unlisted tools get ``{}``.
 """
+
 from __future__ import annotations
 
 import json
@@ -28,6 +29,7 @@ MAX_TURNS = 4
 # ---------------------------------------------------------------------------
 # Layer 1: deterministic validation
 # ---------------------------------------------------------------------------
+
 
 @pytest.mark.parametrize("case", CASES, ids=case_ids(CASES))
 def test_expected_tools_exist_in_registry(case, tool_names):
@@ -47,6 +49,7 @@ def test_match_type_is_valid(case, tool_registry):
 # ---------------------------------------------------------------------------
 # Layer 2: LLM-scored eval
 # ---------------------------------------------------------------------------
+
 
 @pytest.mark.llm
 @pytest.mark.parametrize("case", CASES, ids=case_ids(CASES))
@@ -85,17 +88,19 @@ def test_claude_selects_correct_tools(case, claude_client, claude_tools):
             break
 
         messages.append({"role": "assistant", "content": response.content})
-        messages.append({
-            "role": "user",
-            "content": [
-                {
-                    "type": "tool_result",
-                    "tool_use_id": tu.id,
-                    "content": json.dumps(mock_returns.get(tu.name, {})),
-                }
-                for tu in tool_uses
-            ],
-        })
+        messages.append(
+            {
+                "role": "user",
+                "content": [
+                    {
+                        "type": "tool_result",
+                        "tool_use_id": tu.id,
+                        "content": json.dumps(mock_returns.get(tu.name, {})),
+                    }
+                    for tu in tool_uses
+                ],
+            }
+        )
 
     assert result.passed, (
         f"Case {case['id']!r}: {result.details}\n"

@@ -11,6 +11,7 @@ has four sibling sub-APIs we care about, all reached by changing one path segmen
 This module is just transport: auth, JSON in/out, 429 retry. The tool layer in
 `pexip_mcp.tools.*` decides which sub-API and resource to call.
 """
+
 from __future__ import annotations
 
 import asyncio
@@ -149,9 +150,7 @@ class PexipClient:
         """
         if auth is None:
             if username is None or password is None:
-                raise ValueError(
-                    "PexipClient needs either auth= or both username and password."
-                )
+                raise ValueError("PexipClient needs either auth= or both username and password.")
             auth = httpx.BasicAuth(username, password)
         self._identity = identity or (f"basic:{username}" if username else "credential")
         self._max_retries = max_retries
@@ -206,9 +205,7 @@ class PexipClient:
     async def schema(self, resource: str, *, api: str = "configuration") -> dict[str, Any]:
         """GET /<api>/v1/<resource>/schema/ — returns the live JSON schema for that resource."""
         resource = _safe_segment(resource, kind="resource")
-        return await self._request(
-            "GET", f"{api}/v1/{resource}/schema/", params={"format": "json"}
-        )
+        return await self._request("GET", f"{api}/v1/{resource}/schema/", params={"format": "json"})
 
     # Use get to fetch one resource by its numeric ID.
     async def get(
@@ -220,9 +217,7 @@ class PexipClient:
         return await self._request("GET", f"{api}/v1/{resource}/{obj_id}/")
 
     # Use _audited to time a mutation, emit one audit line, and re-raise on failure.
-    async def _audited(
-        self, action: str, resource: str, obj_id: object | None, coro: Any
-    ) -> Any:
+    async def _audited(self, action: str, resource: str, obj_id: object | None, coro: Any) -> Any:
         """Await `coro`, recording a structured audit line for this mutation.
 
         Success logs at INFO, failure at WARNING with the error's status and
@@ -294,9 +289,7 @@ class PexipClient:
         await self._audited("update", resource, obj_id, _work())
 
     # Use delete to permanently remove a resource by id.
-    async def delete(
-        self, resource: str, obj_id: int | str, *, api: str = "configuration"
-    ) -> None:
+    async def delete(self, resource: str, obj_id: int | str, *, api: str = "configuration") -> None:
         """DELETE /<api>/v1/<resource>/<id>/."""
         resource = _safe_segment(resource, kind="resource")
         obj_id = _safe_segment(obj_id, kind="id")
@@ -323,9 +316,7 @@ class PexipClient:
         action = _safe_segment(action, kind="action")
 
         async def _work() -> dict[str, Any]:
-            response = await self._raw(
-                "POST", f"command/v1/{scope}/{action}/", json=data or {}
-            )
+            response = await self._raw("POST", f"command/v1/{scope}/{action}/", json=data or {})
             self._check(response)
             if not response.content:
                 return {}
@@ -360,8 +351,7 @@ class PexipClient:
                 return response
             delay = _compute_retry_delay(response, attempt)
             logger.warning(
-                "Pexip API rate-limited (429) on %s %s; retrying in %.1fs "
-                "(attempt %d/%d)",
+                "Pexip API rate-limited (429) on %s %s; retrying in %.1fs (attempt %d/%d)",
                 method,
                 path,
                 delay,
@@ -462,9 +452,7 @@ class PexipOAuth2Auth(httpx.Auth):
         self._lock = asyncio.Lock()
 
     # Use async_auth_flow to inject the bearer token and retry once on a 401 with a fresh token.
-    async def async_auth_flow(
-        self, request: httpx.Request
-    ) -> AsyncIterator[httpx.Request]:
+    async def async_auth_flow(self, request: httpx.Request) -> AsyncIterator[httpx.Request]:
         """Attach the cached/fresh bearer token; on 401, refresh once and retry."""
         token = await self._get_token()
         request.headers["Authorization"] = f"Bearer {token}"

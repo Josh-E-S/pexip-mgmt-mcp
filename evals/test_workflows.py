@@ -8,6 +8,7 @@ Layer 2 (--llm flag):
   Runs a simulated multi-turn conversation: sends the prompt, gets a tool_use
   response, feeds the mock return back, and checks the full chain.
 """
+
 from __future__ import annotations
 
 import json
@@ -22,6 +23,7 @@ CASES = load_cases("workflows.yaml")
 # ---------------------------------------------------------------------------
 # Layer 1: deterministic validation
 # ---------------------------------------------------------------------------
+
 
 @pytest.mark.parametrize("case", CASES, ids=case_ids(CASES))
 def test_workflow_tools_exist(case, tool_names):
@@ -50,14 +52,13 @@ def test_workflow_params_are_valid(case, tool_registry):
 @pytest.mark.parametrize("case", CASES, ids=case_ids(CASES))
 def test_workflow_has_at_least_two_steps(case, tool_registry):
     """A workflow must have at least 2 steps to be a meaningful chain test."""
-    assert len(case["steps"]) >= 2, (
-        f"Workflow {case['id']!r} has only {len(case['steps'])} step(s)"
-    )
+    assert len(case["steps"]) >= 2, f"Workflow {case['id']!r} has only {len(case['steps'])} step(s)"
 
 
 # ---------------------------------------------------------------------------
 # Layer 2: LLM-scored multi-turn simulation
 # ---------------------------------------------------------------------------
+
 
 def _match_step(steps: list[dict], step_idx: int, tool_name: str) -> int | None:
     """Find the step this call satisfies, skipping over unmatched optional steps.
@@ -135,11 +136,13 @@ def test_claude_chains_tools_correctly(case, claude_client, claude_tools):
                 _check_params(case["id"], j, step, tool_use.input)
                 step_idx = j + 1
 
-            tool_results.append({
-                "type": "tool_result",
-                "tool_use_id": tool_use.id,
-                "content": json.dumps(mock_return),
-            })
+            tool_results.append(
+                {
+                    "type": "tool_result",
+                    "tool_use_id": tool_use.id,
+                    "content": json.dumps(mock_return),
+                }
+            )
 
         messages.append({"role": "assistant", "content": response.content})
         messages.append({"role": "user", "content": tool_results})

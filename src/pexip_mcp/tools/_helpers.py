@@ -29,6 +29,7 @@ Two groups of utilities live here:
    are just named shortcuts for those buckets so tool modules can write
    `annotations=read("List VMRs")` instead of constructing the full object.
 """
+
 from __future__ import annotations
 
 from typing import Any
@@ -196,9 +197,7 @@ async def paginate_all(
     offset = 0
     server_total: int | None = None
     while True:
-        page = await client.list(
-            resource, api=api, limit=page_size, offset=offset, **params
-        )
+        page = await client.list(resource, api=api, limit=page_size, offset=offset, **params)
         page_objs = page.get("objects", [])
         page_meta = page.get("meta", {})
         if server_total is None:

@@ -22,6 +22,7 @@ Authentication is selectable via `PEXIP_AUTH_MODE`:
                client (Users & Devices > OAuth2 Clients) and enable Management
                API OAuth2. See client.py::PexipOAuth2Auth for the token flow.
 """
+
 from __future__ import annotations
 
 from typing import Literal
@@ -76,9 +77,7 @@ class PexipSettings(BaseSettings):
 
     verify_tls: bool = Field(default=True, description="Verify TLS certificate.")
     timeout: float = Field(default=30.0, description="HTTP timeout seconds.")
-    max_retries: int = Field(
-        default=3, description="Max retries on 429 rate-limit responses."
-    )
+    max_retries: int = Field(default=3, description="Max retries on 429 rate-limit responses.")
 
     read_only: bool = Field(
         default=True,
@@ -169,9 +168,7 @@ class PexipSettings(BaseSettings):
                 if not value
             ]
             if missing:
-                raise ValueError(
-                    f"auth_mode='basic' requires {' and '.join(missing)} to be set."
-                )
+                raise ValueError(f"auth_mode='basic' requires {' and '.join(missing)} to be set.")
         else:  # oauth2
             missing = [
                 f"PEXIP_{name.upper()}"
@@ -182,9 +179,7 @@ class PexipSettings(BaseSettings):
                 if not value
             ]
             if missing:
-                raise ValueError(
-                    f"auth_mode='oauth2' requires {' and '.join(missing)} to be set."
-                )
+                raise ValueError(f"auth_mode='oauth2' requires {' and '.join(missing)} to be set.")
         return self
 
     # Use _check_oidc_config to require issuer+audience when downstream OAuth is selected.

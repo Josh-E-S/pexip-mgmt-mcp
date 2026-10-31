@@ -7,6 +7,7 @@ configured once on the VMR; Pexip handles the dialing every time the meeting
 runs. Compare with the Command API's `dial_participant`, which adds a
 participant to a single live call on demand.
 """
+
 from __future__ import annotations
 
 from typing import Any
@@ -90,9 +91,7 @@ async def add_automatic_participant(
     payload: dict[str, Any] = {"alias": alias, "conference": fk_uri("conference", vmr_id)}
     location_uri: str | None = None
     if system_location is not None:
-        loc_id = await resolve_id_by_field(
-            client, "system_location", system_location, field="name"
-        )
+        loc_id = await resolve_id_by_field(client, "system_location", system_location, field="name")
         location_uri = fk_uri("system_location", loc_id)
     for field, value in (
         ("protocol", protocol),
@@ -113,7 +112,9 @@ async def add_automatic_participant(
 
 
 @mcp.tool(annotations=delete("Delete automatic participant"))
-async def delete_automatic_participant(ctx: Context, participant_id: int) -> dict[str, Any]:
+async def delete_automatic_participant(
+    ctx: Context, automatic_participant_id: int
+) -> dict[str, Any]:
     """Delete an automatic_participant by id. Use list_automatic_participants to find it."""
-    await get_client(ctx).delete("automatic_participant", participant_id)
-    return {"deleted": True, "id": participant_id}
+    await get_client(ctx).delete("automatic_participant", automatic_participant_id)
+    return {"deleted": True, "id": automatic_participant_id}

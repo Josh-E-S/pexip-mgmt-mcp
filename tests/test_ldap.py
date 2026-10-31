@@ -16,9 +16,17 @@ from .conftest import BASE_URL, fk
 async def test_list_ldap_sources(ctx):
     route = respx.get(f"{BASE_URL}/ldap_sync_source/").mock(
         return_value=httpx.Response(
-            200, json={"meta": {"total_count": 0, "limit": 20, "offset": 0,
-                                "next": None, "previous": None},
-                      "objects": []}
+            200,
+            json={
+                "meta": {
+                    "total_count": 0,
+                    "limit": 20,
+                    "offset": 0,
+                    "next": None,
+                    "previous": None,
+                },
+                "objects": [],
+            },
         )
     )
 
@@ -33,10 +41,10 @@ async def test_get_ldap_source_by_name(ctx):
         return_value=httpx.Response(
             200,
             json={
-                "meta": {"total_count": 1, "limit": 2, "offset": 0,
-                         "next": None, "previous": None},
-                "objects": [{"id": 5, "name": "corp-ad",
-                             "resource_uri": fk("ldap_sync_source", 5)}],
+                "meta": {"total_count": 1, "limit": 2, "offset": 0, "next": None, "previous": None},
+                "objects": [
+                    {"id": 5, "name": "corp-ad", "resource_uri": fk("ldap_sync_source", 5)}
+                ],
             },
         )
     )
@@ -83,9 +91,7 @@ async def test_update_ldap_source_no_fields_raises(ctx):
 
 @respx.mock
 async def test_delete_ldap_source(ctx):
-    route = respx.delete(f"{BASE_URL}/ldap_sync_source/5/").mock(
-        return_value=httpx.Response(204)
-    )
+    route = respx.delete(f"{BASE_URL}/ldap_sync_source/5/").mock(return_value=httpx.Response(204))
 
     result = await ldap.delete_ldap_source(ctx, 5)
 

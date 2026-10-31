@@ -15,9 +15,7 @@ from .conftest import BASE_URL
 @respx.mock
 async def test_get_global_settings(ctx):
     respx.get(f"{BASE_URL}/global/1/").mock(
-        return_value=httpx.Response(
-            200, json={"id": 1, "management_session_timeout_secs": 1800}
-        )
+        return_value=httpx.Response(200, json={"id": 1, "management_session_timeout_secs": 1800})
     )
 
     result = await global_settings.get_global_settings(ctx)
@@ -37,9 +35,7 @@ async def test_update_global_settings_empty_raises(ctx):
 async def test_update_global_settings_patches_singleton(ctx):
     patch = respx.patch(f"{BASE_URL}/global/1/").mock(return_value=httpx.Response(202))
     respx.get(f"{BASE_URL}/global/1/").mock(
-        return_value=httpx.Response(
-            200, json={"id": 1, "management_session_timeout_secs": 3600}
-        )
+        return_value=httpx.Response(200, json={"id": 1, "management_session_timeout_secs": 3600})
     )
 
     result = await global_settings.update_global_settings(

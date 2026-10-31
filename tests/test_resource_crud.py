@@ -44,9 +44,7 @@ async def test_list_resources_basic(ctx):
 
 @respx.mock
 async def test_list_resources_with_name_contains(ctx):
-    route = respx.get(_list_url("role")).mock(
-        return_value=httpx.Response(200, json=EMPTY_LIST)
-    )
+    route = respx.get(_list_url("role")).mock(return_value=httpx.Response(200, json=EMPTY_LIST))
 
     await resource_crud.list_resources(ctx, resource="role", name_contains="admin")
 
@@ -144,9 +142,7 @@ async def test_create_resource_empty_settings_raises(ctx):
 
 @respx.mock
 async def test_update_resource_by_id(ctx):
-    patch = respx.patch(_detail_url("smtp_server", 7)).mock(
-        return_value=httpx.Response(202)
-    )
+    patch = respx.patch(_detail_url("smtp_server", 7)).mock(return_value=httpx.Response(202))
     respx.get(_detail_url("smtp_server", 7)).mock(
         return_value=httpx.Response(200, json={"id": 7, "name": "mail", "port": 587})
     )
@@ -162,9 +158,7 @@ async def test_update_resource_by_id(ctx):
 
 async def test_update_resource_empty_settings_raises(ctx):
     with pytest.raises(PexipError) as exc:
-        await resource_crud.update_resource(
-            ctx, resource="smtp_server", id=1, settings={}
-        )
+        await resource_crud.update_resource(ctx, resource="smtp_server", id=1, settings={})
 
     assert exc.value.status_code == 400
 
@@ -174,9 +168,7 @@ async def test_update_resource_empty_settings_raises(ctx):
 
 @respx.mock
 async def test_delete_resource_by_id(ctx):
-    route = respx.delete(_detail_url("ntp_server", 2)).mock(
-        return_value=httpx.Response(204)
-    )
+    route = respx.delete(_detail_url("ntp_server", 2)).mock(return_value=httpx.Response(204))
 
     result = await resource_crud.delete_resource(ctx, resource="ntp_server", id=2)
 
@@ -197,9 +189,7 @@ async def test_delete_resource_by_name(ctx):
             },
         )
     )
-    respx.delete(_detail_url("stun_server", 4)).mock(
-        return_value=httpx.Response(204)
-    )
+    respx.delete(_detail_url("stun_server", 4)).mock(return_value=httpx.Response(204))
 
     result = await resource_crud.delete_resource(ctx, resource="stun_server", id="stun-eu")
 
@@ -211,8 +201,13 @@ async def test_delete_resource_by_name(ctx):
 
 def test_registry_has_all_expected_resources():
     expected_prefixes = [
-        "sip_proxy", "turn_server", "role", "dns_server",
-        "policy_profile", "mjx_integration", "webapp_branding",
+        "sip_proxy",
+        "turn_server",
+        "role",
+        "dns_server",
+        "policy_profile",
+        "mjx_integration",
+        "webapp_branding",
     ]
     for r in expected_prefixes:
         assert r in resource_crud.RESOURCE_REGISTRY, f"Missing registry entry: {r}"

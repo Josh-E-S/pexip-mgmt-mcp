@@ -6,6 +6,7 @@ parameters are passed.
 
 All tests are deterministic — they use respx to mock API responses.
 """
+
 from __future__ import annotations
 
 import httpx
@@ -33,23 +34,23 @@ HISTORY_URL = f"https://{PEXIP_HOST}/api/admin/history/v1"
 CASES = load_cases("error_handling.yaml")
 
 TOOL_FUNCTIONS = {
-    "get_vmr": conference.get_vmr,
-    "update_vmr": conference.update_vmr,
-    "delete_vmr": conference.delete_vmr,
-    "disconnect_participant": command.disconnect_participant,
-    "disconnect_conference": command.disconnect_conference,
-    "set_participant_role": command.set_participant_role,
-    "set_conference_layout": command.set_conference_layout,
-    "mute_participant": command.mute_participant,
-    "transfer_participant": command.transfer_participant,
-    "get_resource_schema": schema.get_resource_schema,
-    "summarize_calls": history.summarize_calls,
-    "get_end_user": end_user.get_end_user,
-    "get_device": device.get_device,
-    "get_resource": resource_crud.get_resource,
-    "list_resources": resource_crud.list_resources,
-    "create_resource": resource_crud.create_resource,
-    "update_resource": resource_crud.update_resource,
+    "pexip_get_vmr": conference.get_vmr,
+    "pexip_update_vmr": conference.update_vmr,
+    "pexip_delete_vmr": conference.delete_vmr,
+    "pexip_disconnect_participant": command.disconnect_participant,
+    "pexip_disconnect_conference": command.disconnect_conference,
+    "pexip_set_participant_role": command.set_participant_role,
+    "pexip_set_conference_layout": command.set_conference_layout,
+    "pexip_mute_participant": command.mute_participant,
+    "pexip_transfer_participant": command.transfer_participant,
+    "pexip_get_resource_schema": schema.get_resource_schema,
+    "pexip_summarize_calls": history.summarize_calls,
+    "pexip_get_end_user": end_user.get_end_user,
+    "pexip_get_device": device.get_device,
+    "pexip_get_resource": resource_crud.get_resource,
+    "pexip_list_resources": resource_crud.list_resources,
+    "pexip_create_resource": resource_crud.create_resource,
+    "pexip_update_resource": resource_crud.update_resource,
 }
 
 URL_BASES = {
@@ -82,9 +83,7 @@ def _setup_mocks(case):
         method = mock["method"]
         url = _get_url_base(case) + mock["url_suffix"]
         mocker = METHOD_MAP[method]
-        mocker(url).mock(
-            return_value=httpx.Response(mock["status"], json=mock["body"])
-        )
+        mocker(url).mock(return_value=httpx.Response(mock["status"], json=mock["body"]))
 
 
 def _build_kwargs(case):

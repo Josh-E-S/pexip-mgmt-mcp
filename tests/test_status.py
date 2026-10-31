@@ -73,8 +73,13 @@ async def test_get_active_participant_resolves_display_name(ctx):
         return_value=httpx.Response(
             200,
             json={
-                "meta": {"total_count": 1, "limit": 200, "offset": 0,
-                         "next": None, "previous": None},
+                "meta": {
+                    "total_count": 1,
+                    "limit": 200,
+                    "offset": 0,
+                    "next": None,
+                    "previous": None,
+                },
                 "objects": [{"id": pid, "display_name": "Alice"}],
             },
         )
@@ -95,11 +100,8 @@ async def test_list_alarms_resolves_node_name_to_fk_uri(ctx):
         return_value=httpx.Response(
             200,
             json={
-                "meta": {"total_count": 1, "limit": 2, "offset": 0,
-                         "next": None, "previous": None},
-                "objects": [
-                    {"id": 12, "name": "lon-conf-01", "resource_uri": fk("worker_vm", 12)}
-                ],
+                "meta": {"total_count": 1, "limit": 2, "offset": 0, "next": None, "previous": None},
+                "objects": [{"id": 12, "name": "lon-conf-01", "resource_uri": fk("worker_vm", 12)}],
             },
         )
     )
@@ -120,11 +122,8 @@ async def test_list_node_status_filters_by_location_uri(ctx):
         return_value=httpx.Response(
             200,
             json={
-                "meta": {"total_count": 1, "limit": 2, "offset": 0,
-                         "next": None, "previous": None},
-                "objects": [
-                    {"id": 4, "name": "London", "resource_uri": fk("system_location", 4)}
-                ],
+                "meta": {"total_count": 1, "limit": 2, "offset": 0, "next": None, "previous": None},
+                "objects": [{"id": 4, "name": "London", "resource_uri": fk("system_location", 4)}],
             },
         )
     )
@@ -143,11 +142,8 @@ async def test_get_node_status_resolves_name(ctx):
         return_value=httpx.Response(
             200,
             json={
-                "meta": {"total_count": 1, "limit": 2, "offset": 0,
-                         "next": None, "previous": None},
-                "objects": [
-                    {"id": 12, "name": "lon-conf-01", "resource_uri": fk("worker_vm", 12)}
-                ],
+                "meta": {"total_count": 1, "limit": 2, "offset": 0, "next": None, "previous": None},
+                "objects": [{"id": 12, "name": "lon-conf-01", "resource_uri": fk("worker_vm", 12)}],
             },
         )
     )
@@ -166,8 +162,13 @@ async def test_get_licensing_status(ctx):
         return_value=httpx.Response(
             200,
             json={
-                "meta": {"total_count": 1, "limit": 1000, "offset": 0,
-                         "next": None, "previous": None},
+                "meta": {
+                    "total_count": 1,
+                    "limit": 1000,
+                    "offset": 0,
+                    "next": None,
+                    "previous": None,
+                },
                 "objects": [{"port_used": 12, "port_max": 100}],
             },
         )
@@ -197,8 +198,13 @@ async def test_get_participant_quality_combines_participant_and_streams(ctx):
         return_value=httpx.Response(
             200,
             json={
-                "meta": {"total_count": 2, "limit": 100, "offset": 0,
-                         "next": None, "previous": None},
+                "meta": {
+                    "total_count": 2,
+                    "limit": 100,
+                    "offset": 0,
+                    "next": None,
+                    "previous": None,
+                },
                 "objects": [
                     {"media_type": "audio", "rx_bitrate": 64000, "tx_bitrate": 64000},
                     {"media_type": "video", "rx_bitrate": 1500000, "tx_bitrate": 1200000},
@@ -207,7 +213,7 @@ async def test_get_participant_quality_combines_participant_and_streams(ctx):
         )
     )
 
-    result = await status.get_participant_quality(ctx, participant_id=pid)
+    result = await status.get_participant_quality(ctx, participant=pid)
 
     assert result["participant"]["call_quality"] == "1_good"
     assert len(result["media_streams"]) == 2
@@ -222,13 +228,21 @@ async def test_get_participant_quality_filters_streams_by_participant_uri(ctx):
     )
     streams_route = respx.get(f"{STATUS_URL}/participant_media_stream/").mock(
         return_value=httpx.Response(
-            200, json={"meta": {"total_count": 0, "limit": 100, "offset": 0,
-                                "next": None, "previous": None},
-                      "objects": []}
+            200,
+            json={
+                "meta": {
+                    "total_count": 0,
+                    "limit": 100,
+                    "offset": 0,
+                    "next": None,
+                    "previous": None,
+                },
+                "objects": [],
+            },
         )
     )
 
-    await status.get_participant_quality(ctx, participant_id=pid)
+    await status.get_participant_quality(ctx, participant=pid)
 
     expected_uri = f"/api/admin/status/v1/participant/{pid}/"
     assert streams_route.calls.last.request.url.params["participant"] == expected_uri
@@ -241,16 +255,26 @@ async def test_fetch_all_walks_pagination(ctx):
         httpx.Response(
             200,
             json={
-                "meta": {"total_count": 1500, "limit": 1000, "offset": 0,
-                         "next": "n", "previous": None},
+                "meta": {
+                    "total_count": 1500,
+                    "limit": 1000,
+                    "offset": 0,
+                    "next": "n",
+                    "previous": None,
+                },
                 "objects": [{"id": str(i)} for i in range(1000)],
             },
         ),
         httpx.Response(
             200,
             json={
-                "meta": {"total_count": 1500, "limit": 1000, "offset": 1000,
-                         "next": None, "previous": "p"},
+                "meta": {
+                    "total_count": 1500,
+                    "limit": 1000,
+                    "offset": 1000,
+                    "next": None,
+                    "previous": "p",
+                },
                 "objects": [{"id": str(i)} for i in range(1000, 1500)],
             },
         ),

@@ -48,9 +48,7 @@ async def test_add_automatic_participant_resolves_location_and_vmr(ctx):
             200,
             json={
                 "meta": {"total_count": 1, "limit": 2, "offset": 0},
-                "objects": [
-                    {"id": 4, "name": "London", "resource_uri": fk("system_location", 4)}
-                ],
+                "objects": [{"id": 4, "name": "London", "resource_uri": fk("system_location", 4)}],
             },
         )
     )

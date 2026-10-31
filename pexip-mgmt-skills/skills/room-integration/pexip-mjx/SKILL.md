@@ -14,7 +14,7 @@ Three Pexip resources govern it:
 - `mjx_integration` — the calendar source (Exchange / Google) Pexip reads from
 - `mjx_meeting_processing_rule` — regex/transform rules that detect each meeting platform in the invite body and produce the dial string
 
-The `pexip-mgmt-mcp` server exposes 4 dedicated MJX **status** tools — `get_mjx_endpoint_status`, `list_mjx_endpoint_status`, `get_mjx_meeting_status`, `list_mjx_meeting_status` (in `src/pexip_mcp/tools/status.py`). The MJX **configuration** resources (`mjx_endpoint`, `mjx_integration`, `mjx_meeting_processing_rule`, …) are managed through the generic `*_resource` CRUD tools (`create_resource`, `get_resource`, `update_resource`, `delete_resource`, `list_resources`).
+The `pexip-mgmt-mcp` server exposes 4 dedicated MJX **status** tools — `pexip_get_mjx_endpoint_status`, `pexip_list_mjx_endpoint_status`, `pexip_get_mjx_meeting_status`, `pexip_list_mjx_meeting_status` (in `src/pexip_mcp/tools/status.py`). The MJX **configuration** resources (`mjx_endpoint`, `mjx_integration`, `mjx_meeting_processing_rule`, …) are managed through the generic `*_resource` CRUD tools (`pexip_create_resource`, `pexip_get_resource`, `pexip_update_resource`, `pexip_delete_resource`, `pexip_list_resources`).
 
 ## When to use
 
@@ -58,7 +58,7 @@ The `pexip-mgmt-mcp` server exposes 4 dedicated MJX **status** tools — `get_mj
 
 ## MCP tools
 
-Each resource has list / get / create / update / delete. Create and update take a `settings` dict for version-flexible fields — call `get_resource_schema('mjx_integration')` to discover exact field names on your platform.
+Each resource has list / get / create / update / delete. Create and update take a `settings` dict for version-flexible fields — call `pexip_get_resource_schema('mjx_integration')` to discover exact field names on your platform.
 
 ```
 # Calendar integrations

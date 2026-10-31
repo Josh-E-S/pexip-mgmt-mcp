@@ -5,6 +5,7 @@ registers that function with the FastMCP server instance. So just importing them
 here (even though we never reference the names) is what makes the server know
 about them — that's why the F401 noqa is needed.
 """
+
 from pexip_mcp.mcp_app import mcp
 
 # Use these imports for their side effect only: each module's @mcp.tool() decorators

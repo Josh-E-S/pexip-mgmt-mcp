@@ -95,7 +95,7 @@ license: MIT
 - Then list **trigger symbols** — API method names, tool names, error messages the user might paste
 - End with **anti-triggers** ("Do NOT use for…") to keep loading precision high
 
-Why the symbol-stuffing: hosts use the description to decide whether to surface a skill. Listing concrete identifiers (`onPeerDisconnect`, `summarize_calls`, `list_active_participants`) matches the user's actual phrasing better than abstract verbs ("control meetings").
+Why the symbol-stuffing: hosts use the description to decide whether to surface a skill. Listing concrete identifiers (`onPeerDisconnect`, `pexip_summarize_calls`, `pexip_list_active_participants`) matches the user's actual phrasing better than abstract verbs ("control meetings").
 
 Hard cap: 1,536 characters combined `description` + `when_to_use` (Claude Code's listing budget). Keep it tight.
 

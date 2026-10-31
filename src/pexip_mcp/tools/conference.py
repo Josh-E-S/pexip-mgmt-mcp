@@ -8,6 +8,7 @@ gateway calls — we always filter to service_type=conference here).
 
 Aliases (the actual dial strings) live in a sibling resource — see `alias.py`.
 """
+
 from __future__ import annotations
 
 from typing import Any

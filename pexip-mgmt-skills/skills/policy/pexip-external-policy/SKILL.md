@@ -10,7 +10,7 @@ The **External Policy API** lets Pexip Infinity outsource per-call decisions to 
 
 Use it when the answer to "where should this call go?" depends on data Pexip doesn't have: your CRM, scheduling system, real-time capacity heuristics, custom auth, dynamic VMRs per booking, etc.
 
-> **Coverage:** the MCP server manages external policy servers today through its **generic CRUD** tools — the `policy_server` and `policy_profile` resources are in the resource registry (`resource_crud.py`), so `list_resource` / `get_resource` / `create_resource` / `update_resource` / `delete_resource` all work against them (no dedicated `*_external_policy_server` tools, and no `PEXIP_ALLOW_SECURITY_RESOURCES` gate). This skill covers configuring those servers **and** building the receiver side (the HTTP service Pexip calls).
+> **Coverage:** the MCP server manages external policy servers today through its **generic CRUD** tools — the `policy_server` and `policy_profile` resources are in the resource registry (`resource_crud.py`), so `list_resource` / `pexip_get_resource` / `pexip_create_resource` / `pexip_update_resource` / `pexip_delete_resource` all work against them (no dedicated `*_external_policy_server` tools, and no `PEXIP_ALLOW_SECURITY_RESOURCES` gate). This skill covers configuring those servers **and** building the receiver side (the HTTP service Pexip calls).
 
 ## When to use
 
@@ -54,14 +54,14 @@ Manage policy servers with the generic resource tools, passing `resource="policy
 
 ```
 list_resource(resource="policy_server")
-get_resource(resource="policy_server", identifier="<name-or-id>")
-create_resource(resource="policy_server", data={"name": …, "url": …, "ssl_cert": …, …})
-update_resource(resource="policy_server", identifier="<name-or-id>", data={…})
-delete_resource(resource="policy_server", identifier="<name-or-id>")
+pexip_get_resource(resource="policy_server", identifier="<name-or-id>")
+pexip_create_resource(resource="policy_server", data={"name": …, "url": …, "ssl_cert": …, …})
+pexip_update_resource(resource="policy_server", identifier="<name-or-id>", data={…})
+pexip_delete_resource(resource="policy_server", identifier="<name-or-id>")
 ```
 
 `policy_profile` works the same way. Introspect the exact fields first with
-`get_resource_schema(resource="policy_server")` — they shift across Pexip versions.
+`pexip_get_resource_schema(resource="policy_server")` — they shift across Pexip versions.
 You can also configure these in Pexip's admin UI under **Call Control → External Policy**.
 
 ## Field gotchas (anticipated, verify when implementing)

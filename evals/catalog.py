@@ -51,7 +51,7 @@ def has_real_output_schema(tool: Any) -> bool:
     return bool(schema and schema.get("properties"))
 
 
-_VERB_PREFIX = re.compile(r"^(get|list)_")
+_VERB_PREFIX = re.compile(r"^(?:pexip_)?(get|list)_")
 
 
 def is_conventional_pair(a: str, b: str) -> bool:

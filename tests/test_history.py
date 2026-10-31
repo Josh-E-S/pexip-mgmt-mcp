@@ -12,8 +12,7 @@ from .conftest import BASE_URL, HISTORY_URL, fk
 
 def _empty_page(limit: int = 20):
     return {
-        "meta": {"total_count": 0, "limit": limit, "offset": 0,
-                 "next": None, "previous": None},
+        "meta": {"total_count": 0, "limit": limit, "offset": 0, "next": None, "previous": None},
         "objects": [],
     }
 
@@ -76,11 +75,8 @@ async def test_list_history_participants_resolves_location(ctx):
         return_value=httpx.Response(
             200,
             json={
-                "meta": {"total_count": 1, "limit": 2, "offset": 0,
-                         "next": None, "previous": None},
-                "objects": [
-                    {"id": 4, "name": "London", "resource_uri": fk("system_location", 4)}
-                ],
+                "meta": {"total_count": 1, "limit": 2, "offset": 0, "next": None, "previous": None},
+                "objects": [{"id": 4, "name": "London", "resource_uri": fk("system_location", 4)}],
             },
         )
     )
@@ -130,8 +126,13 @@ async def test_summarize_calls_aggregates_by_call_direction(ctx):
         return_value=httpx.Response(
             200,
             json={
-                "meta": {"total_count": 5, "limit": 1000, "offset": 0,
-                         "next": None, "previous": None},
+                "meta": {
+                    "total_count": 5,
+                    "limit": 1000,
+                    "offset": 0,
+                    "next": None,
+                    "previous": None,
+                },
                 "objects": [
                     {"id": "1", "call_direction": "in", "duration": 60},
                     {"id": "2", "call_direction": "in", "duration": 120},
@@ -169,8 +170,13 @@ async def test_summarize_calls_passes_filters(ctx):
         return_value=httpx.Response(
             200,
             json={
-                "meta": {"total_count": 0, "limit": 1000, "offset": 0,
-                         "next": None, "previous": None},
+                "meta": {
+                    "total_count": 0,
+                    "limit": 1000,
+                    "offset": 0,
+                    "next": None,
+                    "previous": None,
+                },
                 "objects": [],
             },
         )
@@ -199,19 +205,28 @@ async def test_summarize_calls_truncated_when_max_records_hit(ctx):
         httpx.Response(
             200,
             json={
-                "meta": {"total_count": 50000, "limit": 1000, "offset": 0,
-                         "next": "n", "previous": None},
+                "meta": {
+                    "total_count": 50000,
+                    "limit": 1000,
+                    "offset": 0,
+                    "next": "n",
+                    "previous": None,
+                },
                 "objects": [
-                    {"id": str(i), "call_direction": "in", "duration": 60}
-                    for i in range(1000)
+                    {"id": str(i), "call_direction": "in", "duration": 60} for i in range(1000)
                 ],
             },
         ),
         httpx.Response(
             200,
             json={
-                "meta": {"total_count": 50000, "limit": 1000, "offset": 1000,
-                         "next": "n", "previous": "p"},
+                "meta": {
+                    "total_count": 50000,
+                    "limit": 1000,
+                    "offset": 1000,
+                    "next": "n",
+                    "previous": "p",
+                },
                 "objects": [
                     {"id": str(i), "call_direction": "out", "duration": 30}
                     for i in range(1000, 2000)

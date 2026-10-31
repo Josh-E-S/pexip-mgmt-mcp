@@ -6,6 +6,7 @@ label. One VMR can have many aliases (e.g. an internal short code plus a full
 SIP URI). When matching against incoming calls, Pexip looks aliases up exactly,
 so spelling/punctuation matters.
 """
+
 from __future__ import annotations
 
 from typing import Any

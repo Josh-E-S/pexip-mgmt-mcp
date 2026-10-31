@@ -17,6 +17,7 @@ Lines are key=value, one per call, so they grep and ship cleanly without a JSON
 pipeline. Secrets never appear here — only the action, resource, resolved id,
 outcome, latency, and principal.
 """
+
 from __future__ import annotations
 
 import logging

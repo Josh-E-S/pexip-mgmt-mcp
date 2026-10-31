@@ -76,8 +76,15 @@ The MCP server config in `.mcp.json` points at the `pexip-mgmt` server (this rep
 
 ```bash
 export PEXIP_HOST=manager.example.com
+# basic auth (dev/lab):
 export PEXIP_USERNAME=admin
 export PEXIP_PASSWORD=...
+# or OAuth2 (recommended for production):
+# export PEXIP_AUTH_MODE=oauth2
+# export PEXIP_OAUTH2_CLIENT_ID=...
+# export PEXIP_OAUTH2_PRIVATE_KEY="$(cat key.pem)"
+# Writes are off by default; enable deliberately:
+# export PEXIP_READ_ONLY=false
 # Optional:
 # export PEXIP_VERIFY_TLS=true
 # export PEXIP_TIMEOUT=30

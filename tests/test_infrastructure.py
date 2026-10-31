@@ -28,9 +28,7 @@ async def test_get_location_by_name(ctx):
             200,
             json={
                 "meta": {"total_count": 1, "limit": 2, "offset": 0},
-                "objects": [
-                    {"id": 4, "name": "London", "resource_uri": fk("system_location", 4)}
-                ],
+                "objects": [{"id": 4, "name": "London", "resource_uri": fk("system_location", 4)}],
             },
         )
     )
@@ -50,9 +48,7 @@ async def test_list_conferencing_nodes_filters_by_location_uri(ctx):
             200,
             json={
                 "meta": {"total_count": 1, "limit": 2, "offset": 0},
-                "objects": [
-                    {"id": 4, "name": "London", "resource_uri": fk("system_location", 4)}
-                ],
+                "objects": [{"id": 4, "name": "London", "resource_uri": fk("system_location", 4)}],
             },
         )
     )
@@ -62,9 +58,7 @@ async def test_list_conferencing_nodes_filters_by_location_uri(ctx):
         )
     )
 
-    await infrastructure.list_conferencing_nodes(
-        ctx, location="London", node_type="CONFERENCING"
-    )
+    await infrastructure.list_conferencing_nodes(ctx, location="London", node_type="CONFERENCING")
 
     params = list_route.calls.last.request.url.params
     assert params["system_location"] == fk("system_location", 4)

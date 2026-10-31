@@ -6,6 +6,7 @@ can assert the signed assertion is sent and the bearer token is attached,
 cached, and refreshed correctly. A real ES256 (P-256) key is generated per test
 so the JWT signing path runs for real.
 """
+
 from __future__ import annotations
 
 import httpx
@@ -139,9 +140,7 @@ async def test_oauth_refetches_after_expiry():
 
 @respx.mock
 async def test_oauth_token_failure_raises_pexiperror():
-    respx.post(TOKEN_URL).mock(
-        return_value=httpx.Response(400, json={"error": "invalid_client"})
-    )
+    respx.post(TOKEN_URL).mock(return_value=httpx.Response(400, json={"error": "invalid_client"}))
 
     auth = PexipOAuth2Auth(TOKEN_URL, "cid", _ec_private_key_pem())
     client = PexipClient(host=PEXIP_HOST, auth=auth)

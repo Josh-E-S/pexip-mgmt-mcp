@@ -6,6 +6,7 @@ locked" voice, splash images, color scheme. Themes are uploaded via the admin
 UI (binary assets aren't a great fit for an API); this module exposes
 list/get so the LLM can pick an existing one by name when calling create_vmr.
 """
+
 from __future__ import annotations
 
 from typing import Any

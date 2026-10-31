@@ -1,6 +1,6 @@
 ---
 name: pexip-mgmt-intake
-description: Use at the START of any open-ended Pexip Infinity management or admin-API task to scope the work before answering. Triggers when the user says "I want to manage Pexip", "set up Pexip admin tooling", "use the Pexip management API", "automate Pexip", "report on Pexip calls", or any project-shaped Pexip-server-side request without specifics. Ask the questions in this skill BEFORE diving in. Do NOT use for narrow specific questions like "how does summarize_calls work" or "kick Alice from the standup" — only for project-shaped requests where the user hasn't yet decided what they're building.
+description: Use at the START of any open-ended Pexip Infinity management or admin-API task to scope the work before answering. Triggers when the user says "I want to manage Pexip", "set up Pexip admin tooling", "use the Pexip management API", "automate Pexip", "report on Pexip calls", or any project-shaped Pexip-server-side request without specifics. Ask the questions in this skill BEFORE diving in. Do NOT use for narrow specific questions like "how does pexip_summarize_calls work" or "kick Alice from the standup" — only for project-shaped requests where the user hasn't yet decided what they're building.
 license: MIT
 ---
 
@@ -22,7 +22,7 @@ Keep it brief. Most management tasks resolve in 2-3 questions.
 
 - Narrow API questions: "what's the schema for `conference`?" → answer with `pexip-config-api`
 - Live operator verbs: "kick Alice", "lock the AllHands" → answer with `pexip-operations`
-- Specific tool questions: "how do I call `summarize_calls`?" → answer with `pexip-operations`
+- Specific tool questions: "how do I call `pexip_summarize_calls`?" → answer with `pexip-operations`
 - MCP server code edits: "add a tool that wraps X" → answer with the matching `pexip-*-api` developer-reference skill
 
 ## The minimum questions
@@ -123,7 +123,7 @@ Based on your answers, here's how I'd proceed:
   - <max 2-3 if anything's still unclear>
 ```
 
-Then **wait for confirmation** before running any destructive tool. For read-only actions (list_*, get_*, summarize_calls) it's fine to proceed immediately.
+Then **wait for confirmation** before running any destructive tool. For read-only actions (list_*, get_*, pexip_summarize_calls) it's fine to proceed immediately.
 
 ## Example session
 
@@ -164,10 +164,10 @@ A few quick questions:
 Plan:
 
   Skill(s) to load:
-  - pexip-operations → reporting.md      (CDR / summarize_calls patterns)
+  - pexip-operations → reporting.md      (CDR / pexip_summarize_calls patterns)
 
   First step:
-  Test the report by calling summarize_calls(start_time, end_time,
+  Test the report by calling pexip_summarize_calls(start_time, end_time,
   group_by='call_direction') for yesterday. I'll then run the same
   with group_by='call_quality' and show both.
 

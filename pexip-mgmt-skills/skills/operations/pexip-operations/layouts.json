@@ -1,5 +1,5 @@
 {
-  "_comment": "Valid layout enum values for set_conference_layout (host_layout / guest_layout). These are Pexip's stock layout codes. Some Pexip versions ship additional custom layouts uploaded via the admin UI — call get_resource_schema('conference') and inspect host_view / guest_view enum values to be sure.",
+  "_comment": "Valid layout enum values for pexip_set_conference_layout (host_layout / guest_layout). These are Pexip's stock layout codes. Some Pexip versions ship additional custom layouts uploaded via the admin UI — call pexip_get_resource_schema('conference') and inspect host_view / guest_view enum values to be sure.",
   "layouts": [
     {
       "name": "one_main_zero_pips",
@@ -50,5 +50,5 @@
       "description": "Adaptive composition with presentation focused."
     }
   ],
-  "_note": "Layout availability and naming depends on Pexip Infinity version. For an exhaustive, version-correct list call get_resource_schema('conference') and read the 'host_view' / 'guest_view' enum values."
+  "_note": "Layout availability and naming depends on Pexip Infinity version. For an exhaustive, version-correct list call pexip_get_resource_schema('conference') and read the 'host_view' / 'guest_view' enum values."
 }

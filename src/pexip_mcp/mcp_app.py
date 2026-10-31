@@ -22,19 +22,88 @@ to register them, and every tool module imports `mcp` from somewhere to call
 `@mcp.tool()`. If `mcp` lived in server.py we'd have a circular import. Putting
 it here breaks the cycle.
 """
+
 from __future__ import annotations
 
 import logging
+import os
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from dataclasses import dataclass
+from typing import Any
 
 from mcp.server.fastmcp import FastMCP
 
 from pexip_mcp.client import PexipClient
 from pexip_mcp.config import PexipSettings
+from pexip_mcp.tools._guidance import GUIDANCE, render_description
 
 log = logging.getLogger(__name__)
+
+# Every tool is published under this prefix (pexip_list_vmrs, ...). A service
+# prefix lets a host that aggregates several MCP servers group ours in one tool
+# search and keeps names from colliding with another server's list_* tools.
+TOOL_PREFIX = "pexip_"
+
+
+def _env_flag(name: str) -> bool:
+    return os.environ.get(name, "").strip().lower() in ("1", "true", "yes", "on")
+
+
+# Use legacy_tool_names_enabled to tell whether the pre-0.3 unprefixed names are also registered.
+def legacy_tool_names_enabled() -> bool:
+    """True when PEXIP_LEGACY_TOOL_NAMES asks for the old unprefixed names as aliases.
+
+    Off by default: aliases double the catalog (every alias carries the full
+    input schema), which is exactly the token cost the prefix migration is meant
+    to avoid. Turn it on for one release while existing configs, skills and eval
+    cases move to the pexip_* names.
+    """
+    return _env_flag("PEXIP_LEGACY_TOOL_NAMES")
+
+
+class PexipMCP(FastMCP):
+    """FastMCP that prefixes tool names, appends usage guidance, and can alias old names.
+
+    Tool modules keep writing `@mcp.tool(annotations=read("..."))` on a plainly
+    named function; this class turns that into the published tool:
+
+      name         `pexip_<function name>` unless `name=` is given explicitly
+      description  the docstring plus the tool's GUIDANCE entry (use when / do
+                   not use when / API reference), see tools/_guidance.py
+      meta         `input_examples` from GUIDANCE, for hosts that read them
+      alias        the unprefixed name too, when PEXIP_LEGACY_TOOL_NAMES is on
+
+    Python function names are untouched, so tests and the live suite keep
+    calling `conference.list_vmrs(...)` directly.
+    """
+
+    def tool(self, name: str | None = None, **kwargs: Any):  # type: ignore[override]
+        parent_tool = super().tool
+
+        def decorator(fn):
+            base_name = fn.__name__
+            published = name or f"{TOOL_PREFIX}{base_name}"
+            guidance = GUIDANCE.get(base_name)
+            description = kwargs.pop("description", None) or render_description(
+                fn.__doc__, guidance, prefix=TOOL_PREFIX
+            )
+            meta = dict(kwargs.pop("meta", None) or {})
+            if guidance and guidance.get("examples"):
+                meta.setdefault("input_examples", guidance["examples"])
+            registered = parent_tool(
+                name=published, description=description, meta=meta or None, **kwargs
+            )(fn)
+            if name is None and legacy_tool_names_enabled():
+                parent_tool(
+                    name=base_name,
+                    description=f"Deprecated alias of {published}. " + description,
+                    meta=meta or None,
+                    **kwargs,
+                )(fn)
+            return registered
+
+        return decorator
 
 
 # Use AppContext to hold the PexipClient engine so tool modules can reach it via the request context.
@@ -130,9 +199,7 @@ def apply_startup_policy(server: FastMCP, settings: PexipSettings) -> None:
         )
     else:
         # Writes are enabled — make that a loud, deliberate signal, not a silent default.
-        writable = sum(
-            1 for t in server._tool_manager._tools.values() if not _tool_is_read_only(t)
-        )
+        writable = sum(1 for t in server._tool_manager._tools.values() if not _tool_is_read_only(t))
         log.warning(
             "PEXIP_READ_ONLY=false — the mutating admin surface is ENABLED "
             "(%d create/update/delete/control tools callable). Security-critical "
@@ -181,4 +248,4 @@ async def lifespan(server: FastMCP) -> AsyncIterator[AppContext]:
 
 
 # Use mcp as the singleton FastMCP server instance. Other files import this to register tools.
-mcp = FastMCP("pexip-mgmt", lifespan=lifespan)
+mcp = PexipMCP("pexip-mgmt", lifespan=lifespan)

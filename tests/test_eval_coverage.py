@@ -39,60 +39,60 @@ LIVE_FILE = REPO / "evals" / "test_live_integration.py"
 
 KNOWN_UNCOVERED: frozenset[str] = frozenset(
     {
-        "backup_restore",
-        "certificates_import",
-        "delete_ldap_source",
-        "delete_resource",
-        "get_alarm_history",
-        "get_backplane",
-        "get_backplane_history",
-        "get_backplane_history_media_streams",
-        "get_backplane_media_streams",
-        "get_cloud_monitored_location",
-        "get_cloud_node",
-        "get_cloud_overflow_location",
-        "get_conference_shard",
-        "get_conference_sync_status",
-        "get_conferencing_node",
-        "get_exchange_scheduler_status",
-        "get_gateway_rule",
-        "get_ivr_theme",
-        "get_ldap_source",
-        "get_location",
-        "get_location_status",
-        "get_management_node_status",
-        "get_mjx_endpoint_status",
-        "get_mjx_meeting_status",
-        "get_node_event_history",
-        "get_node_statistics",
-        "get_node_status",
-        "get_registration_alias",
-        "get_registration_history",
-        "get_teams_node_call_status",
-        "get_teams_node_status",
-        "list_backplane_history",
-        "list_backplanes",
-        "list_cloud_monitored_locations",
-        "list_cloud_overflow_locations",
-        "list_conference_shards",
-        "list_conference_sync_status",
-        "list_exchange_scheduler_status",
-        "list_location_status",
-        "list_node_event_history",
-        "list_registration_aliases",
-        "list_teams_node_call_status",
-        "platform_upgrade",
-        "start_cloud_node",
-        "update_global_settings",
-        "update_ldap_source",
-        "upload_software_bundle",
+        "pexip_backup_restore",
+        "pexip_certificates_import",
+        "pexip_delete_ldap_source",
+        "pexip_delete_resource",
+        "pexip_get_alarm_history",
+        "pexip_get_backplane",
+        "pexip_get_backplane_history",
+        "pexip_get_backplane_history_media_streams",
+        "pexip_get_backplane_media_streams",
+        "pexip_get_cloud_monitored_location",
+        "pexip_get_cloud_node",
+        "pexip_get_cloud_overflow_location",
+        "pexip_get_conference_shard",
+        "pexip_get_conference_sync_status",
+        "pexip_get_conferencing_node",
+        "pexip_get_exchange_scheduler_status",
+        "pexip_get_gateway_rule",
+        "pexip_get_ivr_theme",
+        "pexip_get_ldap_source",
+        "pexip_get_location",
+        "pexip_get_location_status",
+        "pexip_get_management_node_status",
+        "pexip_get_mjx_endpoint_status",
+        "pexip_get_mjx_meeting_status",
+        "pexip_get_node_event_history",
+        "pexip_get_node_statistics",
+        "pexip_get_node_status",
+        "pexip_get_registration_alias",
+        "pexip_get_registration_history",
+        "pexip_get_teams_node_call_status",
+        "pexip_get_teams_node_status",
+        "pexip_list_backplane_history",
+        "pexip_list_backplanes",
+        "pexip_list_cloud_monitored_locations",
+        "pexip_list_cloud_overflow_locations",
+        "pexip_list_conference_shards",
+        "pexip_list_conference_sync_status",
+        "pexip_list_exchange_scheduler_status",
+        "pexip_list_location_status",
+        "pexip_list_node_event_history",
+        "pexip_list_registration_aliases",
+        "pexip_list_teams_node_call_status",
+        "pexip_platform_upgrade",
+        "pexip_start_cloud_node",
+        "pexip_update_global_settings",
+        "pexip_update_ldap_source",
+        "pexip_upload_software_bundle",
     }
 )
 
 
 # Covered only by evals/test_live_integration.py, which CI does not run. Each
 # of these still needs a mocked case; the list is kept exact so it is visible.
-KNOWN_LIVE_ONLY: frozenset[str] = frozenset({"get_active_participant"})
+KNOWN_LIVE_ONLY: frozenset[str] = frozenset({"pexip_get_active_participant"})
 
 
 def _yaml_tool_refs() -> set[str]:
@@ -119,7 +119,9 @@ def _yaml_tool_refs() -> set[str]:
 def _live_tool_refs() -> set[str]:
     """Tool names invoked as `<module>.<tool>(` in the live integration suite."""
     text = LIVE_FILE.read_text(encoding="utf-8")
-    return {m.group(1) for m in re.finditer(r"\b[a-z_]+\.([a-z_]+)\(", text)}
+    # The live suite calls the Python functions (conference.list_vmrs); the
+    # published tool name carries the service prefix.
+    return {f"pexip_{m.group(1)}" for m in re.finditer(r"\b[a-z_]+\.([a-z_]+)\(", text)}
 
 
 REGISTERED: frozenset[str] = frozenset(t.name for t in mcp._tool_manager.list_tools())

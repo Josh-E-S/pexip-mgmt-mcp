@@ -4,6 +4,7 @@ We sign tokens with a local RSA keypair and inject a fake signing-key resolver,
 so nothing here touches a real IdP or the network. This mirrors what a real
 Entra/Google/Okta token would look like to the validator.
 """
+
 from __future__ import annotations
 
 import time

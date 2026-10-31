@@ -21,6 +21,7 @@ IdP's JWKS endpoint — which is the operator's own system.
 We deliberately reuse `pyjwt` (already a dependency via `pyjwt[crypto]`) rather
 than adding an OAuth library, so this introduces no new supply-chain surface.
 """
+
 from __future__ import annotations
 
 from typing import Any, Protocol
@@ -183,7 +184,5 @@ def _discover_jwks_uri(issuer: str) -> str:
     resp.raise_for_status()
     jwks_uri = resp.json().get("jwks_uri")
     if not jwks_uri:
-        raise OIDCValidationError(
-            f"OIDC discovery at {well_known} did not contain a jwks_uri"
-        )
+        raise OIDCValidationError(f"OIDC discovery at {well_known} did not contain a jwks_uri")
     return str(jwks_uri)

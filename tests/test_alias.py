@@ -51,9 +51,7 @@ async def test_add_vmr_alias_sends_conference_fk_uri(ctx):
 
 @respx.mock
 async def test_delete_alias(ctx):
-    route = respx.delete(f"{BASE_URL}/conference_alias/55/").mock(
-        return_value=httpx.Response(204)
-    )
+    route = respx.delete(f"{BASE_URL}/conference_alias/55/").mock(return_value=httpx.Response(204))
 
     result = await alias.delete_alias(ctx, 55)
 

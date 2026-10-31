@@ -163,9 +163,7 @@ async def test_create_vmr_aliases_are_wrapped_as_objects(ctx):
     post = respx.post(f"{BASE_URL}/conference/").mock(
         return_value=httpx.Response(201, headers={"Location": vmr_uri(99)})
     )
-    respx.get(f"{BASE_URL}/conference/99/").mock(
-        return_value=httpx.Response(200, json={"id": 99})
-    )
+    respx.get(f"{BASE_URL}/conference/99/").mock(return_value=httpx.Response(200, json={"id": 99}))
 
     await conference.create_vmr(
         ctx, name="VMR", aliases=["meet.alice", "1234"], pin="1111", allow_guests=True

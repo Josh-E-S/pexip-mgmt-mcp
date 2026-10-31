@@ -6,6 +6,7 @@ for authorization checks. Entries can be created by hand here, or synced
 automatically from LDAP (see ldap.py). The `primary_email_address` is the
 unique handle — these tools accept either an integer id or that email everywhere.
 """
+
 from __future__ import annotations
 
 from typing import Any
@@ -24,9 +25,7 @@ async def _resolve_end_user_id(client, value: int | str) -> int:
     Email is the natural handle here — most LLM-driven flows know a user's email
     long before they know the integer id, so we look it up automatically.
     """
-    return await resolve_id_by_field(
-        client, "end_user", value, field="primary_email_address"
-    )
+    return await resolve_id_by_field(client, "end_user", value, field="primary_email_address")
 
 
 @mcp.tool(annotations=read("List end users"))

@@ -145,12 +145,15 @@ See [Configuration](#configuration) for all options.
 
 | API | Tools | What it covers |
 |---|---|---|
-| **Configuration** | 46 | VMRs + aliases, end users, devices, gateway rules, automatic participants, IVR themes, LDAP sync, locations + Conferencing Nodes, global settings, schema introspection, plus **generic CRUD** (`list/get/create/update/delete_resource`) over ~70 registry resources: SIP/H.323/MS-SIP proxies, TURN/STUN, Teams Connectors, Azure tenants, Google Meet tokens, MJX (endpoints, integrations, deployments), DNS/NTP/SMTP/syslog/SNMP, certificates (CA/TLS/CSR), admin roles + identity providers, backups + upgrades, web app hosting, policy profiles, and more |
+| **Configuration** | 46 | VMRs + aliases, end users, devices, gateway rules, automatic participants, IVR themes, LDAP sync, locations + Conferencing Nodes, global settings, schema introspection, plus **generic CRUD** (`pexip_list/get/create/update/delete_resource`) over ~70 registry resources: SIP/H.323/MS-SIP proxies, TURN/STUN, Teams Connectors, Azure tenants, Google Meet tokens, MJX (endpoints, integrations, deployments), DNS/NTP/SMTP/syslog/SNMP, certificates (CA/TLS/CSR), admin roles + identity providers, backups + upgrades, web app hosting, policy profiles, and more |
 | **Status** | 39 | Live conferences + per-node shards, participants + media streams, per-participant call quality, registrations, node/location status + load stats, backplanes, alarms, licensing, cloud overflow, Exchange scheduler, MJX endpoints + meetings, Teams Connector nodes + calls |
-| **History** | 14 | Conference + participant CDRs, server-side aggregation (`summarize_calls`), alarm history, backplane history, registration history, node event history |
+| **History** | 14 | Conference + participant CDRs, server-side aggregation (`pexip_summarize_calls`), alarm history, backplane history, registration history, node event history |
 | **Command** | 23 | Active call control: dial, disconnect, mute/unmute (participant or all guests), set role, lock/unlock, transfer, layout, messages, LDAP sync, provisioning emails, backup create/restore, certificate import, snapshot, upgrade |
 
-The full catalog with per-tool annotations and parameters is in
+Every tool is named `pexip_<verb>_<resource>` (for example `pexip_list_vmrs`), so a host
+that aggregates several MCP servers can find all of ours with one search and nothing
+collides with another server's `list_*`. The full catalog with per-tool annotations and
+parameters is in
 [TOOLS.md](TOOLS.md) (regenerate with `uv run python scripts/generate_tools_md.py`).
 
 **This MCP server is designed to optimize tool use.** High-traffic resources
@@ -231,6 +234,7 @@ environment). See [.env.example](.env.example) for an annotated template.
 | `PEXIP_MAX_RETRIES` | `3` | Retries on 429 rate-limit responses |
 | `PEXIP_READ_ONLY` | `true` | Expose only read tools; remove all write/control tools. **On by default;** set `false` to enable writes |
 | `PEXIP_ALLOW_SECURITY_RESOURCES` | `false` | Allow generic CRUD to mutate security-critical resources (SSH keys, roles, auth, certs). Only relevant when writes are enabled |
+| `PEXIP_LEGACY_TOOL_NAMES` | `false` | Also register the pre-0.3 unprefixed tool names (`list_vmrs`) as aliases of the `pexip_*` names. Doubles the catalog; use only while migrating configs, skills, or eval cases |
 | `PEXIP_ALLOW_PLATFORM_TOOLS` | `false` | Expose platform-lifecycle command tools (backup/restore, upgrade, cert import, software upload, cloud-node start, snapshot). Removed at startup unless enabled, even with writes on |
 | `PEXIP_MCP_AUTH_MODE` | `token` | How HTTP clients authenticate to this server: `token` (static bearer) or `oauth` (OIDC). Only affects `--http`. See [docs/identity.md](docs/identity.md) |
 | `PEXIP_MCP_TOKEN` | unset | Bearer token for the `--http` transport (required for non-loopback binds; min 32 chars). Run `pexip-mgmt-mcp --generate-token` |

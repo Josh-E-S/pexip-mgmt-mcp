@@ -31,7 +31,7 @@ async def test_conference_command_resolves_name_to_uuid(ctx):
     )
     lock = respx.post(f"{COMMAND_URL}/conference/lock/").mock(return_value=_ok())
 
-    await command.lock_conference(ctx, conference_id="All Hands")
+    await command.lock_conference(ctx, conference="All Hands")
 
     assert lookup.called
     assert json.loads(lock.calls.last.request.read()) == {"conference_id": _UUID}
@@ -43,7 +43,7 @@ async def test_conference_command_uuid_skips_lookup(ctx):
     lookup = respx.get(f"{STATUS_URL}/conference/")
     lock = respx.post(f"{COMMAND_URL}/conference/lock/").mock(return_value=_ok())
 
-    await command.lock_conference(ctx, conference_id=_UUID)
+    await command.lock_conference(ctx, conference=_UUID)
 
     assert not lookup.called
     assert json.loads(lock.calls.last.request.read()) == {"conference_id": _UUID}
@@ -55,7 +55,7 @@ async def test_conference_name_not_running_raises_404(ctx):
         return_value=httpx.Response(200, json={"objects": [], "meta": {"total_count": 0}})
     )
     with pytest.raises(PexipError) as exc:
-        await command.mute_guests(ctx, conference_id="Nonexistent Room")
+        await command.mute_guests(ctx, conference="Nonexistent Room")
     assert exc.value.status_code == 404
 
 
@@ -74,7 +74,7 @@ async def test_conference_name_ambiguous_raises_409(ctx):
         )
     )
     with pytest.raises(PexipError) as exc:
-        await command.mute_guests(ctx, conference_id="Standup")
+        await command.mute_guests(ctx, conference="Standup")
     assert exc.value.status_code == 409
 
 
@@ -84,12 +84,15 @@ async def test_participant_command_resolves_display_name(ctx):
     lookup = respx.get(f"{STATUS_URL}/participant/").mock(
         return_value=httpx.Response(
             200,
-            json={"objects": [{"id": _UUID, "display_name": "Alice Smith"}], "meta": {"total_count": 1}},
+            json={
+                "objects": [{"id": _UUID, "display_name": "Alice Smith"}],
+                "meta": {"total_count": 1},
+            },
         )
     )
     mute = respx.post(f"{COMMAND_URL}/participant/mute/").mock(return_value=_ok())
 
-    await command.mute_participant(ctx, participant_id="Alice")  # substring match
+    await command.mute_participant(ctx, participant="Alice")  # substring match
 
     assert lookup.called
     assert json.loads(mute.calls.last.request.read()) == {"participant_id": _UUID}
@@ -106,7 +109,7 @@ async def test_participant_scope_passes_conference_filter(ctx):
     )
     respx.post(f"{COMMAND_URL}/participant/disconnect/").mock(return_value=_ok())
 
-    await command.disconnect_participant(ctx, participant_id="Bob", conference="All Hands")
+    await command.disconnect_participant(ctx, participant="Bob", conference="All Hands")
 
     assert "conference=All+Hands" in str(lookup.calls.last.request.url)
 
@@ -126,7 +129,7 @@ async def test_participant_name_ambiguous_raises_409(ctx):
         )
     )
     with pytest.raises(PexipError) as exc:
-        await command.mute_participant(ctx, participant_id="Ale")
+        await command.mute_participant(ctx, participant="Ale")
     assert exc.value.status_code == 409
 
 
@@ -146,11 +149,8 @@ async def test_dial_participant_resolves_system_location_to_uri(ctx):
         return_value=httpx.Response(
             200,
             json={
-                "meta": {"total_count": 1, "limit": 2, "offset": 0,
-                         "next": None, "previous": None},
-                "objects": [
-                    {"id": 4, "name": "London", "resource_uri": fk("system_location", 4)}
-                ],
+                "meta": {"total_count": 1, "limit": 2, "offset": 0, "next": None, "previous": None},
+                "objects": [{"id": 4, "name": "London", "resource_uri": fk("system_location", 4)}],
             },
         )
     )
@@ -177,7 +177,7 @@ async def test_dial_participant_resolves_system_location_to_uri(ctx):
 async def test_disconnect_participant_passes_id(ctx):
     route = respx.post(f"{COMMAND_URL}/participant/disconnect/").mock(return_value=_ok())
 
-    await command.disconnect_participant(ctx, participant_id="11111111-aaaa-bbbb-cccc-222222222222")
+    await command.disconnect_participant(ctx, participant="11111111-aaaa-bbbb-cccc-222222222222")
 
     body = json.loads(route.calls.last.request.read())
     assert body == {"participant_id": "11111111-aaaa-bbbb-cccc-222222222222"}
@@ -189,7 +189,9 @@ async def test_disconnect_participant_swallows_404_as_already_disconnected(ctx):
         return_value=httpx.Response(404, json={"detail": "Not found"})
     )
 
-    result = await command.disconnect_participant(ctx, participant_id="55555555-aaaa-bbbb-cccc-666666666666")
+    result = await command.disconnect_participant(
+        ctx, participant="55555555-aaaa-bbbb-cccc-666666666666"
+    )
 
     assert result["status"] == "success"
     assert "already disconnected" in result["note"]
@@ -203,7 +205,9 @@ async def test_disconnect_participant_propagates_other_errors(ctx):
     )
 
     with pytest.raises(PexipError) as exc:
-        await command.disconnect_participant(ctx, participant_id="77777777-aaaa-bbbb-cccc-888888888888")
+        await command.disconnect_participant(
+            ctx, participant="77777777-aaaa-bbbb-cccc-888888888888"
+        )
 
     assert exc.value.status_code == 500
 
@@ -212,16 +216,18 @@ async def test_disconnect_participant_propagates_other_errors(ctx):
 async def test_mute_participant(ctx):
     route = respx.post(f"{COMMAND_URL}/participant/mute/").mock(return_value=_ok())
 
-    await command.mute_participant(ctx, participant_id="33333333-aaaa-bbbb-cccc-444444444444")
+    await command.mute_participant(ctx, participant="33333333-aaaa-bbbb-cccc-444444444444")
 
-    assert json.loads(route.calls.last.request.read()) == {"participant_id": "33333333-aaaa-bbbb-cccc-444444444444"}
+    assert json.loads(route.calls.last.request.read()) == {
+        "participant_id": "33333333-aaaa-bbbb-cccc-444444444444"
+    }
 
 
 @respx.mock
 async def test_unmute_participant(ctx):
     route = respx.post(f"{COMMAND_URL}/participant/unmute/").mock(return_value=_ok())
 
-    await command.unmute_participant(ctx, participant_id="33333333-aaaa-bbbb-cccc-444444444444")
+    await command.unmute_participant(ctx, participant="33333333-aaaa-bbbb-cccc-444444444444")
 
     assert route.called
 
@@ -229,7 +235,9 @@ async def test_unmute_participant(ctx):
 @respx.mock
 async def test_set_participant_role_validates_enum(ctx):
     with pytest.raises(PexipError) as exc:
-        await command.set_participant_role(ctx, participant_id="33333333-aaaa-bbbb-cccc-444444444444", role="admin")
+        await command.set_participant_role(
+            ctx, participant="33333333-aaaa-bbbb-cccc-444444444444", role="admin"
+        )
 
     assert exc.value.status_code == 400
 
@@ -238,7 +246,9 @@ async def test_set_participant_role_validates_enum(ctx):
 async def test_set_participant_role_chair(ctx):
     route = respx.post(f"{COMMAND_URL}/participant/role/").mock(return_value=_ok())
 
-    await command.set_participant_role(ctx, participant_id="33333333-aaaa-bbbb-cccc-444444444444", role="chair")
+    await command.set_participant_role(
+        ctx, participant="33333333-aaaa-bbbb-cccc-444444444444", role="chair"
+    )
 
     body = json.loads(route.calls.last.request.read())
     assert body == {"participant_id": "33333333-aaaa-bbbb-cccc-444444444444", "role": "chair"}
@@ -248,9 +258,11 @@ async def test_set_participant_role_chair(ctx):
 async def test_disconnect_conference(ctx):
     route = respx.post(f"{COMMAND_URL}/conference/disconnect/").mock(return_value=_ok())
 
-    await command.disconnect_conference(ctx, conference_id="aaaaaaaa-1111-2222-3333-444444444444")
+    await command.disconnect_conference(ctx, conference="aaaaaaaa-1111-2222-3333-444444444444")
 
-    assert json.loads(route.calls.last.request.read()) == {"conference_id": "aaaaaaaa-1111-2222-3333-444444444444"}
+    assert json.loads(route.calls.last.request.read()) == {
+        "conference_id": "aaaaaaaa-1111-2222-3333-444444444444"
+    }
 
 
 @respx.mock
@@ -259,7 +271,9 @@ async def test_disconnect_conference_swallows_404(ctx):
         return_value=httpx.Response(404, json={"detail": "Not found"})
     )
 
-    result = await command.disconnect_conference(ctx, conference_id="bbbbbbbb-1111-2222-3333-444444444444")
+    result = await command.disconnect_conference(
+        ctx, conference="bbbbbbbb-1111-2222-3333-444444444444"
+    )
 
     assert result["status"] == "success"
     assert "already ended" in result["note"]
@@ -270,8 +284,8 @@ async def test_lock_and_unlock_conference(ctx):
     lock_route = respx.post(f"{COMMAND_URL}/conference/lock/").mock(return_value=_ok())
     unlock_route = respx.post(f"{COMMAND_URL}/conference/unlock/").mock(return_value=_ok())
 
-    await command.lock_conference(ctx, conference_id="aaaaaaaa-1111-2222-3333-444444444444")
-    await command.unlock_conference(ctx, conference_id="aaaaaaaa-1111-2222-3333-444444444444")
+    await command.lock_conference(ctx, conference="aaaaaaaa-1111-2222-3333-444444444444")
+    await command.unlock_conference(ctx, conference="aaaaaaaa-1111-2222-3333-444444444444")
 
     assert lock_route.called
     assert unlock_route.called
@@ -282,8 +296,8 @@ async def test_mute_and_unmute_guests(ctx):
     mute_route = respx.post(f"{COMMAND_URL}/conference/mute_guests/").mock(return_value=_ok())
     unmute_route = respx.post(f"{COMMAND_URL}/conference/unmute_guests/").mock(return_value=_ok())
 
-    await command.mute_guests(ctx, conference_id="aaaaaaaa-1111-2222-3333-444444444444")
-    await command.unmute_guests(ctx, conference_id="aaaaaaaa-1111-2222-3333-444444444444")
+    await command.mute_guests(ctx, conference="aaaaaaaa-1111-2222-3333-444444444444")
+    await command.unmute_guests(ctx, conference="aaaaaaaa-1111-2222-3333-444444444444")
 
     assert mute_route.called
     assert unmute_route.called
@@ -292,7 +306,7 @@ async def test_mute_and_unmute_guests(ctx):
 @respx.mock
 async def test_set_conference_layout_requires_at_least_one_field(ctx):
     with pytest.raises(PexipError) as exc:
-        await command.set_conference_layout(ctx, conference_id="aaaaaaaa-1111-2222-3333-444444444444")
+        await command.set_conference_layout(ctx, conference="aaaaaaaa-1111-2222-3333-444444444444")
 
     assert exc.value.status_code == 400
 
@@ -302,7 +316,7 @@ async def test_set_conference_layout_sends_transforms_payload(ctx):
     route = respx.post(f"{COMMAND_URL}/conference/transform_layout/").mock(return_value=_ok())
 
     await command.set_conference_layout(
-        ctx, conference_id="aaaaaaaa-1111-2222-3333-444444444444", host_layout="four_mains_zero_pips"
+        ctx, conference="aaaaaaaa-1111-2222-3333-444444444444", host_layout="four_mains_zero_pips"
     )
 
     body = json.loads(route.calls.last.request.read())
@@ -318,7 +332,7 @@ async def test_set_conference_layout_both_layouts(ctx):
 
     await command.set_conference_layout(
         ctx,
-        conference_id="aaaaaaaa-1111-2222-3333-444444444444",
+        conference="aaaaaaaa-1111-2222-3333-444444444444",
         host_layout="one_main_zero_pips",
         guest_layout="nine_equal",
     )
@@ -335,11 +349,14 @@ async def test_transfer_participant_minimal(ctx):
     route = respx.post(f"{COMMAND_URL}/participant/transfer/").mock(return_value=_ok())
 
     await command.transfer_participant(
-        ctx, participant_id="33333333-aaaa-bbbb-cccc-444444444444", conference_alias="breakout-1"
+        ctx, participant="33333333-aaaa-bbbb-cccc-444444444444", conference_alias="breakout-1"
     )
 
     body = json.loads(route.calls.last.request.read())
-    assert body == {"participant_id": "33333333-aaaa-bbbb-cccc-444444444444", "conference_alias": "breakout-1"}
+    assert body == {
+        "participant_id": "33333333-aaaa-bbbb-cccc-444444444444",
+        "conference_alias": "breakout-1",
+    }
 
 
 @respx.mock
@@ -348,7 +365,7 @@ async def test_transfer_participant_with_role_and_pin(ctx):
 
     await command.transfer_participant(
         ctx,
-        participant_id="33333333-aaaa-bbbb-cccc-444444444444",
+        participant="33333333-aaaa-bbbb-cccc-444444444444",
         conference_alias="locked-room",
         role="guest",
         pin="1234",
@@ -363,8 +380,9 @@ async def test_transfer_participant_with_role_and_pin(ctx):
 async def test_transfer_participant_invalid_role_raises(ctx):
     with pytest.raises(PexipError) as exc:
         await command.transfer_participant(
-            ctx, participant_id="33333333-aaaa-bbbb-cccc-444444444444", conference_alias="x", role="admin"
+            ctx,
+            participant="33333333-aaaa-bbbb-cccc-444444444444",
+            conference_alias="x",
+            role="admin",
         )
     assert exc.value.status_code == 400
-
-

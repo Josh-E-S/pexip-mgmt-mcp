@@ -27,6 +27,7 @@ bodies contain the right reference string.
 pytest-asyncio runs async tests automatically (see `asyncio_mode = "auto"` in
 pyproject.toml), so async def tests don't need a decorator.
 """
+
 from __future__ import annotations
 
 from types import SimpleNamespace

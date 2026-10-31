@@ -10,6 +10,7 @@ Rules evaluate in ascending `priority` order — first match wins. Same idea
 as Asterisk extensions or an Avaya dial plan: the regex/replace pattern is
 the part that takes the most thought.
 """
+
 from __future__ import annotations
 
 from typing import Any

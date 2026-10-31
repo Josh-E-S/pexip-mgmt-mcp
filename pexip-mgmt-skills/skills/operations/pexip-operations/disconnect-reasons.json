@@ -1,5 +1,5 @@
 {
-  "_comment": "Common disconnect_reason strings on history.participant records. The exact set varies between Pexip versions — call get_resource_schema on the participant resource (history namespace) to be sure. Use these for the `disconnect_reason=` filter on list_history_participants or for grouping with summarize_calls(group_by='disconnect_reason').",
+  "_comment": "Common disconnect_reason strings on history.participant records. The exact set varies between Pexip versions — call pexip_get_resource_schema on the participant resource (history namespace) to be sure. Use these for the `disconnect_reason=` filter on pexip_list_history_participants or for grouping with pexip_summarize_calls(group_by='disconnect_reason').",
   "reasons": [
     {
       "value": "Call disconnected",
@@ -53,8 +53,8 @@
     }
   ],
   "_query_hints": {
-    "all_failures": "Use list_history_participants with disconnect_reason__in=Call+failed,Call+rejected,Connection+timed+out (Pexip supports Tastypie __in filters).",
-    "by_reason_chart": "Use summarize_calls(group_by='disconnect_reason', ...) for a single grouped report.",
-    "filter_single": "Use list_history_participants(disconnect_reason='Call failed', ...) for individual records."
+    "all_failures": "Use pexip_list_history_participants with disconnect_reason__in=Call+failed,Call+rejected,Connection+timed+out (Pexip supports Tastypie __in filters).",
+    "by_reason_chart": "Use pexip_summarize_calls(group_by='disconnect_reason', ...) for a single grouped report.",
+    "filter_single": "Use pexip_list_history_participants(disconnect_reason='Call failed', ...) for individual records."
   }
 }

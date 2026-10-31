@@ -12,6 +12,7 @@ locations + per-location stats, backplanes + media stats, management node,
 alarms, licensing, conference sync, cloud overflow nodes/locations, Exchange
 scheduler, MJX endpoints + meetings, and Teams Connector nodes + calls.
 """
+
 from __future__ import annotations
 
 from typing import Any
@@ -103,19 +104,19 @@ async def list_active_participants(
 
 @mcp.tool(annotations=read("Get active participant"))
 async def get_active_participant(
-    ctx: Context, participant_id: str, conference: str | None = None
+    ctx: Context, participant: str, conference: str | None = None
 ) -> dict[str, Any]:
     """Retrieve a single active participant.
 
     Args:
-        participant_id: UUID, or the participant's display name (e.g. "Bob") —
+        participant: UUID, or the participant's display name (e.g. "Bob") —
             names are resolved against currently connected participants
             automatically, so there is no need to call
             list_active_participants first.
         conference: Optional conference name to scope a display-name lookup
             when the name might not be unique across meetings.
     """
-    pid = await _resolve_active_participant_id(ctx, participant_id, conference)
+    pid = await _resolve_active_participant_id(ctx, participant, conference)
     return await get_client(ctx).get("participant", pid, api="status")
 
 
@@ -187,7 +188,7 @@ async def get_licensing_status(ctx: Context) -> dict[str, Any]:
 
 @mcp.tool(annotations=read("Get live participant quality"))
 async def get_participant_quality(
-    ctx: Context, participant_id: str, conference: str | None = None
+    ctx: Context, participant: str, conference: str | None = None
 ) -> dict[str, Any]:
     """Live call quality for one active participant.
 
@@ -202,14 +203,14 @@ async def get_participant_quality(
     exposes bucketed_call_quality.
 
     Args:
-        participant_id: UUID, or the participant's display name (e.g. "Bob") —
+        participant: UUID, or the participant's display name (e.g. "Bob") —
             names are resolved against currently connected participants
             automatically, so there is no need to call
             list_active_participants first.
         conference: Optional conference name to scope a display-name lookup
             when the name might not be unique across meetings.
     """
-    pid = await _resolve_active_participant_id(ctx, participant_id, conference)
+    pid = await _resolve_active_participant_id(ctx, participant, conference)
     client = get_client(ctx)
     participant = await client.get("participant", pid, api="status")
     streams = await client.list(
@@ -274,9 +275,9 @@ async def list_registration_aliases(
 
 
 @mcp.tool(annotations=read("Get registered alias"))
-async def get_registration_alias(ctx: Context, alias_id: str) -> dict[str, Any]:
+async def get_registration_alias(ctx: Context, registration_alias_id: str) -> dict[str, Any]:
     """Retrieve a single registered alias by id."""
-    return await get_client(ctx).get("registration_alias", alias_id, api="status")
+    return await get_client(ctx).get("registration_alias", registration_alias_id, api="status")
 
 
 # ── system_location status + statistics ──────────────────────────────────────
@@ -319,9 +320,7 @@ async def get_location_statistics(ctx: Context, location: str | int) -> dict[str
     """
     client = get_client(ctx)
     loc_id = await resolve_id_by_field(client, "system_location", location, field="name")
-    return await client.list(
-        f"system_location/{loc_id}/statistics", api="status", limit=100
-    )
+    return await client.list(f"system_location/{loc_id}/statistics", api="status", limit=100)
 
 
 # ── worker_vm statistics (per-node load) ─────────────────────────────────────
@@ -336,9 +335,7 @@ async def get_node_statistics(ctx: Context, node: str | int) -> dict[str, Any]:
     """
     client = get_client(ctx)
     node_id = await resolve_id_by_field(client, "worker_vm", node, field="name")
-    return await client.list(
-        f"worker_vm/{node_id}/statistics", api="status", limit=100
-    )
+    return await client.list(f"worker_vm/{node_id}/statistics", api="status", limit=100)
 
 
 # ── backplane + media stats ──────────────────────────────────────────────────
@@ -353,13 +350,13 @@ async def list_backplanes(
 
 
 @mcp.tool(annotations=read("Get backplane"))
-async def get_backplane(ctx: Context, backplane_id: str) -> dict[str, Any]:
+async def get_backplane(ctx: Context, backplane_id: str | int) -> dict[str, Any]:
     """Retrieve a single backplane by id."""
     return await get_client(ctx).get("backplane", backplane_id, api="status")
 
 
 @mcp.tool(annotations=read("Get backplane media streams"))
-async def get_backplane_media_streams(ctx: Context, backplane_id: str) -> dict[str, Any]:
+async def get_backplane_media_streams(ctx: Context, backplane_id: str | int) -> dict[str, Any]:
     """Get media stream statistics for a backplane connection.
 
     Args:
@@ -416,9 +413,9 @@ async def list_cloud_nodes(
 
 
 @mcp.tool(annotations=read("Get cloud overflow node"))
-async def get_cloud_node(ctx: Context, node_id: str) -> dict[str, Any]:
+async def get_cloud_node(ctx: Context, cloud_node_id: str) -> dict[str, Any]:
     """Retrieve a single cloud overflow node by id."""
-    return await get_client(ctx).get("cloud_node", node_id, api="status")
+    return await get_client(ctx).get("cloud_node", cloud_node_id, api="status")
 
 
 @mcp.tool(annotations=read("List cloud monitored locations"))
@@ -461,9 +458,7 @@ async def list_exchange_scheduler_status(
     ctx: Context, limit: int = 20, offset: int = 0, fetch_all: bool = False
 ) -> dict[str, Any]:
     """List Secure Scheduler for Exchange integration status."""
-    return await _list(
-        get_client(ctx), "exchange_scheduler", fetch_all, limit=limit, offset=offset
-    )
+    return await _list(get_client(ctx), "exchange_scheduler", fetch_all, limit=limit, offset=offset)
 
 
 @mcp.tool(annotations=read("Get Exchange scheduler status"))
@@ -527,9 +522,9 @@ async def list_teams_node_status(
 
 
 @mcp.tool(annotations=read("Get Teams Connector node status"))
-async def get_teams_node_status(ctx: Context, node_id: str) -> dict[str, Any]:
+async def get_teams_node_status(ctx: Context, teams_node_id: str) -> dict[str, Any]:
     """Retrieve status for a single Teams Connector node by id."""
-    return await get_client(ctx).get("teamsnode", node_id, api="status")
+    return await get_client(ctx).get("teamsnode", teams_node_id, api="status")
 
 
 @mcp.tool(annotations=read("List Teams Connector call status"))

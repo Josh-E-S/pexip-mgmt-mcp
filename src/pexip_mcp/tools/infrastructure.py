@@ -14,6 +14,7 @@ Configuration changes for these resources typically happen via deployment
 tooling (cloud bursting, manual node bring-up) and are intentionally NOT
 exposed as MCP tools — only reads.
 """
+
 from __future__ import annotations
 
 from typing import Any

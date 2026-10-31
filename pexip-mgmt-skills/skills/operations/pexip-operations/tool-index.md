@@ -6,30 +6,30 @@ A curated, intent-grouped lookup for the pexip-mgmt MCP server's tools: find the
 
 | Tool | Description |
 |---|---|
-| `list_active_conferences` | Currently-running conference instances. Filter by `name`, `service_type`, `tag`. |
-| `list_active_participants` | Currently-connected participants. Filter by `conference_name`, `role`, `protocol`, `is_muted`. |
-| `get_active_participant` | One active participant by UUID. |
-| `list_node_status` | Live load + sync state for each Conferencing Node. |
-| `get_node_status` | One Conferencing Node's live status. |
-| `list_alarms` | Active platform alarms. Filter by `level`, `node_name`. |
-| `get_licensing_status` | Concurrent port usage vs entitlement, per location. |
-| `get_participant_quality` | Live call quality + per-stream stats for one participant. |
+| `pexip_list_active_conferences` | Currently-running conference instances. Filter by `name`, `service_type`, `tag`. |
+| `pexip_list_active_participants` | Currently-connected participants. Filter by `conference_name`, `role`, `protocol`, `is_muted`. |
+| `pexip_get_active_participant` | One active participant by UUID. |
+| `pexip_list_node_status` | Live load + sync state for each Conferencing Node. |
+| `pexip_get_node_status` | One Conferencing Node's live status. |
+| `pexip_list_alarms` | Active platform alarms. Filter by `level`, `node_name`. |
+| `pexip_get_licensing_status` | Concurrent port usage vs entitlement, per location. |
+| `pexip_get_participant_quality` | Live call quality + per-stream stats for one participant. |
 
 ## Live meeting control (Command API — write)
 
 | Tool | Idempotent? | Description |
 |---|---|---|
-| `dial_participant` | NO | Place an outbound call to add a participant to a running conference. |
-| `disconnect_participant` | yes | Kick one participant (404 → already gone). |
-| `mute_participant` / `unmute_participant` | yes | Audio mute one participant. |
+| `pexip_dial_participant` | NO | Place an outbound call to add a participant to a running conference. |
+| `pexip_disconnect_participant` | yes | Kick one participant (404 → already gone). |
+| `pexip_mute_participant` / `pexip_unmute_participant` | yes | Audio mute one participant. |
 | `video_mute_participant` / `video_unmute_participant` | yes | Video mute one participant. |
-| `set_participant_role` | yes | Change role to `chair` or `guest`. |
+| `pexip_set_participant_role` | yes | Change role to `chair` or `guest`. |
 | `spotlight_participant` / `unspotlight_participant` | yes | Pin a participant in the layout. |
-| `transfer_participant` | NO | Move a participant to another conference. |
-| `disconnect_conference` | yes | End a meeting (disconnect everyone). DESTRUCTIVE. |
-| `lock_conference` / `unlock_conference` | yes | Lock new joiners out. |
-| `mute_guests` / `unmute_guests` | yes | Audio mute every participant with role=guest. |
-| `set_conference_layout` | yes | Change active layout. See `layouts.json` (sibling of `SKILL.md`). |
+| `pexip_transfer_participant` | NO | Move a participant to another conference. |
+| `pexip_disconnect_conference` | yes | End a meeting (disconnect everyone). DESTRUCTIVE. |
+| `pexip_lock_conference` / `pexip_unlock_conference` | yes | Lock new joiners out. |
+| `pexip_mute_guests` / `pexip_unmute_guests` | yes | Audio mute every participant with role=guest. |
+| `pexip_set_conference_layout` | yes | Change active layout. See `layouts.json` (sibling of `SKILL.md`). |
 | `send_conference_message` | NO | Display a text/banner message to everyone in a conference. |
 | `send_participant_message` | NO | Display a text message to one participant. |
 
@@ -37,48 +37,48 @@ A curated, intent-grouped lookup for the pexip-mgmt MCP server's tools: find the
 
 | Tool | Description |
 |---|---|
-| `list_history_conferences` | Completed conference instances in a time window. |
-| `get_history_conference` | One past conference instance. |
-| `list_history_participants` | Completed participant legs (CDRs). |
-| `get_history_participant` | One past participant — includes `bucketed_call_quality` + `historic_call_quality`. |
-| `summarize_calls` | Aggregate counts + duration in a time window, grouped by direction/quality/protocol/etc. **Prefer this for reporting.** |
+| `pexip_list_history_conferences` | Completed conference instances in a time window. |
+| `pexip_get_history_conference` | One past conference instance. |
+| `pexip_list_history_participants` | Completed participant legs (CDRs). |
+| `pexip_get_history_participant` | One past participant — includes `bucketed_call_quality` + `historic_call_quality`. |
+| `pexip_summarize_calls` | Aggregate counts + duration in a time window, grouped by direction/quality/protocol/etc. **Prefer this for reporting.** |
 
 ## VMR / conference configuration
 
 | Tool | Description |
 |---|---|
-| `list_vmrs` / `get_vmr` / `create_vmr` / `update_vmr` / `delete_vmr` | CRUD on Virtual Meeting Rooms. Name-or-id everywhere. |
-| `list_aliases` / `add_vmr_alias` / `delete_alias` | Manage dial strings on a VMR. |
-| `list_automatic_participants` / `add_automatic_participant` / `delete_automatic_participant` | Auto-dial entries (recorder, streamer) per VMR. |
+| `pexip_list_vmrs` / `pexip_get_vmr` / `pexip_create_vmr` / `pexip_update_vmr` / `pexip_delete_vmr` | CRUD on Virtual Meeting Rooms. Name-or-id everywhere. |
+| `pexip_list_aliases` / `pexip_add_vmr_alias` / `pexip_delete_alias` | Manage dial strings on a VMR. |
+| `pexip_list_automatic_participants` / `pexip_add_automatic_participant` / `pexip_delete_automatic_participant` | Auto-dial entries (recorder, streamer) per VMR. |
 
 ## Directory
 
 | Tool | Description |
 |---|---|
-| `list_end_users` / `get_end_user` / `create_end_user` / `update_end_user` / `delete_end_user` | Directory CRUD. Handle is `primary_email_address`. |
-| `list_ldap_sources` / `get_ldap_source` / `create_ldap_source` / `update_ldap_source` / `delete_ldap_source` | LDAP / AD sync sources. `get_ldap_source` returns last sync status. |
+| `pexip_list_end_users` / `pexip_get_end_user` / `pexip_create_end_user` / `pexip_update_end_user` / `pexip_delete_end_user` | Directory CRUD. Handle is `primary_email_address`. |
+| `pexip_list_ldap_sources` / `pexip_get_ldap_source` / `pexip_create_ldap_source` / `pexip_update_ldap_source` / `pexip_delete_ldap_source` | LDAP / AD sync sources. `pexip_get_ldap_source` returns last sync status. |
 
 ## Devices & registrations
 
 | Tool | Description |
 |---|---|
-| `list_devices` / `get_device` / `create_device` / `update_device` / `delete_device` | CRUD on provisioned registration records (alias + creds + protocol flags). Name-or-id by `alias`. |
-| `list_registrations` | Live Status-API read of endpoints registered *right now* (alias, node, protocol). |
+| `pexip_list_devices` / `pexip_get_device` / `pexip_create_device` / `pexip_update_device` / `pexip_delete_device` | CRUD on provisioned registration records (alias + creds + protocol flags). Name-or-id by `alias`. |
+| `pexip_list_registrations` | Live Status-API read of endpoints registered *right now* (alias, node, protocol). |
 
 ## Dial plan & policy
 
 | Tool | Description |
 |---|---|
-| `list_gateway_rules` / `get_gateway_rule` / `create_gateway_rule` / `update_gateway_rule` / `delete_gateway_rule` | Outbound dial-plan rules, evaluated in ascending `priority`. |
-| `list_policy_profiles` / `get_policy_profile` / `create_policy_profile` / `update_policy_profile` / `delete_policy_profile` | External + local (Jinja2) policy profiles. `settings` is a dict — discover fields with `get_resource_schema('policy_profile')`. |
+| `pexip_list_gateway_rules` / `pexip_get_gateway_rule` / `pexip_create_gateway_rule` / `pexip_update_gateway_rule` / `pexip_delete_gateway_rule` | Outbound dial-plan rules, evaluated in ascending `priority`. |
+| `list_policy_profiles` / `get_policy_profile` / `create_policy_profile` / `update_policy_profile` / `delete_policy_profile` | External + local (Jinja2) policy profiles. `settings` is a dict — discover fields with `pexip_get_resource_schema('policy_profile')`. |
 
 ## Infrastructure (read-only)
 
 | Tool | Description |
 |---|---|
-| `list_locations` / `get_location` | System locations (datacenter / region groupings of nodes). |
-| `list_conferencing_nodes` / `get_conferencing_node` | Conferencing Node configuration (the `worker_vm` resource). |
-| `list_ivr_themes` / `get_ivr_theme` | Branding bundles assignable to VMRs. |
+| `pexip_list_locations` / `pexip_get_location` | System locations (datacenter / region groupings of nodes). |
+| `pexip_list_conferencing_nodes` / `pexip_get_conferencing_node` | Conferencing Node configuration (the `worker_vm` resource). |
+| `pexip_list_ivr_themes` / `pexip_get_ivr_theme` | Branding bundles assignable to VMRs. |
 
 ## MJX — One-Touch Join
 
@@ -191,8 +191,8 @@ A curated, intent-grouped lookup for the pexip-mgmt MCP server's tools: find the
 
 | Tool | Description |
 |---|---|
-| `get_global_settings` / `update_global_settings` | Singleton at `/configuration/v1/global/1/`. Affects the whole platform. |
-| `get_resource_schema(resource=…)` | Fetch the live JSON schema for any resource. Use before guessing field names or enum values. |
+| `pexip_get_global_settings` / `pexip_update_global_settings` | Singleton at `/configuration/v1/global/1/`. Affects the whole platform. |
+| `pexip_get_resource_schema(resource=…)` | Fetch the live JSON schema for any resource. Use before guessing field names or enum values. |
 
 ## Not exposed
 

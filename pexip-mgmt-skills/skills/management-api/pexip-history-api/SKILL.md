@@ -1,6 +1,6 @@
 ---
 name: pexip-history-api
-description: Use when adding, modifying, or debugging MCP tools that read post-call data from Pexip Infinity — Call Detail Records (CDRs), historical conferences and participants, call quality summaries, packet loss / bitrate stats, disconnect reasons, bucketed_call_quality, historic_call_quality. Triggers on `/api/admin/history/v1/`, `conference` (history), `participant` (history), `summarize_calls`, `list_history_conferences`, `list_history_participants`, `get_history_participant`, `start_time__gte`, `disconnect_reason`, `call_quality`, `tools/history.py`. Do NOT use for live in-progress meetings (use `pexip-status-api`) or for state-changing actions (use `pexip-command-api`).
+description: Use when adding, modifying, or debugging MCP tools that read post-call data from Pexip Infinity — Call Detail Records (CDRs), historical conferences and participants, call quality summaries, packet loss / bitrate stats, disconnect reasons, bucketed_call_quality, historic_call_quality. Triggers on `/api/admin/history/v1/`, `conference` (history), `participant` (history), `pexip_summarize_calls`, `pexip_list_history_conferences`, `pexip_list_history_participants`, `pexip_get_history_participant`, `start_time__gte`, `disconnect_reason`, `call_quality`, `tools/history.py`. Do NOT use for live in-progress meetings (use `pexip-status-api`) or for state-changing actions (use `pexip-command-api`).
 license: MIT
 ---
 
@@ -69,7 +69,7 @@ Quality classification rule:
 
 - **List-then-detail.** For "show me the bad calls and explain why" tools, list with `?call_quality=3_bad,4_terrible` (or `__in`), then GET each participant by id to get `bucketed_call_quality`. Cap detail-fanout (e.g. top 20 worst) to respect the 1,000/60s rate limit.
 - **Time-window queries should always be inclusive-lower / exclusive-upper** to avoid double-counting at boundaries: `start_time__gte=...&start_time__lt=...`.
-- **For aggregations (counts, totals, breakdowns), prefer the `summarize_calls` MCP tool** over fetching individual records. It paginates server-side with `limit=10000` (the per-request max) and returns counts + duration totals grouped by a chosen field.
+- **For aggregations (counts, totals, breakdowns), prefer the `pexip_summarize_calls` MCP tool** over fetching individual records. It paginates server-side with `limit=10000` (the per-request max) and returns counts + duration totals grouped by a chosen field.
 - **Time format is ISO 8601 in UTC** (e.g. `2026-04-30T00:00:00`). Pexip stores and returns UTC; convert to the user's timezone on display, not on query.
 - **CDR completeness.** The participant resource is the closest thing to a CDR. For billing-grade exports, prefer pulling on a schedule and storing externally — Pexip's 10,000-instance limit means high-volume platforms lose history fast.
 - **Don't confuse `conference` (history)** — a string name — **with `conference` (configuration)** — a URI/FK. They look similar in JSON but mean different things.

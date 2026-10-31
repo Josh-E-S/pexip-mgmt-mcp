@@ -1,8 +1,8 @@
 """Catalog quality lint: the Glama rubric and the Claude Connectors Directory
 pre-submission checklist, made executable.
 
-Each test asserts one property of EVERY registered tool. Properties the current
-catalog does not yet satisfy are marked xfail(strict=True): they document the
+Each test asserts one property of EVERY registered tool. Properties the catalog
+does not yet satisfy are marked xfail(strict=True): they document the
 phase-1 acceptance criteria in docs/TOOL-ARCHITECTURE-PLAN.md and will start
 failing-as-XPASS (which strict turns into a real failure) the moment the work
 lands, at which point the xfail marker is removed. Nothing here changes runtime
@@ -99,18 +99,12 @@ def test_freeform_payload_tools_reference_pexip_api_docs():
             desc = t.description or ""
             if not any(m in desc for m in PEXIP_DOCS_MARKERS):
                 bad.append(t.name)
-    # Today the generic CRUD tools say "Pexip configuration resource" but do not
-    # link the Management API docs; tracked for phase 1.
-    if bad:
-        pytest.xfail(f"phase 1: add Management API doc reference to {bad}")
+    assert not bad, bad
 
 
 # ── Phase-1 acceptance criteria (xfail until the work lands) ────────────────
 
 
-@pytest.mark.xfail(
-    strict=True, raises=AssertionError, reason="phase 1: every tool gets the pexip_ prefix"
-)
 def test_every_tool_has_service_prefix():
     bad = [n for n in NAMES if not n.startswith("pexip_")]
     assert not bad, bad
@@ -125,9 +119,6 @@ def test_every_non_read_tool_declares_destructive():
     assert not bad, bad
 
 
-@pytest.mark.xfail(
-    strict=True, raises=AssertionError, reason="phase 1: description floor of 120 chars"
-)
 def test_descriptions_meet_length_floor():
     short = [t.name for t in TOOLS if len((t.description or "").strip()) < 120]
     assert not short, short
@@ -143,19 +134,11 @@ def test_descriptions_meet_length_ceiling():
     assert not long, long
 
 
-@pytest.mark.xfail(
-    strict=True, raises=AssertionError, reason="phase 1: 'Use when' guidance in every description"
-)
 def test_descriptions_state_when_to_use():
     bad = [t.name for t in TOOLS if "use when" not in (t.description or "").lower()]
     assert not bad, bad
 
 
-@pytest.mark.xfail(
-    strict=True,
-    raises=AssertionError,
-    reason="phase 1: input_examples via tool meta for 4+ optional params",
-)
 def test_tools_with_many_optional_params_have_input_examples():
     bad = [
         t.name
@@ -175,22 +158,21 @@ def test_every_tool_has_output_schema():
     assert not bad, bad
 
 
-@pytest.mark.xfail(
-    strict=True,
-    raises=AssertionError,
-    reason="phase 1: parameter names must not carry two meanings across tools "
-    "(conference_id is a UUID in command tools and an int elsewhere)",
-)
 def test_parameter_names_have_one_type_across_catalog():
     seen: dict[str, set[str]] = {}
     for t in TOOLS:
         for pname, pschema in _props(t).items():
             if pname == "ctx":
                 continue
-            types = pschema.get("type")
-            if types is None and "anyOf" in pschema:
-                types = "/".join(sorted(s.get("type", "?") for s in pschema["anyOf"]))
-            seen.setdefault(pname, set()).add(str(types))
+            # Optional parameters are `anyOf [X, null]`; drop the null so a parameter
+            # that is required in one tool and optional in another is not flagged.
+            if "anyOf" in pschema:
+                types = "/".join(
+                    sorted(s.get("type", "?") for s in pschema["anyOf"] if s.get("type") != "null")
+                )
+            else:
+                types = str(pschema.get("type"))
+            seen.setdefault(pname, set()).add(types)
     conflicts = {k: v for k, v in seen.items() if len(v) > 1}
     assert not conflicts, conflicts
 

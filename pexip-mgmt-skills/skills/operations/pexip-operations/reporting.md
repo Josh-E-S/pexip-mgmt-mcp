@@ -6,11 +6,11 @@ For "what happened" questions: usage reports, billing inputs, call-quality foren
 
 | Tool | Use when |
 |---|---|
-| **`summarize_calls`** | The user wants **counts or totals** — "how many", "how long", "by direction / quality / protocol". |
-| **`list_history_participants`** | The user wants **individual records** — "show me the bad-quality calls", "every leg of yesterday's standup". |
-| **`get_history_participant`** | Drill down on **one specific record** — only here do you get `bucketed_call_quality` and `historic_call_quality`. |
+| **`pexip_summarize_calls`** | The user wants **counts or totals** — "how many", "how long", "by direction / quality / protocol". |
+| **`pexip_list_history_participants`** | The user wants **individual records** — "show me the bad-quality calls", "every leg of yesterday's standup". |
+| **`pexip_get_history_participant`** | Drill down on **one specific record** — only here do you get `bucketed_call_quality` and `historic_call_quality`. |
 
-**Rule of thumb: if the answer is a number or a chart, start with `summarize_calls`.** It walks pagination server-side up to the platform's 10,000-instance retention limit. Fetching individual records and counting in tool-call-land is strictly worse on tokens, latency, and rate limit.
+**Rule of thumb: if the answer is a number or a chart, start with `pexip_summarize_calls`.** It walks pagination server-side up to the platform's 10,000-instance retention limit. Fetching individual records and counting in tool-call-land is strictly worse on tokens, latency, and rate limit.
 
 ## Time format
 
@@ -19,7 +19,7 @@ UTC, ISO 8601, no timezone suffix: `2026-05-19T00:00:00`. The user gives you the
 Time bounds are **inclusive lower, exclusive upper** to avoid double-counting at boundaries:
 
 ```
-summarize_calls(start_time="2026-05-19T00:00:00", end_time="2026-05-20T00:00:00", …)
+pexip_summarize_calls(start_time="2026-05-19T00:00:00", end_time="2026-05-20T00:00:00", …)
 ```
 
 That's "all of May 19th UTC". For a week, set `end_time` to the start of the day **after** the last day you want.
@@ -27,7 +27,7 @@ That's "all of May 19th UTC". For a week, set `end_time` to the start of the day
 ## Recipe: usage report
 
 ```
-summarize_calls(
+pexip_summarize_calls(
     start_time="2026-05-19T00:00:00",
     end_time="2026-05-20T00:00:00",
     group_by="call_direction",   # in vs out
@@ -84,7 +84,7 @@ location="eu-west"                  # one system_location
 
 ```
 # 1. List the bad records.
-bad = list_history_participants(
+bad = pexip_list_history_participants(
     start_time="2026-05-18T20:00:00",
     end_time="2026-05-19T08:00:00",
     call_quality="4_terrible",
@@ -93,7 +93,7 @@ bad = list_history_participants(
 
 # 2. For each, drill down for the per-window timeline.
 for p in bad["objects"]:
-    detail = get_history_participant(participant_id=p["id"])
+    detail = pexip_get_history_participant(participant_id=p["id"])
     # detail["bucketed_call_quality"] = [unknown, good, ok, bad, terrible] counts
     # detail["historic_call_quality"] = per-20s-window timeline
 ```
@@ -110,7 +110,7 @@ Cap the per-record fan-out at ~20 to stay within the platform's 1,000-req/60s ra
 ## Recipe: failed-call audit
 
 ```
-list_history_participants(
+pexip_list_history_participants(
     start_time="2026-05-19T00:00:00",
     end_time="2026-05-20T00:00:00",
     disconnect_reason="Call failed",
@@ -118,14 +118,14 @@ list_history_participants(
 )
 ```
 
-Common `disconnect_reason` strings are in `disconnect-reasons.json` (sibling). The exact set differs slightly between Pexip versions — call `get_resource_schema("participant")` against the **history** namespace if you need to be sure.
+Common `disconnect_reason` strings are in `disconnect-reasons.json` (sibling). The exact set differs slightly between Pexip versions — call `pexip_get_resource_schema("participant")` against the **history** namespace if you need to be sure.
 
 ## Recipe: per-VMR breakdown
 
 "Which VMRs got the most use last week?"
 
 ```
-summarize_calls(
+pexip_summarize_calls(
     start_time="2026-05-12T00:00:00",
     end_time="2026-05-19T00:00:00",
     group_by="conference_name",

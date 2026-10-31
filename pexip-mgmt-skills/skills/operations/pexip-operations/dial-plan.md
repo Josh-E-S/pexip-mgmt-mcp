@@ -16,13 +16,13 @@ Lower priority = evaluated earlier. Plan priority numbers with gaps (10, 20, 30)
 ## Recipe: list rules in evaluation order
 
 ```
-list_gateway_rules(enabled_only=True)   # ordered by priority ascending
+pexip_list_gateway_rules(enabled_only=True)   # ordered by priority ascending
 ```
 
 ## Recipe: add a rule (bridge SIP → Teams)
 
 ```
-create_gateway_rule(
+pexip_create_gateway_rule(
     name="route-teams-meetings",
     priority=100,
     match_string="^teams\\.([0-9]+)@example\\.com$",
@@ -44,7 +44,7 @@ create_gateway_rule(
 ## Recipe: re-prioritize a rule
 
 ```
-update_gateway_rule(rule="route-teams-meetings", priority=50)
+pexip_update_gateway_rule(rule="route-teams-meetings", priority=50)
 ```
 
 Other rules' priorities are **not** auto-shifted. If another rule already has priority 50 you'll have two rules at the same priority — order between them becomes unstable. Renumber both, or pick a gap (e.g. priority=45).
@@ -52,15 +52,15 @@ Other rules' priorities are **not** auto-shifted. If another rule already has pr
 ## Recipe: disable instead of delete
 
 ```
-update_gateway_rule(rule="route-teams-meetings", enable=False)
+pexip_update_gateway_rule(rule="route-teams-meetings", enable=False)
 ```
 
-Disabled rules stay in the config (and in `list_gateway_rules()` unless filtered) but are skipped during evaluation. Reversible. Prefer this for rules you might want back.
+Disabled rules stay in the config (and in `pexip_list_gateway_rules()` unless filtered) but are skipped during evaluation. Reversible. Prefer this for rules you might want back.
 
 ## Recipe: delete a rule
 
 ```
-delete_gateway_rule(rule="route-teams-meetings")
+pexip_delete_gateway_rule(rule="route-teams-meetings")
 ```
 
 Irreversible. Confirm with the user first.
@@ -75,7 +75,7 @@ Irreversible. Confirm with the user first.
 ## Field gotchas
 
 - **`outgoing_location` is a FK.** Pass the location name or id; the MCP tool resolves to a URI internally.
-- **Booleans in filters** sometimes need to be Python-cased (`enabled_only=True` → query `enable=True`). The MCP tool handles this for `list_gateway_rules`.
+- **Booleans in filters** sometimes need to be Python-cased (`enabled_only=True` → query `enable=True`). The MCP tool handles this for `pexip_list_gateway_rules`.
 - **`crypto_mode="required"` will hard-fail calls** to destinations that don't support encryption — common gotcha for legacy H.323 endpoints.
 
 ## Authoritative docs

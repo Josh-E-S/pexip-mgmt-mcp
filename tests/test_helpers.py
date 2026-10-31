@@ -9,6 +9,7 @@ documented in `_helpers.paginate_all`'s docstring. We feed a sequence of those
 into `respx`'s `route.side_effect = [...]` so the same URL returns a different
 page on each call — that's how we simulate Pexip paginating.
 """
+
 from __future__ import annotations
 
 import httpx
@@ -38,12 +39,17 @@ def _page(*, total: int, objects: list, has_next: bool):
 async def test_paginate_all_walks_pages_until_next_is_null(client):
     route = respx.get(f"{HISTORY_URL}/participant/")
     route.side_effect = [
-        httpx.Response(200, json=_page(total=2500, objects=[{"id": i} for i in range(1000)],
-                                       has_next=True)),
-        httpx.Response(200, json=_page(total=2500, objects=[{"id": i} for i in range(1000, 2000)],
-                                       has_next=True)),
-        httpx.Response(200, json=_page(total=2500, objects=[{"id": i} for i in range(2000, 2500)],
-                                       has_next=False)),
+        httpx.Response(
+            200, json=_page(total=2500, objects=[{"id": i} for i in range(1000)], has_next=True)
+        ),
+        httpx.Response(
+            200,
+            json=_page(total=2500, objects=[{"id": i} for i in range(1000, 2000)], has_next=True),
+        ),
+        httpx.Response(
+            200,
+            json=_page(total=2500, objects=[{"id": i} for i in range(2000, 2500)], has_next=False),
+        ),
     ]
 
     result = await paginate_all(client, "participant", api="history", page_size=1000)
@@ -63,11 +69,13 @@ async def test_paginate_all_walks_pages_until_next_is_null(client):
 async def test_paginate_all_truncates_at_max_records(client):
     route = respx.get(f"{HISTORY_URL}/participant/")
     route.side_effect = [
-        httpx.Response(200, json=_page(total=10000, objects=[{"id": i} for i in range(1000)],
-                                       has_next=True)),
-        httpx.Response(200, json=_page(total=10000,
-                                       objects=[{"id": i} for i in range(1000, 2000)],
-                                       has_next=True)),
+        httpx.Response(
+            200, json=_page(total=10000, objects=[{"id": i} for i in range(1000)], has_next=True)
+        ),
+        httpx.Response(
+            200,
+            json=_page(total=10000, objects=[{"id": i} for i in range(1000, 2000)], has_next=True),
+        ),
     ]
 
     result = await paginate_all(

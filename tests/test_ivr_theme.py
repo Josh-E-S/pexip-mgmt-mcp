@@ -12,9 +12,17 @@ from .conftest import BASE_URL, fk
 async def test_list_ivr_themes(ctx):
     route = respx.get(f"{BASE_URL}/ivr_theme/").mock(
         return_value=httpx.Response(
-            200, json={"meta": {"total_count": 0, "limit": 20, "offset": 0,
-                                "next": None, "previous": None},
-                      "objects": []}
+            200,
+            json={
+                "meta": {
+                    "total_count": 0,
+                    "limit": 20,
+                    "offset": 0,
+                    "next": None,
+                    "previous": None,
+                },
+                "objects": [],
+            },
         )
     )
 
@@ -29,10 +37,8 @@ async def test_get_ivr_theme_by_name(ctx):
         return_value=httpx.Response(
             200,
             json={
-                "meta": {"total_count": 1, "limit": 2, "offset": 0,
-                         "next": None, "previous": None},
-                "objects": [{"id": 2, "name": "default",
-                             "resource_uri": fk("ivr_theme", 2)}],
+                "meta": {"total_count": 1, "limit": 2, "offset": 0, "next": None, "previous": None},
+                "objects": [{"id": 2, "name": "default", "resource_uri": fk("ivr_theme", 2)}],
             },
         )
     )

@@ -56,8 +56,13 @@ async def test_retry_429_then_succeeds(fast_client):
         httpx.Response(
             200,
             json={
-                "meta": {"total_count": 0, "limit": 20, "offset": 0,
-                         "next": None, "previous": None},
+                "meta": {
+                    "total_count": 0,
+                    "limit": 20,
+                    "offset": 0,
+                    "next": None,
+                    "previous": None,
+                },
                 "objects": [],
             },
         ),

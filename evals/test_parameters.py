@@ -11,6 +11,7 @@ Layer 2 (--llm flag):
   may provide ``mock_returns`` (tool name -> payload) for those intermediate
   calls; unlisted tools get ``{}``.
 """
+
 from __future__ import annotations
 
 import json
@@ -29,6 +30,7 @@ MAX_TURNS = 4
 # Layer 1: deterministic validation
 # ---------------------------------------------------------------------------
 
+
 @pytest.mark.parametrize("case", CASES, ids=case_ids(CASES))
 def test_expected_tool_exists(case, tool_names):
     """The expected tool (and any mocked tools) must exist in the registry."""
@@ -36,9 +38,7 @@ def test_expected_tool_exists(case, tool_names):
         f"Tool {case['expected_tool']!r} from case {case['id']!r} not in registry"
     )
     for tool in case.get("mock_returns", {}):
-        assert tool in tool_names, (
-            f"Mocked tool {tool!r} in case {case['id']!r} not in registry"
-        )
+        assert tool in tool_names, f"Mocked tool {tool!r} in case {case['id']!r} not in registry"
 
 
 @pytest.mark.parametrize("case", CASES, ids=case_ids(CASES))
@@ -61,6 +61,7 @@ def test_expected_params_match_signature(case, tool_registry):
 # ---------------------------------------------------------------------------
 # Layer 2: LLM-scored eval
 # ---------------------------------------------------------------------------
+
 
 @pytest.mark.llm
 @pytest.mark.parametrize("case", CASES, ids=case_ids(CASES))
@@ -91,29 +92,28 @@ def test_claude_passes_correct_params(case, claude_client, claude_tools):
             break
 
         all_calls.extend(tu.name for tu in tool_uses)
-        target_use = next(
-            (tu for tu in tool_uses if tu.name == case["expected_tool"]), None
-        )
+        target_use = next((tu for tu in tool_uses if tu.name == case["expected_tool"]), None)
         if target_use is not None:
             break
 
         messages.append({"role": "assistant", "content": response.content})
-        messages.append({
-            "role": "user",
-            "content": [
-                {
-                    "type": "tool_result",
-                    "tool_use_id": tu.id,
-                    "content": json.dumps(mock_returns.get(tu.name, {})),
-                }
-                for tu in tool_uses
-            ],
-        })
+        messages.append(
+            {
+                "role": "user",
+                "content": [
+                    {
+                        "type": "tool_result",
+                        "tool_use_id": tu.id,
+                        "content": json.dumps(mock_returns.get(tu.name, {})),
+                    }
+                    for tu in tool_uses
+                ],
+            }
+        )
 
     assert all_calls, f"Case {case['id']!r}: Claude returned no tool calls"
     assert target_use is not None, (
-        f"Case {case['id']!r}: expected {case['expected_tool']!r}, "
-        f"got {all_calls}"
+        f"Case {case['id']!r}: expected {case['expected_tool']!r}, got {all_calls}"
     )
 
     result = score_params(
@@ -122,6 +122,5 @@ def test_claude_passes_correct_params(case, claude_client, claude_tools):
         case.get("params_present"),
     )
     assert result.passed, (
-        f"Case {case['id']!r}: {result.details}\n"
-        f"  Actual params: {target_use.input}"
+        f"Case {case['id']!r}: {result.details}\n  Actual params: {target_use.input}"
     )

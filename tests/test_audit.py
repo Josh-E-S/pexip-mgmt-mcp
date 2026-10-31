@@ -1,4 +1,5 @@
 """Tests for audit logging of mutating Management API calls, and F6 error redaction."""
+
 from __future__ import annotations
 
 import logging
@@ -55,8 +56,10 @@ async def test_command_audited(client, audit_logs):
     )
     await client.command("participant", "disconnect", {"participant_id": "abc"})
     lines = [r.message for r in audit_logs.records if r.name == "pexip_mcp.audit"]
-    assert any("action=command" in m and "resource=participant" in m and "id=disconnect" in m
-               for m in lines)
+    assert any(
+        "action=command" in m and "resource=participant" in m and "id=disconnect" in m
+        for m in lines
+    )
 
 
 @respx.mock
@@ -66,8 +69,11 @@ async def test_failed_mutation_logs_warning_with_ref(client, audit_logs):
     )
     with pytest.raises(PexipError) as exc:
         await client.delete("conference", 5)
-    warnings = [r for r in audit_logs.records
-                if r.name == "pexip_mcp.audit" and r.levelno == logging.WARNING]
+    warnings = [
+        r
+        for r in audit_logs.records
+        if r.name == "pexip_mcp.audit" and r.levelno == logging.WARNING
+    ]
     assert warnings, "a failed mutation must log a WARNING audit line"
     msg = warnings[-1].message
     assert "outcome=error" in msg
@@ -78,9 +84,7 @@ async def test_failed_mutation_logs_warning_with_ref(client, audit_logs):
 
 @respx.mock
 async def test_reads_are_not_audited(client, audit_logs):
-    respx.get(f"{BASE_URL}/conference/1/").mock(
-        return_value=httpx.Response(200, json={"id": 1})
-    )
+    respx.get(f"{BASE_URL}/conference/1/").mock(return_value=httpx.Response(200, json={"id": 1}))
     await client.get("conference", 1)
     assert not [r for r in audit_logs.records if r.name == "pexip_mcp.audit"]
 

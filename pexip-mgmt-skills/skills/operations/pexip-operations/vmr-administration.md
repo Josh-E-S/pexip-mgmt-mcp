@@ -13,7 +13,7 @@ For long-lived platform configuration: VMRs (Virtual Meeting Rooms), the aliases
 | `*_ldap_source` | `ldap_sync_source` | LDAP / AD server config for end-user sync. |
 | `get/list_ivr_theme` | `ivr_theme` | Branding bundle (read-only — themes are uploaded via the admin UI). |
 | `*_global_settings` | `global` (singleton, id=1) | Platform-wide settings. |
-| `get_resource_schema` | any | Live schema for any resource — use before guessing fields. |
+| `pexip_get_resource_schema` | any | Live schema for any resource — use before guessing fields. |
 
 ## Name-or-id everywhere
 
@@ -26,7 +26,7 @@ The CRUD tools accept friendly identifiers — exact name for most resources, `p
 ## Recipe: create a VMR with aliases
 
 ```
-create_vmr(
+pexip_create_vmr(
     name="AllHands",
     aliases=["allhands@example.com", "+15551234567"],
     pin="1234",                  # optional, host PIN
@@ -44,19 +44,19 @@ Returns the created VMR with its integer id. Names must be unique; conflicts com
 ## Recipe: add an alias to an existing VMR
 
 ```
-add_vmr_alias(
+pexip_add_vmr_alias(
     vmr="AllHands",                # or vmr=42
     alias="meet.allhands@example.com",
     description="Marketing's preferred URL",
 )
 ```
 
-VMR-side `aliases` (the inline list on the VMR object) and `conference_alias` (a sibling resource) are two ways to attach an alias. **Pick one approach per VMR and stick with it.** `add_vmr_alias` always uses the sibling-resource approach.
+VMR-side `aliases` (the inline list on the VMR object) and `conference_alias` (a sibling resource) are two ways to attach an alias. **Pick one approach per VMR and stick with it.** `pexip_add_vmr_alias` always uses the sibling-resource approach.
 
 ## Recipe: rename / update a VMR
 
 ```
-update_vmr(
+pexip_update_vmr(
     vmr="AllHands",
     name="AllHands-2026",          # rename — keep aliases pointed by id, not by old name
     pin="9999",
@@ -64,12 +64,12 @@ update_vmr(
 )
 ```
 
-Only the fields you pass are patched. Aliases are managed separately (use `add_vmr_alias` / `delete_alias`), **not** by passing an `aliases=` list to update — PATCH on list fields **replaces**, it does not append.
+Only the fields you pass are patched. Aliases are managed separately (use `pexip_add_vmr_alias` / `pexip_delete_alias`), **not** by passing an `aliases=` list to update — PATCH on list fields **replaces**, it does not append.
 
 ## Recipe: delete a VMR
 
 ```
-delete_vmr(vmr="AllHands")
+pexip_delete_vmr(vmr="AllHands")
 ```
 
 Irreversible. Conferences in progress on this VMR keep running (a running conference is a Status object; deletion only removes the persistent config). Always confirm with the user first.
@@ -77,17 +77,17 @@ Irreversible. Conferences in progress on this VMR keep running (a running confer
 ## Recipe: end-user CRUD
 
 ```
-list_end_users(email_contains="example.com", name_contains="Alice")
-get_end_user(user="alice@example.com")
-create_end_user(
+pexip_list_end_users(email_contains="example.com", name_contains="Alice")
+pexip_get_end_user(user="alice@example.com")
+pexip_create_end_user(
     primary_email_address="bob@example.com",
     first_name="Bob", last_name="Jones",
     display_name="Bob Jones",
     telephone_number="+15550100",
     department="Engineering",
 )
-update_end_user(user="bob@example.com", title="Staff Engineer")
-delete_end_user(user="bob@example.com")
+pexip_update_end_user(user="bob@example.com", title="Staff Engineer")
+pexip_delete_end_user(user="bob@example.com")
 ```
 
 If the directory is LDAP-synced, manual creates/edits drift from LDAP on the next sync. Prefer fixing the LDAP source.
@@ -97,7 +97,7 @@ If the directory is LDAP-synced, manual creates/edits drift from LDAP on the nex
 For "auto-dial a recorder whenever this VMR starts":
 
 ```
-add_automatic_participant(
+pexip_add_automatic_participant(
     vmr="AllHands",
     alias="sip:recorder@recording.example.com",
     protocol="sip",
@@ -118,7 +118,7 @@ add_automatic_participant(
 ## Recipe: LDAP sync source
 
 ```
-create_ldap_source(
+pexip_create_ldap_source(
     name="corp-ad",
     ldap_server="ldap.corp.example.com",
     ldap_base_dn="DC=corp,DC=example,DC=com",
@@ -129,16 +129,16 @@ create_ldap_source(
 )
 ```
 
-`get_ldap_source(source="corp-ad")` returns the last sync status / errors — useful for answering "is LDAP working?" without leaving the conversation.
+`pexip_get_ldap_source(source="corp-ad")` returns the last sync status / errors — useful for answering "is LDAP working?" without leaving the conversation.
 
 ## Recipe: global platform settings
 
 Singleton at `/configuration/v1/global/1/`. Discover fields first:
 
 ```
-get_resource_schema("global")        # → field types, enums, help text
-get_global_settings()                # → current values
-update_global_settings(updates={
+pexip_get_resource_schema("global")        # → field types, enums, help text
+pexip_get_global_settings()                # → current values
+pexip_update_global_settings(updates={
     "management_session_timeout_secs": 1800,
     "guests_only_timeout": 300,
 })

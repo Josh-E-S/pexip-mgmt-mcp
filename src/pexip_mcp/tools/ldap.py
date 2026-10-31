@@ -8,6 +8,7 @@ bind credentials + search scope; you can have several (e.g. one per region).
 Sync results are visible via get_ldap_source — handy for answering "is LDAP
 working?" without leaving the conversation.
 """
+
 from __future__ import annotations
 
 from typing import Any

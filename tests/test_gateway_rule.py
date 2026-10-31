@@ -46,9 +46,7 @@ async def test_create_gateway_rule_resolves_outgoing_location_name_to_uri(ctx):
             200,
             json={
                 "meta": {"total_count": 1, "limit": 2, "offset": 0},
-                "objects": [
-                    {"id": 4, "name": "London", "resource_uri": fk("system_location", 4)}
-                ],
+                "objects": [{"id": 4, "name": "London", "resource_uri": fk("system_location", 4)}],
             },
         )
     )

@@ -4,7 +4,7 @@
 
 - id: vmr-not-found
   prompt: "Get the VMR called nonexistent-room-xyz"
-  tool: get_vmr
+  tool: pexip_get_vmr
   tool_params: {vmr: "nonexistent-room-xyz"}
   mock_sequence:
     - method: GET
@@ -20,7 +20,7 @@
 
 - id: vmr-ambiguous-name
   prompt: "Get the VMR called Meeting"
-  tool: get_vmr
+  tool: pexip_get_vmr
   tool_params: {vmr: "Meeting"}
   mock_sequence:
     - method: GET
@@ -38,7 +38,7 @@
 
 - id: update-vmr-no-fields
   prompt: "Update the VMR with id 5 but don't change anything"
-  tool: update_vmr
+  tool: pexip_update_vmr
   tool_params: {vmr: 5}
   mock_sequence: []
   expect_error:
@@ -48,7 +48,7 @@
 
 - id: delete-nonexistent-vmr
   prompt: "Delete VMR with id 99999"
-  tool: delete_vmr
+  tool: pexip_delete_vmr
   tool_params: {vmr: 99999}
   mock_sequence:
     - method: DELETE
@@ -62,8 +62,8 @@
 
 - id: disconnect-already-gone
   prompt: "Disconnect participant that already left"
-  tool: disconnect_participant
-  tool_params: {participant_id: "99999999-aaaa-bbbb-cccc-dddddddddddd"}
+  tool: pexip_disconnect_participant
+  tool_params: {participant: "99999999-aaaa-bbbb-cccc-dddddddddddd"}
   mock_sequence:
     - method: POST
       url_suffix: /participant/disconnect/
@@ -76,8 +76,8 @@
 
 - id: disconnect-conference-already-ended
   prompt: "Disconnect everyone from a conference that already ended"
-  tool: disconnect_conference
-  tool_params: {conference_id: "cccccccc-1111-2222-3333-444444444444"}
+  tool: pexip_disconnect_conference
+  tool_params: {conference: "cccccccc-1111-2222-3333-444444444444"}
   mock_sequence:
     - method: POST
       url_suffix: /conference/disconnect/
@@ -90,8 +90,8 @@
 
 - id: invalid-role
   prompt: "Set participant abc-123 to role 'moderator'"
-  tool: set_participant_role
-  tool_params: {participant_id: "88888888-aaaa-bbbb-cccc-eeeeeeeeeeee", role: "moderator"}
+  tool: pexip_set_participant_role
+  tool_params: {participant: "88888888-aaaa-bbbb-cccc-eeeeeeeeeeee", role: "moderator"}
   mock_sequence: []
   expect_error:
     type: PexipError
@@ -100,8 +100,8 @@
 
 - id: set-layout-no-layout
   prompt: "Change the conference layout without specifying which layout"
-  tool: set_conference_layout
-  tool_params: {conference_id: "conf-uuid-1"}
+  tool: pexip_set_conference_layout
+  tool_params: {conference: "conf-uuid-1"}
   mock_sequence: []
   expect_error:
     type: PexipError
@@ -110,7 +110,7 @@
 
 - id: invalid-schema-resource
   prompt: "Get the schema for a resource that doesn't exist"
-  tool: get_resource_schema
+  tool: pexip_get_resource_schema
   tool_params: {resource: "not_a_real_resource"}
   mock_sequence:
     - method: GET
@@ -124,7 +124,7 @@
 
 - id: summarize-invalid-group-by
   prompt: "Summarize calls grouped by an invalid field"
-  tool: summarize_calls
+  tool: pexip_summarize_calls
   tool_params:
     start_time: "2026-01-01T00:00:00"
     end_time: "2026-01-02T00:00:00"
@@ -139,8 +139,8 @@
 
 - id: mute-participant-gone
   prompt: "Mute a participant who already left"
-  tool: mute_participant
-  tool_params: {participant_id: "99999999-aaaa-bbbb-cccc-dddddddddddd"}
+  tool: pexip_mute_participant
+  tool_params: {participant: "99999999-aaaa-bbbb-cccc-dddddddddddd"}
   mock_sequence:
     - method: POST
       url_suffix: /participant/mute/
@@ -153,8 +153,8 @@
 
 - id: transfer-to-missing-conference
   prompt: "Transfer a participant into a conference alias that doesn't exist"
-  tool: transfer_participant
-  tool_params: {participant_id: "88888888-aaaa-bbbb-cccc-eeeeeeeeeeee", conference_alias: "no-such-room"}
+  tool: pexip_transfer_participant
+  tool_params: {participant: "88888888-aaaa-bbbb-cccc-eeeeeeeeeeee", conference_alias: "no-such-room"}
   mock_sequence:
     - method: POST
       url_suffix: /participant/transfer/
@@ -167,8 +167,8 @@
 
 - id: transfer-invalid-role
   prompt: "Transfer participant abc-123 to Breakout-1 as a 'moderator'"
-  tool: transfer_participant
-  tool_params: {participant_id: "88888888-aaaa-bbbb-cccc-eeeeeeeeeeee", conference_alias: "Breakout-1", role: "moderator"}
+  tool: pexip_transfer_participant
+  tool_params: {participant: "88888888-aaaa-bbbb-cccc-eeeeeeeeeeee", conference_alias: "Breakout-1", role: "moderator"}
   mock_sequence: []
   expect_error:
     type: PexipError
@@ -179,7 +179,7 @@
 
 - id: end-user-not-found
   prompt: "Look up the end user nobody@company.com"
-  tool: get_end_user
+  tool: pexip_get_end_user
   tool_params: {user: "nobody@company.com"}
   mock_sequence:
     - method: GET
@@ -195,7 +195,7 @@
 
 - id: device-not-found
   prompt: "Get the device ghost-endpoint@company.com"
-  tool: get_device
+  tool: pexip_get_device
   tool_params: {device: "ghost-endpoint@company.com"}
   mock_sequence:
     - method: GET
@@ -213,7 +213,7 @@
 
 - id: get-resource-unknown-name
   prompt: "Get a resource of a type that doesn't exist"
-  tool: get_resource
+  tool: pexip_get_resource
   tool_params: {resource: "not_a_real_resource", id: 1}
   mock_sequence: []
   expect_error:
@@ -223,7 +223,7 @@
 
 - id: list-resources-unknown-name
   prompt: "List a resource type that isn't in the registry"
-  tool: list_resources
+  tool: pexip_list_resources
   tool_params: {resource: "bogus_thing"}
   mock_sequence: []
   expect_error:
@@ -233,7 +233,7 @@
 
 - id: create-resource-empty-settings
   prompt: "Create a DNS server but provide no fields"
-  tool: create_resource
+  tool: pexip_create_resource
   tool_params: {resource: "dns_server", settings: {}}
   mock_sequence: []
   expect_error:
@@ -243,7 +243,7 @@
 
 - id: update-resource-empty-settings
   prompt: "Update the SMTP server but change nothing"
-  tool: update_resource
+  tool: pexip_update_resource
   tool_params: {resource: "smtp_server", id: 1, settings: {}}
   mock_sequence: []
   expect_error:

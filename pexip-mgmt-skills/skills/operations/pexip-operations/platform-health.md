@@ -6,17 +6,17 @@ For "is the platform OK" / capacity / monitoring questions. Read-only — no des
 
 | Lens | Tool | When |
 |---|---|---|
-| **Active alarms** | `list_alarms` | "Anything broken right now?" |
-| **Conferencing Node load** | `list_node_status`, `get_node_status` | Capacity, sync state, version drift, maintenance mode. |
-| **Port usage vs entitlement** | `get_licensing_status` | "Are we about to run out of licenses?" |
+| **Active alarms** | `pexip_list_alarms` | "Anything broken right now?" |
+| **Conferencing Node load** | `pexip_list_node_status`, `pexip_get_node_status` | Capacity, sync state, version drift, maintenance mode. |
+| **Port usage vs entitlement** | `pexip_get_licensing_status` | "Are we about to run out of licenses?" |
 
 ## Recipe: triage the platform
 
 ```
-list_alarms(level="error")            # most-severe first
-list_alarms(level="warning")          # then warnings
-get_licensing_status()                # any location near max?
-list_node_status(fetch_all=False)     # any node OUT_OF_SYNC or in maintenance_mode?
+pexip_list_alarms(level="error")            # most-severe first
+pexip_list_alarms(level="warning")          # then warnings
+pexip_get_licensing_status()                # any location near max?
+pexip_list_node_status(fetch_all=False)     # any node OUT_OF_SYNC or in maintenance_mode?
 ```
 
 Surface findings as a punch list — alarms by severity, then any nodes that aren't `SYNCED`, then any location whose `port_used` is close to `port_max`.
@@ -24,7 +24,7 @@ Surface findings as a punch list — alarms by severity, then any nodes that are
 ## Alarms
 
 ```
-list_alarms(level="error" | "warning" | "info", node_name="<node>", fetch_all=True)
+pexip_list_alarms(level="error" | "warning" | "info", node_name="<node>", fetch_all=True)
 ```
 
 Fields per alarm:
@@ -40,8 +40,8 @@ Alarms self-clear when the underlying condition resolves — there is no "ack" o
 ## Conferencing Node status
 
 ```
-list_node_status(location="eu-west", name_contains="proxy", fetch_all=False)
-get_node_status(node="cnf-eu-west-1")
+pexip_list_node_status(location="eu-west", name_contains="proxy", fetch_all=False)
+pexip_get_node_status(node="cnf-eu-west-1")
 ```
 
 Useful fields:
@@ -61,7 +61,7 @@ Useful fields:
 ## Licensing
 
 ```
-get_licensing_status()
+pexip_get_licensing_status()
 ```
 
 Returns one record per `system_location` with concurrent-port counts:

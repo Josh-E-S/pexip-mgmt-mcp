@@ -7,6 +7,7 @@ Status/Command API tests auto-dial a participant into a temporary VMR
 using the existing dial_participant tool. Set PEXIP_EVAL_DIAL_TARGET to
 the SIP URI or alias to dial out to (e.g. "sip:test@lab.local").
 """
+
 from __future__ import annotations
 
 import asyncio
@@ -31,6 +32,7 @@ EVAL_VMR = os.environ.get("PEXIP_EVAL_VMR", "allhands@example.com")
 # Phase 1: Read-only smoke tests
 # ---------------------------------------------------------------------------
 
+
 class TestReadOnlySmoke:
     """Verify connectivity, auth, and basic list/get calls."""
 
@@ -41,11 +43,13 @@ class TestReadOnlySmoke:
 
     async def test_list_locations(self, live_ctx):
         from pexip_mcp.tools import infrastructure
+
         result = await infrastructure.list_locations(live_ctx)
         assert "objects" in result
 
     async def test_get_global_settings(self, live_ctx):
         from pexip_mcp.tools import global_settings
+
         result = await global_settings.get_global_settings(live_ctx)
         assert isinstance(result, dict)
 
@@ -70,6 +74,7 @@ class TestReadOnlySmoke:
 # ---------------------------------------------------------------------------
 # Phase 1b: Generic CRUD tools — read-only smoke tests
 # ---------------------------------------------------------------------------
+
 
 class TestGenericCRUDSmoke:
     """Verify the generic CRUD tools work against the live node."""
@@ -104,6 +109,7 @@ class TestGenericCRUDSmoke:
 # ---------------------------------------------------------------------------
 # Phase 2: VMR CRUD lifecycle
 # ---------------------------------------------------------------------------
+
 
 class TestVMRLifecycle:
     """Create -> read -> update -> delete a VMR on the live node."""
@@ -146,6 +152,7 @@ class TestVMRLifecycle:
 # Phase 3: End user CRUD
 # ---------------------------------------------------------------------------
 
+
 class TestEndUserLifecycle:
     """Create -> read -> update -> delete an end user."""
 
@@ -177,6 +184,7 @@ class TestEndUserLifecycle:
 # Phase 4: History API (always available, no live call needed)
 # ---------------------------------------------------------------------------
 
+
 class TestHistoryAPI:
     """Test history endpoints — these work even without an active call."""
 
@@ -201,6 +209,7 @@ class TestHistoryAPI:
 # ---------------------------------------------------------------------------
 # Phase 5: Error handling on live node
 # ---------------------------------------------------------------------------
+
 
 class TestLiveErrors:
     """Verify error handling against a real server."""
@@ -233,6 +242,7 @@ class TestLiveErrors:
 # temporary VMR, then exercises status reads and command actions against
 # the live call. Cleans up (disconnect + delete VMR) in teardown.
 # ---------------------------------------------------------------------------
+
 
 @pytest_asyncio.fixture(scope="session")
 async def live_call(live_ctx):
@@ -269,7 +279,9 @@ async def live_call(live_ctx):
             # opt out of the secure-by-default PIN requirement (and any node PIN
             # policy) rather than couple the test to a specific PIN length.
             await conference.create_vmr(
-                live_ctx, name=EVAL_VMR, description="eval live call test",
+                live_ctx,
+                name=EVAL_VMR,
+                description="eval live call test",
                 allow_no_pin=True,
             )
             created_vmr = True
@@ -322,7 +334,7 @@ async def live_call(live_ctx):
     finally:
         # Step 6: Disconnect the dialed participant (not the whole conference)
         try:
-            await command.disconnect_participant(live_ctx, participant_id=dialed_pid)
+            await command.disconnect_participant(live_ctx, participant=dialed_pid)
         except Exception:
             pass
         # Only delete the VMR if we created it
@@ -350,9 +362,7 @@ class TestLiveCallStatus:
         assert len(result["objects"]) >= 1
 
     async def test_get_active_participant(self, live_call):
-        result = await status.get_active_participant(
-            live_call["ctx"], live_call["participant_id"]
-        )
+        result = await status.get_active_participant(live_call["ctx"], live_call["participant_id"])
         assert result["id"] == live_call["participant_id"]
 
     async def test_list_node_status(self, live_call):
@@ -373,20 +383,20 @@ class TestLiveCallNameResolution:
         ctx = live_call["ctx"]
         name = live_call["conference_name"]  # human-facing running-conference name
 
-        result = await command.lock_conference(ctx, conference_id=name)
+        result = await command.lock_conference(ctx, conference=name)
         assert result.get("status") == "success"
 
-        result = await command.unlock_conference(ctx, conference_id=name)
+        result = await command.unlock_conference(ctx, conference=name)
         assert result.get("status") == "success"
 
     async def test_mute_unmute_guests_by_name(self, live_call):
         ctx = live_call["ctx"]
         name = live_call["conference_name"]
 
-        result = await command.mute_guests(ctx, conference_id=name)
+        result = await command.mute_guests(ctx, conference=name)
         assert result.get("status") == "success"
 
-        result = await command.unmute_guests(ctx, conference_id=name)
+        result = await command.unmute_guests(ctx, conference=name)
         assert result.get("status") == "success"
 
     async def test_mute_unmute_participant_by_display_name(self, live_call):
@@ -397,12 +407,12 @@ class TestLiveCallNameResolution:
             pytest.skip("participant has no display_name to resolve by")
 
         result = await command.mute_participant(
-            ctx, participant_id=display_name, conference=live_call["conference_name"]
+            ctx, participant=display_name, conference=live_call["conference_name"]
         )
         assert result.get("status") == "success"
 
         result = await command.unmute_participant(
-            ctx, participant_id=display_name, conference=live_call["conference_name"]
+            ctx, participant=display_name, conference=live_call["conference_name"]
         )
         assert result.get("status") == "success"
 
@@ -410,9 +420,7 @@ class TestLiveCallNameResolution:
         """A made-up conference name resolves to a clean 404, not a crash."""
         ctx = live_call["ctx"]
         with pytest.raises(PexipError) as exc:
-            await command.lock_conference(
-                ctx, conference_id="No Such Conference Xyzzy 12345"
-            )
+            await command.lock_conference(ctx, conference="No Such Conference Xyzzy 12345")
         assert exc.value.status_code == 404
 
 
@@ -427,30 +435,30 @@ class TestLiveCallCommands:
         ctx = live_call["ctx"]
         pid = live_call["participant_id"]
 
-        result = await command.mute_participant(ctx, participant_id=pid)
+        result = await command.mute_participant(ctx, participant=pid)
         assert result.get("status") == "success"
 
-        result = await command.unmute_participant(ctx, participant_id=pid)
+        result = await command.unmute_participant(ctx, participant=pid)
         assert result.get("status") == "success"
 
     async def test_lock_unlock(self, live_call):
         ctx = live_call["ctx"]
         cid = live_call["conference_id"]
 
-        result = await command.lock_conference(ctx, conference_id=cid)
+        result = await command.lock_conference(ctx, conference=cid)
         assert result.get("status") == "success"
 
-        result = await command.unlock_conference(ctx, conference_id=cid)
+        result = await command.unlock_conference(ctx, conference=cid)
         assert result.get("status") == "success"
 
     async def test_mute_unmute_guests(self, live_call):
         ctx = live_call["ctx"]
         cid = live_call["conference_id"]
 
-        result = await command.mute_guests(ctx, conference_id=cid)
+        result = await command.mute_guests(ctx, conference=cid)
         assert result.get("status") == "success"
 
-        result = await command.unmute_guests(ctx, conference_id=cid)
+        result = await command.unmute_guests(ctx, conference=cid)
         assert result.get("status") == "success"
 
     async def test_disconnect_participant(self, live_call):
@@ -458,5 +466,5 @@ class TestLiveCallCommands:
         ctx = live_call["ctx"]
         pid = live_call["participant_id"]
 
-        result = await command.disconnect_participant(ctx, participant_id=pid)
+        result = await command.disconnect_participant(ctx, participant=pid)
         assert result.get("status") == "success"

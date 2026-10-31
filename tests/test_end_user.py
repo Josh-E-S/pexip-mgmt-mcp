@@ -55,9 +55,7 @@ async def test_get_end_user_by_email_resolves_then_fetches(ctx):
             },
         )
     )
-    respx.get(f"{BASE_URL}/end_user/7/").mock(
-        return_value=httpx.Response(200, json={"id": 7})
-    )
+    respx.get(f"{BASE_URL}/end_user/7/").mock(return_value=httpx.Response(200, json={"id": 7}))
 
     result = await end_user.get_end_user(ctx, "alice@example.com")
 
@@ -83,9 +81,7 @@ async def test_create_end_user_omits_unset_fields(ctx):
     post = respx.post(f"{BASE_URL}/end_user/").mock(
         return_value=httpx.Response(201, headers={"Location": fk("end_user", 1)})
     )
-    respx.get(f"{BASE_URL}/end_user/1/").mock(
-        return_value=httpx.Response(200, json={"id": 1})
-    )
+    respx.get(f"{BASE_URL}/end_user/1/").mock(return_value=httpx.Response(200, json={"id": 1}))
 
     await end_user.create_end_user(ctx, primary_email_address="bob@example.com", first_name="Bob")
 
