@@ -173,10 +173,10 @@ catalog is grouped into toolsets and a deployment chooses which to expose with
 |---|---|---|
 | `core` | always | `pexip_describe_resources` (searchable catalog + which toolsets are on), `pexip_get_resource_schema`, `pexip_get_platform_health` |
 | `rooms` | on | VMRs, dial aliases, automatic participants, IVR themes |
-| `directory` | on | end users, devices, live registrations |
+| `directory` | on | end users, device records |
 | `config` | on | generic CRUD over every other configuration resource, LDAP sources, global settings |
 | `live` | on | active conferences and participants, participant quality, all live call control |
-| `health` | on | alarms, licensing, node and location status, registrations, integration status |
+| `health` | on | alarms, licensing, node and location status, live registrations, integration status |
 | `history` | on | `pexip_summarize_calls`, CDRs, past alarms / registrations / node events |
 | `dialplan` | off | gateway routing rules, locations, Conferencing Node configuration |
 | `platform` | off | backup / restore / upgrade / certificate commands (also gated by `PEXIP_ALLOW_PLATFORM_TOOLS`), provisioning emails, LDAP template sync |

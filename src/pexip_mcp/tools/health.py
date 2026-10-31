@@ -8,6 +8,7 @@ only drill down when something looks wrong.
 
 from __future__ import annotations
 
+import asyncio
 from collections import Counter
 from typing import Any, TypedDict
 
@@ -41,6 +42,13 @@ class PlatformHealth(TypedDict):
     active_participants: int | None
 
 
+_LEVEL_RANK = {"critical": 0, "error": 1, "warning": 2, "info": 3}
+
+
+def _severity(alarm: dict[str, Any]) -> int:
+    return _LEVEL_RANK.get(str(alarm.get("level", "")).lower(), 9)
+
+
 def _num(value: Any) -> float | None:
     try:
         return float(value)
@@ -60,11 +68,16 @@ async def get_platform_health(ctx: Context) -> PlatformHealth:
     reason needs detail.
     """
     client = get_client(ctx)
-    alarms = (await client.list("alarm", api="status", limit=1000)).get("objects", [])
-    licensing = (await client.list("licensing", api="status", limit=1000)).get("objects", [])
-    nodes = (await client.list("worker_vm", api="status", limit=1000)).get("objects", [])
-    conferences = await client.list("conference", api="status", limit=1)
-    participants = await client.list("participant", api="status", limit=1)
+    alarm_page, licensing_page, node_page, conferences, participants = await asyncio.gather(
+        client.list("alarm", api="status", limit=1000),
+        client.list("licensing", api="status", limit=1000),
+        client.list("worker_vm", api="status", limit=1000),
+        client.list("conference", api="status", limit=1),
+        client.list("participant", api="status", limit=1),
+    )
+    alarms = alarm_page.get("objects", [])
+    licensing = licensing_page.get("objects", [])
+    nodes = node_page.get("objects", [])
 
     reasons: list[str] = []
     by_level = Counter(str(a.get("level", "unknown")).lower() for a in alarms)
@@ -91,12 +104,19 @@ async def get_platform_health(ctx: Context) -> PlatformHealth:
     if max_load is not None and max_load >= 90:
         reasons.append(f"a node is at {max_load:.0f}% media load")
 
+    # Pexip reports licence usage as <kind>_count / <kind>_total pairs
+    # (port_count/port_total, audio_count/audio_total, vmr_count/vmr_total, ...).
     for lic in licensing:
-        used, total = _num(lic.get("used")), _num(lic.get("total"))
-        if used is not None and total:
-            pct = used / total * 100
-            if pct >= 90:
-                reasons.append(f"{lic.get('name', 'licence')} at {pct:.0f}% of entitlement")
+        for key, raw_total in lic.items():
+            if not str(key).endswith("_total"):
+                continue
+            kind = str(key)[: -len("_total")]
+            used = _num(lic.get(f"{kind}_count", lic.get(f"{kind}_used")))
+            total = _num(raw_total)
+            if used is not None and total:
+                pct = used / total * 100
+                if pct >= 90:
+                    reasons.append(f"{kind} licences at {pct:.0f}% of entitlement")
 
     if by_level.get("critical") or unsynced:
         verdict = "critical"
@@ -119,7 +139,7 @@ async def get_platform_health(ctx: Context) -> PlatformHealth:
                     "node": a.get("node"),
                     "time_raised": a.get("time_raised"),
                 }
-                for a in alarms[:5]
+                for a in sorted(alarms, key=_severity)[:5]
             ],
         },
         "licensing": licensing,

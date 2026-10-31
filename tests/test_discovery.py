@@ -100,3 +100,30 @@ async def test_schema_resource_reports_errors_as_json(client):
     respx.get(f"{BASE_URL}/nope/schema/").mock(return_value=httpx.Response(404, json={}))
     body = json.loads(await discovery.schema_resource("nope", _ctx(client)))
     assert body["resource"] == "nope" and "error" in body
+
+
+async def test_only_registered_tools_are_advertised(monkeypatch):
+    """In a read-only deployment the write tools are not registered, so the entry
+    must not point the model at them."""
+    monkeypatch.setattr(
+        discovery, "_registered_names", lambda: {"pexip_list_resources", "pexip_get_resource"}
+    )
+    out = await discovery.describe_resources(_ctx(), query="dns")
+    entry = out["resources"][0]
+    assert set(entry["tools"]) == {"list", "get"}
+    assert "pexip_create_resource" in entry["unavailable_tools"]
+    assert out["toolsets"]["config"]["registered"] == 2
+
+
+async def test_common_words_in_tool_names_do_not_match_everything():
+    out = await discovery.describe_resources(_ctx(), query="status")
+    assert out["count"] < 10  # only entries whose resource/label say "status"
+
+
+def test_unknown_toolset_is_a_settings_error():
+    import pytest
+
+    from pexip_mcp.config import PexipSettings
+
+    with pytest.raises(ValueError, match="Unknown toolset"):
+        PexipSettings(host="h", username="u", password="p", toolsets="room")

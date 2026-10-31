@@ -16,7 +16,13 @@ from pathlib import Path
 REPO_ROOT = Path(__file__).parent.parent
 sys.path.insert(0, str(REPO_ROOT / "src"))
 
-CATEGORY_BY_MODULE = {"status": "Status", "history": "History", "command": "Command"}
+CATEGORY_BY_MODULE = {
+    "status": "Status",
+    "history": "History",
+    "command": "Command",
+    "health": "Status",
+    "discovery": "Discovery",
+}
 
 
 def _params_cell(schema: dict | None) -> str:
@@ -56,7 +62,9 @@ def main() -> None:
         )
 
     summary = ", ".join(
-        f"{counts[c]} {c}" for c in ("Configuration", "Status", "History", "Command") if c in counts
+        f"{counts[c]} {c}"
+        for c in ("Configuration", "Status", "History", "Command", "Discovery")
+        if c in counts
     )
     lines = [
         "# Tool Catalog",

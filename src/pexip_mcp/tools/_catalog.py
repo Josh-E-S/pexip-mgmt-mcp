@@ -59,7 +59,7 @@ TOOLSETS: dict[str, Toolset] = {
         ),
         Toolset(
             "directory",
-            "End users and registered devices.",
+            "End users and device records (who may register).",
             frozenset(
                 {
                     "list_end_users",
@@ -228,6 +228,23 @@ TOOLSETS: dict[str, Toolset] = {
 }
 
 TOOLSET_OF: dict[str, str] = {tool: ts.name for ts in TOOLSETS.values() for tool in ts.tools}
+
+# Platform-lifecycle commands removed unless PEXIP_ALLOW_PLATFORM_TOOLS=true,
+# even with writes enabled and the platform toolset selected. Misuse of any of
+# these can replace or compromise the whole deployment. Defined here, next to
+# the toolset they belong to, so there is one list to maintain.
+PLATFORM_GATED: frozenset[str] = frozenset(
+    {
+        "backup_create",
+        "backup_restore",
+        "certificates_import",
+        "start_cloud_node",
+        "take_snapshot",
+        "platform_upgrade",
+        "upload_software_bundle",
+    }
+)
+assert PLATFORM_GATED <= TOOLSETS["platform"].tools
 DEFAULT_TOOLSETS: frozenset[str] = frozenset(ts.name for ts in TOOLSETS.values() if ts.default)
 
 

@@ -166,36 +166,62 @@ def catalog_entries() -> list[dict[str, Any]]:
 
 
 def _matches(entry: dict[str, Any], query: str) -> bool:
+    """All query terms must appear in the resource name, label or keywords.
+
+    Tool names are deliberately not searched: their shared words (list, get,
+    status, resource) would match every entry.
+    """
     q = query.lower()
-    hay = " ".join(
-        [entry["resource"], entry["label"], " ".join(entry.get("keywords", []))]
-        + [t for t in entry["tools"].values() if t]
-    ).lower()
+    hay = " ".join([entry["resource"], entry["label"], " ".join(entry.get("keywords", []))]).lower()
     return all(term in hay for term in q.split())
+
+
+def _registered_names() -> set[str]:
+    return set(mcp._tool_manager._tools)
+
+
+def _with_availability(entry: dict[str, Any], registered: set[str]) -> dict[str, Any]:
+    """Keep only tools that exist in this deployment; name the rest separately."""
+    available = {k: v for k, v in entry["tools"].items() if v and v in registered}
+    missing = sorted(v for v in entry["tools"].values() if v and v not in registered)
+    out = {**entry, "tools": available}
+    if missing:
+        out["unavailable_tools"] = missing
+    return out
 
 
 def _shape(entry: dict[str, Any], detail: Detail) -> Any:
     if detail == "names":
         return f"{entry['api']}/{entry['resource']}"
     if detail == "summary":
-        return {
+        row = {
             "api": entry["api"],
             "resource": entry["resource"],
             "label": entry["label"],
             "tools": {k: v for k, v in entry["tools"].items() if v},
         }
+        if entry.get("unavailable_tools"):
+            row["unavailable_tools"] = entry["unavailable_tools"]
+        return row
     return entry
 
 
-def toolset_overview(enabled: set[str] | frozenset[str] | None) -> dict[str, Any]:
-    return {
-        name: {
+def toolset_overview(
+    enabled: set[str] | frozenset[str] | None, registered: set[str] | None = None
+) -> dict[str, Any]:
+    """Per toolset: description, whether it was selected, and how many of its
+    tools are actually registered (PEXIP_TOOLS / PEXIP_DENY_TOOLS / gates change that)."""
+    out: dict[str, Any] = {}
+    for name, ts in TOOLSETS.items():
+        row: dict[str, Any] = {
             "description": ts.description,
             "enabled": (name in enabled) if enabled is not None else None,
             "tool_count": len(ts.tools),
         }
-        for name, ts in TOOLSETS.items()
-    }
+        if registered is not None:
+            row["registered"] = sum(1 for t in ts.tools if f"{TOOL_PREFIX}{t}" in registered)
+        out[name] = row
+    return out
 
 
 @mcp.tool(annotations=read("Describe resources and tools"))
@@ -221,7 +247,8 @@ async def describe_resources(
         detail: "names" (just api/resource strings), "summary" (default: resource,
             label, tools) or "full" (adds filters, lookup field, security flag).
     """
-    entries = catalog_entries()
+    registered = _registered_names()
+    entries = [_with_availability(e, registered) for e in catalog_entries()]
     if api:
         entries = [e for e in entries if e["api"] == api]
     if query:
@@ -231,12 +258,13 @@ async def describe_resources(
     return {
         "count": len(entries),
         "resources": [_shape(e, detail) for e in entries],
-        "toolsets": toolset_overview(enabled),
+        "toolsets": toolset_overview(enabled, registered),
         "hint": (
-            "Configuration resources marked generic are reached with pexip_list_resources / "
-            "pexip_get_resource / pexip_create_resource / pexip_update_resource / "
-            "pexip_delete_resource by passing resource=<name>. Call "
-            "pexip_get_resource_schema(resource) for field names before create/update."
+            "Generic configuration resources are reached with the pexip_*_resource tools by "
+            "passing resource=<name>; call pexip_get_resource_schema(resource) for field "
+            "names before create/update. A tool listed under unavailable_tools is not "
+            "registered in this deployment (read-only mode, toolset selection, deny list, "
+            "or the platform gate)."
         ),
     }
 

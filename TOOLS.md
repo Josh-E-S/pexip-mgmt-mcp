@@ -1,6 +1,6 @@
 # Tool Catalog
 
-Auto-generated reference of all 124 tools exposed by the pexip-mgmt-mcp server (48 Configuration, 39 Status, 14 History, 23 Command).
+Auto-generated reference of all 124 tools exposed by the pexip-mgmt-mcp server (46 Configuration, 40 Status, 14 History, 23 Command, 1 Discovery).
 
 Regenerate with: `uv run python scripts/generate_tools_md.py`
 

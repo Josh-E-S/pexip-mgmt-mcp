@@ -174,3 +174,11 @@ def test_startup_policy_applies_toolsets_on_a_real_shaped_registry(monkeypatch):
         server, _settings(read_only=False, allow_platform_tools=True, toolsets="rooms,platform")
     )
     assert _names(server) == {"pexip_list_vmrs", "pexip_backup_create", "pexip_describe_resources"}
+
+
+def test_platform_gate_set_is_defined_once_inside_the_platform_toolset():
+    from pexip_mcp.mcp_app import PLATFORM_TOOLS
+    from pexip_mcp.tools._catalog import PLATFORM_GATED
+
+    assert PLATFORM_TOOLS is PLATFORM_GATED
+    assert PLATFORM_GATED <= TOOLSETS["platform"].tools

@@ -27,7 +27,7 @@ from __future__ import annotations
 
 from typing import Literal
 
-from pydantic import Field, model_validator
+from pydantic import Field, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -174,6 +174,15 @@ class PexipSettings(BaseSettings):
         "platform. Set PEXIP_ALLOW_PLATFORM_TOOLS=true to expose them. No effect in "
         "read-only mode, where they are already removed.",
     )
+
+    # Use _check_toolsets to reject an unknown toolset name with the other config errors.
+    @field_validator("toolsets")
+    @classmethod
+    def _check_toolsets(cls, value: str) -> str:
+        from pexip_mcp.tools._catalog import resolve_toolsets
+
+        resolve_toolsets(value)  # raises ValueError naming the bad toolset
+        return value
 
     # Use _check_auth_credentials to fail fast when the chosen auth_mode is missing its creds.
     @model_validator(mode="after")

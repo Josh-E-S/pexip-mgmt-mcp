@@ -37,7 +37,7 @@ from mcp.server.fastmcp import FastMCP
 
 from pexip_mcp.client import PexipClient
 from pexip_mcp.config import PexipSettings
-from pexip_mcp.tools._catalog import TOOLSET_OF, resolve_toolsets
+from pexip_mcp.tools._catalog import PLATFORM_GATED, TOOLSET_OF, resolve_toolsets
 from pexip_mcp.tools._guidance import GUIDANCE, render_description
 from pexip_mcp.tools._shaping import finalize_result
 
@@ -168,23 +168,9 @@ def _tool_is_read_only(tool: object) -> bool:
     return bool(ann and ann.readOnlyHint)
 
 
-# Platform-lifecycle command tools, by BARE function name (the gate strips the
-# pexip_ prefix before comparing, so published names and legacy aliases both
-# match). Misuse of any of these can replace or compromise the whole deployment
-# (restore over all state, import trust anchors, upgrade/ship arbitrary software,
-# spin infra). Gated off unless PEXIP_ALLOW_PLATFORM_TOOLS=true, even when
-# writes are otherwise enabled.
-PLATFORM_TOOLS: frozenset[str] = frozenset(
-    {
-        "backup_create",
-        "backup_restore",
-        "certificates_import",
-        "start_cloud_node",
-        "take_snapshot",
-        "platform_upgrade",
-        "upload_software_bundle",
-    }
-)
+# The gated platform-lifecycle commands live in tools/_catalog.py next to the
+# platform toolset; re-exported here for the gate and the tests.
+PLATFORM_TOOLS: frozenset[str] = PLATFORM_GATED
 
 
 # Use enforce_platform_gate to remove the platform-lifecycle tools from the catalog.
@@ -250,7 +236,7 @@ def enforce_read_only(mcp_instance: FastMCP) -> list[str]:
 
 
 # Use apply_startup_policy to enforce read-only / write-mode policy on the tool catalog.
-def apply_startup_policy(server: FastMCP, settings: PexipSettings) -> None:
+def apply_startup_policy(server: FastMCP, settings: PexipSettings) -> frozenset[str]:
     """Apply the read-only / write-enabled policy to the server's tool catalog.
 
     Extracted so it can run in BOTH transports. The stdio path drives it from
@@ -309,6 +295,7 @@ def apply_startup_policy(server: FastMCP, settings: PexipSettings) -> None:
         len(server._tool_manager._tools),
         len(trimmed),
     )
+    return frozenset(enabled)
 
 
 # Use lifespan to manage the server's full lifecycle: Startup, Run, Shutdown.
@@ -317,14 +304,14 @@ async def lifespan(server: FastMCP) -> AsyncIterator[AppContext]:
     """Build the PexipClient on startup, hand it to the server, and close it on shutdown."""
     # 1. STARTUP: Read the .env settings and build the engine (auth mode chosen in config).
     settings = PexipSettings()
-    apply_startup_policy(server, settings)
+    enabled_toolsets = apply_startup_policy(server, settings)
     client = PexipClient.from_settings(settings)
     try:
         # 2. RUN: Pass the object to the server. The function pauses here while the server is running.
         yield AppContext(
             pexip=client,
             allow_security_resources=settings.allow_security_resources,
-            toolsets=frozenset(resolve_toolsets(settings.toolsets)),
+            toolsets=enabled_toolsets,
         )
     finally:
         # 3. SHUTDOWN: When the server is turned off, cleanly close network connections.

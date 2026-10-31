@@ -41,7 +41,7 @@ async def test_healthy_platform_is_ok(ctx):
                 "maintenance_mode": False,
             }
         ],
-        licensing=[{"name": "ports", "used": 4, "total": 100}],
+        licensing=[{"port_count": 4, "port_total": 100, "audio_count": 1, "audio_total": 50}],
         conferences=3,
         participants=11,
     )
@@ -57,13 +57,13 @@ async def test_warnings_and_high_load_are_degraded(ctx):
     _mock(
         alarms=[{"name": "disk", "level": "warning", "node": "n1", "time_raised": "t"}],
         nodes=[{"name": "n1", "sync_status": "synchronized", "media_load": "95"}],
-        licensing=[{"name": "ports", "used": 95, "total": 100}],
+        licensing=[{"port_count": 95, "port_total": 100}],
     )
     out = await health.get_platform_health(ctx)
     assert out["verdict"] == "degraded"
     assert any("warning" in r for r in out["reasons"])
     assert any("95% media load" in r for r in out["reasons"])
-    assert any("95% of entitlement" in r for r in out["reasons"])
+    assert any("port licences at 95% of entitlement" in r for r in out["reasons"])
     assert out["alarms"]["by_level"] == {"warning": 1}
 
 
@@ -82,7 +82,18 @@ async def test_critical_alarm_or_unsynced_node_is_critical(ctx):
 
 @respx.mock
 async def test_tolerates_missing_numeric_fields(ctx):
-    _mock(nodes=[{"name": "n1"}], licensing=[{"name": "x"}])
+    _mock(nodes=[{"name": "n1"}], licensing=[{"name": "x", "port_total": None}])
     out = await health.get_platform_health(ctx)
     assert out["verdict"] == "ok"
     assert out["nodes"]["max_media_load"] is None
+
+
+@respx.mock
+async def test_top_alarms_are_ordered_by_severity(ctx):
+    _mock(
+        alarms=[{"name": f"w{i}", "level": "warning"} for i in range(6)]
+        + [{"name": "boom", "level": "critical"}],
+    )
+    out = await health.get_platform_health(ctx)
+    assert out["alarms"]["top"][0]["name"] == "boom"
+    assert len(out["alarms"]["top"]) == 5
