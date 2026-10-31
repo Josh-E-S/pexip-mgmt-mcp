@@ -47,7 +47,33 @@ TOOL_PREFIX = "pexip_"
 
 
 def _env_flag(name: str) -> bool:
-    return os.environ.get(name, "").strip().lower() in ("1", "true", "yes", "on")
+    """Read a boolean flag from the process environment, falling back to ./.env.
+
+    Tools register at import time, before PexipSettings (which loads .env) is
+    built, so this one flag reads .env itself. Same precedence as pydantic:
+    the real environment wins over the file.
+    """
+    value = os.environ.get(name)
+    if value is None:
+        try:
+            for line in open(".env", encoding="utf-8"):
+                line = line.strip()
+                if line.startswith(f"{name}="):
+                    value = line.split("=", 1)[1].strip().strip("'\"")
+                    break
+        except OSError:
+            value = None
+    return (value or "").strip().lower() in ("1", "true", "yes", "on")
+
+
+# Marker placed in a legacy alias tool's meta, so lints, coverage checks and
+# catalog stats can tell an alias from a real tool.
+LEGACY_ALIAS_META_KEY = "legacy_alias_of"
+
+
+# Use is_legacy_alias to tell whether a registered tool is only an alias of a pexip_* tool.
+def is_legacy_alias(tool: object) -> bool:
+    return bool((getattr(tool, "meta", None) or {}).get(LEGACY_ALIAS_META_KEY))
 
 
 # Use legacy_tool_names_enabled to tell whether the pre-0.3 unprefixed names are also registered.
@@ -98,7 +124,7 @@ class PexipMCP(FastMCP):
                 parent_tool(
                     name=base_name,
                     description=f"Deprecated alias of {published}. " + description,
-                    meta=meta or None,
+                    meta={**meta, LEGACY_ALIAS_META_KEY: published},
                     **kwargs,
                 )(fn)
             return registered
@@ -124,10 +150,12 @@ def _tool_is_read_only(tool: object) -> bool:
     return bool(ann and ann.readOnlyHint)
 
 
-# Platform-lifecycle command tools: misuse of any of these can replace or
-# compromise the whole deployment (restore over all state, import trust anchors,
-# upgrade/ship arbitrary software, spin infra). Gated off unless
-# PEXIP_ALLOW_PLATFORM_TOOLS=true, even when writes are otherwise enabled.
+# Platform-lifecycle command tools, by BARE function name (the gate strips the
+# pexip_ prefix before comparing, so published names and legacy aliases both
+# match). Misuse of any of these can replace or compromise the whole deployment
+# (restore over all state, import trust anchors, upgrade/ship arbitrary software,
+# spin infra). Gated off unless PEXIP_ALLOW_PLATFORM_TOOLS=true, even when
+# writes are otherwise enabled.
 PLATFORM_TOOLS: frozenset[str] = frozenset(
     {
         "backup_create",
@@ -150,7 +178,9 @@ def enforce_platform_gate(mcp_instance: FastMCP) -> list[str]:
     import, etc. through the normal write surface. Idempotent.
     """
     manager = mcp_instance._tool_manager
-    removed = [name for name in PLATFORM_TOOLS if name in manager._tools]
+    # Match on the bare function name so the published pexip_* tool AND any
+    # legacy alias of it are both removed.
+    removed = [name for name in manager._tools if name.removeprefix(TOOL_PREFIX) in PLATFORM_TOOLS]
     for name in removed:
         manager.remove_tool(name)
     return sorted(removed)

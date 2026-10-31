@@ -212,14 +212,14 @@ async def get_participant_quality(
     """
     pid = await _resolve_active_participant_id(ctx, participant, conference)
     client = get_client(ctx)
-    participant = await client.get("participant", pid, api="status")
+    record = await client.get("participant", pid, api="status")
     streams = await client.list(
         "participant_media_stream",
         api="status",
         participant=f"/api/admin/status/v1/participant/{pid}/",
         limit=100,
     )
-    return {"participant": participant, "media_streams": streams.get("objects", [])}
+    return {"participant": record, "media_streams": streams.get("objects", [])}
 
 
 # ── conference_shard (per-node conference instances) ─────────────────────────

@@ -148,9 +148,9 @@ participants = pexip_list_active_participants(conference_name="standup")
 # Filter to people who joined after the scheduled start.
 # Surface the list to the user, ask for confirmation.
 for p in late_arrivals:
-    pexip_disconnect_participant(participant_id=p["id"])
+    pexip_disconnect_participant(participant=p["id"])
 conf = pexip_list_active_conferences(name="standup")
-pexip_lock_conference(conference_id=conf["objects"][0]["id"])
+pexip_lock_conference(conference=conf["objects"][0]["id"])
 ```
 
 ## Live call quality — is Bob's call OK?

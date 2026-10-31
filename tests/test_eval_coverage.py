@@ -29,7 +29,7 @@ from pathlib import Path
 import pytest
 import yaml
 
-from pexip_mcp.mcp_app import mcp
+from pexip_mcp.mcp_app import is_legacy_alias, mcp
 
 import pexip_mcp.server  # noqa: F401 — registers all tools
 
@@ -124,7 +124,9 @@ def _live_tool_refs() -> set[str]:
     return {f"pexip_{m.group(1)}" for m in re.finditer(r"\b[a-z_]+\.([a-z_]+)\(", text)}
 
 
-REGISTERED: frozenset[str] = frozenset(t.name for t in mcp._tool_manager.list_tools())
+REGISTERED: frozenset[str] = frozenset(
+    t.name for t in mcp._tool_manager.list_tools() if not is_legacy_alias(t)
+)
 YAML_COVERED: frozenset[str] = frozenset(_yaml_tool_refs()) & REGISTERED
 LIVE_ONLY_COVERED: frozenset[str] = (frozenset(_live_tool_refs()) & REGISTERED) - YAML_COVERED
 UNCOVERED: frozenset[str] = REGISTERED - YAML_COVERED - LIVE_ONLY_COVERED

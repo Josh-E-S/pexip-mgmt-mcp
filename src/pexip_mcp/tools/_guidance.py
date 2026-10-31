@@ -787,18 +787,24 @@ GUIDANCE: dict[str, Guidance] = {
 }
 
 
+# A bare tool name: not part of a larger identifier, dotted attribute, or URL
+# path segment (so `/platform/certificates_import/schema/` is left alone).
 _BARE_NAME_RE = re.compile(
-    r"(?<![\w.])(" + "|".join(sorted(map(re.escape, GUIDANCE), key=len, reverse=True)) + r")\b"
+    r"(?<![\w./-])("
+    + "|".join(sorted(map(re.escape, GUIDANCE), key=len, reverse=True))
+    + r")(?![\w/])"
 )
 
 
 def _prefix_tool_names(text: str, prefix: str) -> str:
-    """Rewrite bare sibling tool names (list_vmrs) to their published form (pexip_list_vmrs)."""
+    """Rewrite bare sibling tool names (list_vmrs) to their published form (pexip_list_vmrs).
+
+    The lookbehind already excludes `_`, so an occurrence that is part of
+    `pexip_list_vmrs` never matches and is never double-prefixed.
+    """
     if not prefix:
         return text
-    return _BARE_NAME_RE.sub(
-        lambda m: m.group(1) if m.group(0).startswith(prefix) else prefix + m.group(1), text
-    )
+    return _BARE_NAME_RE.sub(lambda m: prefix + m.group(1), text)
 
 
 def render_description(

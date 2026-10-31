@@ -17,7 +17,7 @@ import pytest
 from mcp.server.fastmcp import Context, FastMCP
 
 from pexip_mcp.config import PexipSettings
-from pexip_mcp.mcp_app import enforce_read_only
+from pexip_mcp.mcp_app import enforce_platform_gate, enforce_read_only
 from pexip_mcp.tools._helpers import control, create, delete, read, update
 
 
@@ -198,3 +198,69 @@ def test_platform_tools_default_gated_in_config(clean_env):
     from pexip_mcp.config import PexipSettings
 
     assert PexipSettings(host="h", username="u", password="p").allow_platform_tools is False
+
+
+# ── Platform gate against prefixed names and legacy aliases ──────────────────
+
+
+def _prefixed_server(monkeypatch=None, legacy: bool = False):
+    """A PexipMCP instance (the class the real server uses), so tools register
+    under pexip_* names exactly as in production, optionally with aliases."""
+    from pexip_mcp.mcp_app import PexipMCP
+
+    if monkeypatch is not None:
+        monkeypatch.setenv("PEXIP_LEGACY_TOOL_NAMES", "true" if legacy else "false")
+    server = PexipMCP("t")
+
+    @server.tool(annotations=control("Restore platform backup", idempotent=False))
+    async def backup_restore(ctx: Context, backup_id: int) -> dict:  # pragma: no cover
+        return {}
+
+    @server.tool(annotations=control("Trigger platform upgrade", idempotent=False))
+    async def platform_upgrade(ctx: Context) -> dict:  # pragma: no cover
+        return {}
+
+    @server.tool(annotations=control("Lock a conference"))
+    async def lock_conference(ctx: Context, conference: str) -> dict:  # pragma: no cover
+        return {}
+
+    @server.tool(annotations=read("List VMRs"))
+    async def list_vmrs(ctx: Context) -> dict:  # pragma: no cover
+        return {}
+
+    return server
+
+
+def test_platform_gate_matches_prefixed_names():
+    server = _prefixed_server()
+    names = {t.name for t in server._tool_manager.list_tools()}
+    assert "pexip_backup_restore" in names  # registered under the published name
+    removed = enforce_platform_gate(server)
+    assert removed == ["pexip_backup_restore", "pexip_platform_upgrade"]
+    remaining = {t.name for t in server._tool_manager.list_tools()}
+    assert remaining == {"pexip_lock_conference", "pexip_list_vmrs"}
+
+
+def test_platform_gate_removes_legacy_aliases_too(monkeypatch):
+    server = _prefixed_server(monkeypatch, legacy=True)
+    names = {t.name for t in server._tool_manager.list_tools()}
+    assert {"backup_restore", "pexip_backup_restore"} <= names
+    removed = enforce_platform_gate(server)
+    assert set(removed) == {
+        "backup_restore",
+        "pexip_backup_restore",
+        "platform_upgrade",
+        "pexip_platform_upgrade",
+    }
+
+
+def test_platform_gate_on_the_real_catalog_names():
+    """Belt and braces: every PLATFORM_TOOLS entry names a tool that actually exists
+    in the real registry under its published name."""
+    from pexip_mcp.mcp_app import PLATFORM_TOOLS, TOOL_PREFIX, mcp
+
+    import pexip_mcp.server  # noqa: F401
+
+    registered = {t.name for t in mcp._tool_manager.list_tools()}
+    missing = {f"{TOOL_PREFIX}{n}" for n in PLATFORM_TOOLS} - registered
+    assert not missing, missing

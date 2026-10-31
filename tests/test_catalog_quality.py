@@ -23,12 +23,14 @@ from __future__ import annotations
 
 import pytest
 
-from pexip_mcp.mcp_app import mcp
+from pexip_mcp.mcp_app import is_legacy_alias, mcp
 
 import pexip_mcp.server  # noqa: F401 — registers all tools
 from evals.catalog import has_real_output_schema, near_duplicate_names
 
-TOOLS = sorted(mcp._tool_manager.list_tools(), key=lambda t: t.name)
+TOOLS = sorted(
+    (t for t in mcp._tool_manager.list_tools() if not is_legacy_alias(t)), key=lambda t: t.name
+)
 NAMES = [t.name for t in TOOLS]
 
 # Tools whose payload is a freeform dict the model constructs. The directory
