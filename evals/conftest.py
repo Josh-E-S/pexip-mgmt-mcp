@@ -143,8 +143,85 @@ def claude_tools(tool_registry) -> list[dict[str, Any]]:
 # Claude API client (gated on --llm)
 # ---------------------------------------------------------------------------
 
+class UsageRecorder:
+    """Accumulates token usage across every Messages API call in a run.
+
+    Exists to prove the prompt cache is working: the ~36k-token tool catalog
+    carries a cache_control breakpoint (see _registry_to_claude_tools), so after
+    the first request every call should report cache_read_input_tokens roughly
+    equal to the catalog size. If that stops happening (breakpoint removed, tool
+    list mutated between calls, TTL expired on a slow run) the cost of a --llm
+    run jumps ~10x. The terminal summary makes that visible on every run, and
+    PEXIP_EVAL_USAGE_JSON=path writes the raw numbers for the scorecard.
+    """
+
+    # Minimum share of requests (after the first) that must read from cache
+    # before the summary is flagged. Under this, something is wrong with caching.
+    MIN_CACHE_HIT_RATE = 0.8
+
+    def __init__(self) -> None:
+        self.requests = 0
+        self.input_tokens = 0
+        self.cache_creation_input_tokens = 0
+        self.cache_read_input_tokens = 0
+        self.output_tokens = 0
+        self.cache_hits = 0  # requests with cache_read_input_tokens > 0
+
+    def record(self, usage: Any) -> None:
+        self.requests += 1
+        self.input_tokens += getattr(usage, "input_tokens", 0) or 0
+        self.output_tokens += getattr(usage, "output_tokens", 0) or 0
+        created = getattr(usage, "cache_creation_input_tokens", 0) or 0
+        read = getattr(usage, "cache_read_input_tokens", 0) or 0
+        self.cache_creation_input_tokens += created
+        self.cache_read_input_tokens += read
+        if read > 0:
+            self.cache_hits += 1
+
+    @property
+    def hit_rate(self) -> float:
+        eligible = max(self.requests - 1, 0)  # first request can only create
+        return self.cache_hits / eligible if eligible else 1.0
+
+    def as_dict(self) -> dict[str, Any]:
+        return {
+            "model": EVAL_MODEL,
+            "requests": self.requests,
+            "input_tokens_uncached": self.input_tokens,
+            "cache_creation_input_tokens": self.cache_creation_input_tokens,
+            "cache_read_input_tokens": self.cache_read_input_tokens,
+            "output_tokens": self.output_tokens,
+            "cache_hit_rate": round(self.hit_rate, 3),
+        }
+
+    def summary_lines(self) -> list[str]:
+        if not self.requests:
+            return []
+        d = self.as_dict()
+        total_in = d["input_tokens_uncached"] + d["cache_creation_input_tokens"] + d["cache_read_input_tokens"]
+        lines = [
+            f"LLM eval usage ({EVAL_MODEL}): {d['requests']} requests, "
+            f"{total_in:,} input tokens of which {d['cache_read_input_tokens']:,} "
+            f"({d['cache_read_input_tokens'] / total_in:.0%}) were cache reads; "
+            f"{d['output_tokens']:,} output tokens; "
+            f"cache hit rate {d['cache_hit_rate']:.0%}",
+        ]
+        if self.requests > 3 and self.hit_rate < self.MIN_CACHE_HIT_RATE:
+            lines.append(
+                "WARNING: prompt cache hit rate is below "
+                f"{self.MIN_CACHE_HIT_RATE:.0%}. Check that the tool catalog still "
+                "carries cache_control (conftest._registry_to_claude_tools) and is "
+                "byte-identical across requests; this run cost ~10x more than it should."
+            )
+        return lines
+
+
+USAGE = UsageRecorder()
+
+
 @pytest.fixture(scope="session")
 def claude_client():
+    """Anthropic client whose messages.create records token usage into USAGE."""
     try:
         import anthropic
     except ImportError:
@@ -152,7 +229,36 @@ def claude_client():
     api_key = os.environ.get("ANTHROPIC_API_KEY")
     if not api_key:
         pytest.skip("ANTHROPIC_API_KEY not set")
-    return anthropic.Anthropic(api_key=api_key)
+    client = anthropic.Anthropic(api_key=api_key)
+
+    original_create = client.messages.create
+
+    def recording_create(*args: Any, **kwargs: Any):
+        response = original_create(*args, **kwargs)
+        usage = getattr(response, "usage", None)
+        if usage is not None:
+            USAGE.record(usage)
+        return response
+
+    client.messages.create = recording_create  # type: ignore[method-assign]
+    return client
+
+
+def pytest_terminal_summary(terminalreporter, exitstatus, config):
+    """Print cache/usage totals after an --llm run and optionally dump them to JSON."""
+    lines = USAGE.summary_lines()
+    if not lines:
+        return
+    terminalreporter.section("prompt cache / token usage")
+    for line in lines:
+        terminalreporter.write_line(line)
+    out = os.environ.get("PEXIP_EVAL_USAGE_JSON")
+    if out:
+        import json
+
+        Path(out).parent.mkdir(parents=True, exist_ok=True)
+        Path(out).write_text(json.dumps(USAGE.as_dict(), indent=2) + "\n")
+        terminalreporter.write_line(f"usage written to {out}")
 
 
 # ---------------------------------------------------------------------------

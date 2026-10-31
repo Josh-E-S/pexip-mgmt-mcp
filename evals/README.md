@@ -37,6 +37,14 @@ PEXIP_EVAL_DIAL_TARGET="sip:test@lab.local" uv run pytest evals/ --llm --live
 > The harness marks it with a prompt-cache breakpoint (`conftest.py`), so all
 > but the first request read it from cache at 10% of the input price — a full
 > run costs roughly $2 instead of ~$20. Keep that `cache_control` in place.
+>
+> The harness **verifies** this on every `--llm` run: the `claude_client` fixture
+> records `usage` from each API call and prints a "prompt cache / token usage"
+> section at the end (requests, cache-read share, hit rate). A hit rate under 80%
+> prints a warning; treat it as a broken run. Set `PEXIP_EVAL_USAGE_JSON=path` to
+> write the totals as JSON for the scorecard. Tool definitions are the first
+> block of the cached prefix, so the three test modules' slightly different
+> system prompts do not invalidate the catalog cache.
 
 ## What's tested
 

@@ -154,6 +154,8 @@ Extend `evals/scoring.py` to emit a JSON scorecard per run and per mode:
 
 Run the deterministic subset in CI, the LLM layer nightly or on label, and the live layer against the lab on release.
 
+Every LLM run must use the prompt cache on the tool catalog and report it: the harness records `cache_read_input_tokens` per request, prints the hit rate, and warns under 80%. Token-per-task comparisons across modes are only valid when both runs show a healthy hit rate, and the scorecard records uncached, cache-creation, and cache-read tokens separately so a caching regression cannot masquerade as a catalog-size win (or loss).
+
 ### 4.2 End-to-end QA set (Anthropic mcp-builder format)
 
 Ten to fifteen read-only, multi-hop questions with single string answers against seeded lab data in a frozen time window, in the `<evaluation><qa_pair>` XML the mcp-builder skill's `evaluation.py` consumes. Examples of the shape:
