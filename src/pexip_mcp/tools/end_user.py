@@ -15,6 +15,7 @@ from mcp.server.fastmcp import Context
 
 from pexip_mcp.client import PexipError, extract_id_from_uri
 from pexip_mcp.mcp_app import mcp
+from pexip_mcp.tools._shaping import ListResult, ResponseFormat, shape_list
 from pexip_mcp.tools._helpers import create, delete, get_client, read, resolve_id_by_field, update
 
 
@@ -36,7 +37,9 @@ async def list_end_users(
     sync_tag: str | None = None,
     limit: int = 20,
     offset: int = 0,
-) -> dict[str, Any]:
+    response_format: ResponseFormat = "concise",
+    fields: list[str] | None = None,
+) -> ListResult:
     """List directory end users.
 
     Args:
@@ -45,6 +48,9 @@ async def list_end_users(
         sync_tag: Filter by LDAP sync tag.
         limit: Max results.
         offset: Pagination offset.
+        response_format: "concise" (default) returns the high-signal fields of each
+            record; "detailed" returns every field Pexip stores.
+        fields: Explicit list of field names to return (overrides response_format).
     """
     params: dict[str, Any] = {"limit": limit, "offset": offset}
     if email_contains:
@@ -53,7 +59,12 @@ async def list_end_users(
         params["display_name__icontains"] = name_contains
     if sync_tag:
         params["sync_tag"] = sync_tag
-    return await get_client(ctx).list("end_user", **params)
+    return shape_list(
+        await get_client(ctx).list("end_user", **params),
+        resource="end_user",
+        response_format=response_format,
+        fields=fields,
+    )
 
 
 @mcp.tool(annotations=read("Get end user"))

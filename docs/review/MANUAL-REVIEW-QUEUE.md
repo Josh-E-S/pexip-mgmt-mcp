@@ -1,0 +1,36 @@
+# Manual review queue: important tools that may not work against a real node
+
+Collected from `2026-10-31-tool-module-review.md` and `2026-10-31-security-review.md`.
+These are tools an operator would actually reach for, where the code sends a field
+name, value, or path that could not be confirmed from the repo and that the mocked
+tests cannot verify (they pin whatever the code sends). Each needs one check on a
+lab Management Node. Nothing here has been changed in code yet.
+
+How to check most of them in minutes: `pexip_get_resource_schema("<resource>")`
+against the lab, or a single curl of the command schema URL, and compare with the
+field names in the tool.
+
+| # | Tool(s) | What to verify | Why it matters | Where |
+|---|---|---|---|---|
+| 1 | `pexip_set_conference_layout` | Command API `transform_layout` wants layout codes such as `"1:7"`, `"4:0"`, `"1:0"`; the tool's docstring and the evals use configuration `host_view` names (`one_main_zero_pips`) and three names that exist nowhere (`two_mains_seven_pips`, `nine_equal`, `sixteen_equal`). Try one call with a config name and one with a code. | The most common live-control request after mute/kick. If codes are required, every current call fails. | command.py `set_conference_layout`; tests/test_command.py:300-330; evals parameters.yaml layout cases; skills `layouts.json` |
+| 2 | `pexip_list_active_participants`, `pexip_list_history_participants`, `pexip_summarize_calls`, `pexip_list_conferencing_nodes`, `pexip_list_aliases`, `pexip_list_automatic_participants`, `pexip_list_node_status` | Filtering by a related object is done by passing a configuration URI (`/api/admin/configuration/v1/system_location/12/`) as the query value. Pexip documents `field__subfield=` for relation filters, and status/history records carry `system_location` / `conference` as name strings. Call `pexip_summarize_calls(..., location="London")` and `pexip_list_history_participants(location="London")` and confirm the result set is actually narrowed. | If wrong, every location- or VMR-scoped list and report silently returns the unfiltered set. | `_helpers.fk_uri` call sites: alias.py:44, automatic_participant.py:125, infrastructure.py, status.py (two), history.py (two) |
+| 3 | `pexip_create_device`, `pexip_update_device` | Field `enable_infinity_connect` may not exist on the `device` resource (Pexip has `enable_infinity_connect_non_sso`, `enable_infinity_connect_sso`, `enable_standard_sso`). Tastypie ignores unknown keys, so a wrong name is a silent no-op. | Toggling web-app access on a device would do nothing and report success. | device.py; `pexip_get_resource_schema("device")` |
+| 4 | `pexip_create_ldap_source`, `pexip_update_ldap_source` | Field names likely need the `ldap_` prefix (`ldap_bind_username`, `ldap_bind_password`, `ldap_user_search_dn`, `ldap_user_filter`); `ldap_user_search_filter`, `ldap_permitted_users_regex`, `sync_interval_minutes` have no known counterpart. | A source could be created with no bind credentials and no error. | ldap.py; tests/test_ldap.py:177 pins `bind_password`; `pexip_get_resource_schema("ldap_sync_source")` |
+| 5 | `pexip_add_automatic_participant` | Docstring enums for `keep_conference_alive` ("always", ...) and `routing` ("auto") look wrong; Pexip uses `keep_conference_alive` / `keep_conference_alive_if_multiple` / `keep_conference_alive_never` and `routing_rule` / `manual`. | The model copies the docstring enum and the API rejects or ignores it. | automatic_participant.py:161-163; evals parameters.yaml:166 expects "always"; `pexip_get_resource_schema("automatic_participant")` |
+| 6 | `pexip_get_participant_quality` | Media streams are fetched with `?participant=<uri>` on `participant_media_stream`; the documented path is nested: `participant/<uuid>/participant_media_stream/` (the backplane tool already uses the nested form). Confirm which returns streams. | The headline "is Alice's call OK right now" tool may return an empty stream list. | status.py get_participant_quality; tests/test_status.py:588-604 |
+| 7 | `pexip_dial_participant` | Docstring lists `call_type "audio-video"` and `protocol "auto"`, which may not be valid values, and omits `routing`, `keep_conference_alive`, `presentation_url`. Confirm accepted values from the command schema. | Dial-out is a top-five operator action. | command.py dial_participant; command schema at `/api/admin/command/v1/participant/dial/schema/` |
+| 8 | `pexip_create_gateway_rule`, `pexip_update_gateway_rule` | (a) `order_by=priority` is sent on every list call: confirm `priority` is orderable or the list 400s. (b) The tool cannot set `match_incoming_*` / `match_outgoing_calls` / `outgoing_*` flags, so it cannot build the outgoing rule `pexip_dial_participant` needs. (c) Docstring enums for `called_device_type` and `crypto_mode` look wrong. | Dial-plan editing is a core admin use case. | gateway_rule.py:63 and docstrings; `pexip_get_resource_schema("gateway_routing_rule")` |
+| 9 | `pexip_send_device_email` | Body is `{"conference_id": <int>}` on `conference/send_device_email`. A device email almost certainly needs a device id (`device_id`) and possibly a different scope. Parameter was renamed `vmr_id` in phase 1 to match the docstring, but the payload key is unchanged. | Provisioning email to device owners may be impossible today. | command.py send_device_email; command schema |
+| 10 | `pexip_take_snapshot`, `pexip_backup_create`, `pexip_backup_restore` | Snapshot and backup create send `{}`; a third-party rendering of the command reference says both require `name`. Restore sends `backup_id`; the UI flow is file + passphrase. | Platform tools; gated, but when enabled they should work. | command.py platform section; `/api/admin/command/v1/platform/*/schema/` |
+| 11 | `pexip_sync_conference_ldap` | Body field name for the conference sync template id is unconfirmed. | LDAP-driven VMR provisioning. | command.py sync_conference_ldap |
+| 12 | `pexip_list_history_participants` vs `pexip_summarize_calls` | History tools filter on `conference` but group on `conference_name`; Pexip's history participant record has `conference_name`. Confirm which filter key narrows results. | Per-room reporting. | history.py:121/215 vs 155/232 |
+
+## Already changed in code (no lab check needed, listed for awareness)
+
+- Live-control tools accept names (`participant`, `conference`) and resolve to UUIDs server-side; the skills package was wrong about this and is now corrected.
+- `pexip_create_*` tools now declare `destructiveHint`; device/LDAP/global-settings create and update responses redact passwords.
+- `pexip_list_resources` rejects `format`, `order_by`, pagination keys and relation spans in `filters`.
+
+## How results feed back
+
+For each row, the outcome is one of: **works as is** (close the row), **wrong field/value** (I change the code, the test fixture, and the eval case together), or **capability missing** (goes on the phase 4 list as a new typed parameter). Please note the Pexip Infinity version the lab is running when you report; field names drift between versions.

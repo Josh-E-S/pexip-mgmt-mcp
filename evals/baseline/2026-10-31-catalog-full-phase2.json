@@ -1,0 +1,270 @@
+{
+  "catalog_scope": "full",
+  "tool_count": 122,
+  "by_category": {
+    "Configuration": 46,
+    "Command": 23,
+    "Status": 39,
+    "History": 14
+  },
+  "catalog_tokens": {
+    "exact_anthropic": null,
+    "estimate_chars_div_3_5": 31834,
+    "exact_unavailable_reason": "ANTHROPIC_API_KEY not set"
+  },
+  "by_module": {
+    "status": {
+      "tools": 39,
+      "est_tokens": 7609,
+      "category": "Status"
+    },
+    "command": {
+      "tools": 23,
+      "est_tokens": 4980,
+      "category": "Command"
+    },
+    "history": {
+      "tools": 14,
+      "est_tokens": 3987,
+      "category": "History"
+    },
+    "resource_crud": {
+      "tools": 5,
+      "est_tokens": 2165,
+      "category": "Configuration"
+    },
+    "device": {
+      "tools": 6,
+      "est_tokens": 2069,
+      "category": "Configuration"
+    },
+    "gateway_rule": {
+      "tools": 5,
+      "est_tokens": 1877,
+      "category": "Configuration"
+    },
+    "conference": {
+      "tools": 5,
+      "est_tokens": 1773,
+      "category": "Configuration"
+    },
+    "ldap": {
+      "tools": 5,
+      "est_tokens": 1700,
+      "category": "Configuration"
+    },
+    "end_user": {
+      "tools": 5,
+      "est_tokens": 1491,
+      "category": "Configuration"
+    },
+    "automatic_participant": {
+      "tools": 3,
+      "est_tokens": 1297,
+      "category": "Configuration"
+    },
+    "infrastructure": {
+      "tools": 4,
+      "est_tokens": 1036,
+      "category": "Configuration"
+    },
+    "alias": {
+      "tools": 3,
+      "est_tokens": 750,
+      "category": "Configuration"
+    },
+    "global_settings": {
+      "tools": 2,
+      "est_tokens": 452,
+      "category": "Configuration"
+    },
+    "ivr_theme": {
+      "tools": 2,
+      "est_tokens": 283,
+      "category": "Configuration"
+    },
+    "schema": {
+      "tools": 1,
+      "est_tokens": 278,
+      "category": "Configuration"
+    }
+  },
+  "heaviest_tools": [
+    {
+      "name": "pexip_list_resources",
+      "est_tokens": 1039
+    },
+    {
+      "name": "pexip_summarize_calls",
+      "est_tokens": 791
+    },
+    {
+      "name": "pexip_list_history_participants",
+      "est_tokens": 765
+    },
+    {
+      "name": "pexip_add_automatic_participant",
+      "est_tokens": 714
+    },
+    {
+      "name": "pexip_create_gateway_rule",
+      "est_tokens": 627
+    },
+    {
+      "name": "pexip_create_ldap_source",
+      "est_tokens": 616
+    },
+    {
+      "name": "pexip_create_vmr",
+      "est_tokens": 596
+    },
+    {
+      "name": "pexip_dial_participant",
+      "est_tokens": 570
+    },
+    {
+      "name": "pexip_update_gateway_rule",
+      "est_tokens": 544
+    },
+    {
+      "name": "pexip_list_history_conferences",
+      "est_tokens": 537
+    }
+  ],
+  "description_chars": {
+    "min": 153,
+    "median": 347,
+    "max": 2819
+  },
+  "params_per_tool": {
+    "mean": 3.41,
+    "max": 14
+  },
+  "quality_signals": {
+    "missing_title": [],
+    "no_read_or_destructive_hint": [],
+    "description_under_120_chars": [],
+    "description_over_1500_chars": [
+      "pexip_list_resources",
+      "pexip_summarize_calls"
+    ],
+    "no_service_prefix": [],
+    "no_output_schema": 103,
+    "four_plus_optional_params": [
+      "pexip_add_automatic_participant",
+      "pexip_create_device",
+      "pexip_create_end_user",
+      "pexip_create_gateway_rule",
+      "pexip_create_ldap_source",
+      "pexip_create_vmr",
+      "pexip_dial_participant",
+      "pexip_list_active_conferences",
+      "pexip_list_active_participants",
+      "pexip_list_alarm_history",
+      "pexip_list_alarms",
+      "pexip_list_aliases",
+      "pexip_list_automatic_participants",
+      "pexip_list_conference_shards",
+      "pexip_list_conferencing_nodes",
+      "pexip_list_devices",
+      "pexip_list_end_users",
+      "pexip_list_gateway_rules",
+      "pexip_list_history_conferences",
+      "pexip_list_history_participants",
+      "pexip_list_ldap_sources",
+      "pexip_list_location_status",
+      "pexip_list_locations",
+      "pexip_list_mjx_endpoint_status",
+      "pexip_list_node_event_history",
+      "pexip_list_node_status",
+      "pexip_list_registration_aliases",
+      "pexip_list_registration_history",
+      "pexip_list_registrations",
+      "pexip_list_resources",
+      "pexip_list_vmrs",
+      "pexip_summarize_calls",
+      "pexip_update_device",
+      "pexip_update_end_user",
+      "pexip_update_gateway_rule",
+      "pexip_update_ldap_source",
+      "pexip_update_vmr"
+    ],
+    "near_duplicate_names": [
+      [
+        "pexip_add_automatic_participant",
+        "pexip_delete_automatic_participant",
+        0.892
+      ],
+      [
+        "pexip_create_gateway_rule",
+        "pexip_delete_gateway_rule",
+        0.88
+      ],
+      [
+        "pexip_create_gateway_rule",
+        "pexip_get_gateway_rule",
+        0.894
+      ],
+      [
+        "pexip_create_gateway_rule",
+        "pexip_update_gateway_rule",
+        0.88
+      ],
+      [
+        "pexip_create_ldap_source",
+        "pexip_get_ldap_source",
+        0.889
+      ],
+      [
+        "pexip_delete_automatic_participant",
+        "pexip_list_automatic_participants",
+        0.896
+      ],
+      [
+        "pexip_delete_gateway_rule",
+        "pexip_get_gateway_rule",
+        0.894
+      ],
+      [
+        "pexip_delete_gateway_rule",
+        "pexip_update_gateway_rule",
+        0.88
+      ],
+      [
+        "pexip_delete_ldap_source",
+        "pexip_get_ldap_source",
+        0.889
+      ],
+      [
+        "pexip_get_backplane_history_media_streams",
+        "pexip_get_backplane_media_streams",
+        0.892
+      ],
+      [
+        "pexip_get_location_statistics",
+        "pexip_get_location_status",
+        0.889
+      ],
+      [
+        "pexip_get_registration_alias",
+        "pexip_list_registration_aliases",
+        0.881
+      ],
+      [
+        "pexip_get_teams_node_call_status",
+        "pexip_get_teams_node_status",
+        0.915
+      ],
+      [
+        "pexip_list_node_status",
+        "pexip_list_teams_node_status",
+        0.88
+      ],
+      [
+        "pexip_list_teams_node_call_status",
+        "pexip_list_teams_node_status",
+        0.918
+      ]
+    ]
+  }
+}

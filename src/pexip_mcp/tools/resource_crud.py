@@ -18,6 +18,7 @@ from mcp.server.fastmcp import Context
 
 from pexip_mcp.client import PexipError, extract_id_from_uri
 from pexip_mcp.mcp_app import mcp
+from pexip_mcp.tools._shaping import ListResult, ResponseFormat, shape_list
 from pexip_mcp.tools._helpers import (
     create,
     delete,
@@ -257,7 +258,9 @@ async def list_resources(
     filters: dict[str, Any] | None = None,
     limit: int = 20,
     offset: int = 0,
-) -> dict[str, Any]:
+    response_format: ResponseFormat = "concise",
+    fields: list[str] | None = None,
+) -> ListResult:
     """List any Pexip configuration resource that has no dedicated tool.
 
     This is the catch-all listing tool. Supported resources by area:
@@ -301,6 +304,9 @@ async def list_resources(
             {"enable": true}). Keys must match the resource's field names.
         limit: Max results per page (default 20).
         offset: Pagination offset.
+        response_format: "concise" (default) returns the high-signal fields of each
+            record; "detailed" returns every field Pexip stores.
+        fields: Explicit list of field names to return (overrides response_format).
     """
     _validate_resource(resource)
     params: dict[str, Any] = {"limit": limit, "offset": offset}
@@ -308,7 +314,12 @@ async def list_resources(
         params["name__icontains"] = name_contains
     if filters:
         params.update(_validate_filters(filters))
-    return redact_secrets(await get_client(ctx).list(resource, **params))
+    return shape_list(
+        redact_secrets(await get_client(ctx).list(resource, **params)),
+        resource=resource,
+        response_format=response_format,
+        fields=fields,
+    )
 
 
 @mcp.tool(annotations=read("Get configuration resource"))

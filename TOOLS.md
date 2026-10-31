@@ -67,12 +67,12 @@ Regenerate with: `uv run python scripts/generate_tools_md.py`
 | `pexip_get_teams_node_call_status` | Get Teams Connector call status | ✅ | ❌ | ✅ | call_id |
 | `pexip_get_teams_node_status` | Get Teams Connector node status | ✅ | ❌ | ✅ | teams_node_id |
 | `pexip_get_vmr` | Get VMR | ✅ | ❌ | ✅ | vmr |
-| `pexip_list_active_conferences` | List active conferences | ✅ | ❌ | ✅ | name?, service_type?, tag?, limit?, offset?, fetch_all? |
-| `pexip_list_active_participants` | List active participants | ✅ | ❌ | ✅ | conference_name?, role?, protocol?, is_muted?, limit?, offset?, fetch_all? |
+| `pexip_list_active_conferences` | List active conferences | ✅ | ❌ | ✅ | name?, service_type?, tag?, limit?, offset?, fetch_all?, response_format?, fields? |
+| `pexip_list_active_participants` | List active participants | ✅ | ❌ | ✅ | conference_name?, role?, protocol?, is_muted?, limit?, offset?, fetch_all?, response_format?, fields? |
 | `pexip_list_alarm_history` | List alarm history | ✅ | ❌ | ✅ | start_time?, end_time?, level?, limit?, offset?, fetch_all? |
-| `pexip_list_alarms` | List active alarms | ✅ | ❌ | ✅ | level?, node_name?, limit?, offset?, fetch_all? |
-| `pexip_list_aliases` | List conference aliases | ✅ | ❌ | ✅ | vmr?, alias?, alias_contains?, limit?, offset? |
-| `pexip_list_automatic_participants` | List automatic participants | ✅ | ❌ | ✅ | vmr?, alias_contains?, limit?, offset? |
+| `pexip_list_alarms` | List active alarms | ✅ | ❌ | ✅ | level?, node_name?, limit?, offset?, fetch_all?, response_format?, fields? |
+| `pexip_list_aliases` | List conference aliases | ✅ | ❌ | ✅ | vmr?, alias?, alias_contains?, limit?, offset?, response_format?, fields? |
+| `pexip_list_automatic_participants` | List automatic participants | ✅ | ❌ | ✅ | vmr?, alias_contains?, limit?, offset?, response_format?, fields? |
 | `pexip_list_backplane_history` | List backplane history | ✅ | ❌ | ✅ | limit?, offset?, fetch_all? |
 | `pexip_list_backplanes` | List backplanes | ✅ | ❌ | ✅ | limit?, offset?, fetch_all? |
 | `pexip_list_cloud_monitored_locations` | List cloud monitored locations | ✅ | ❌ | ✅ | limit?, offset?, fetch_all? |
@@ -80,29 +80,29 @@ Regenerate with: `uv run python scripts/generate_tools_md.py`
 | `pexip_list_cloud_overflow_locations` | List cloud overflow locations | ✅ | ❌ | ✅ | limit?, offset?, fetch_all? |
 | `pexip_list_conference_shards` | List conference shards | ✅ | ❌ | ✅ | conference_name?, limit?, offset?, fetch_all? |
 | `pexip_list_conference_sync_status` | List conference sync status | ✅ | ❌ | ✅ | limit?, offset?, fetch_all? |
-| `pexip_list_conferencing_nodes` | List conferencing nodes | ✅ | ❌ | ✅ | location?, name_contains?, node_type?, limit?, offset? |
-| `pexip_list_devices` | List devices | ✅ | ❌ | ✅ | alias_contains?, owner_email?, tag?, limit?, offset? |
-| `pexip_list_end_users` | List end users | ✅ | ❌ | ✅ | email_contains?, name_contains?, sync_tag?, limit?, offset? |
+| `pexip_list_conferencing_nodes` | List conferencing nodes | ✅ | ❌ | ✅ | location?, name_contains?, node_type?, limit?, offset?, response_format?, fields? |
+| `pexip_list_devices` | List devices | ✅ | ❌ | ✅ | alias_contains?, owner_email?, tag?, limit?, offset?, response_format?, fields? |
+| `pexip_list_end_users` | List end users | ✅ | ❌ | ✅ | email_contains?, name_contains?, sync_tag?, limit?, offset?, response_format?, fields? |
 | `pexip_list_exchange_scheduler_status` | List Exchange scheduler status | ✅ | ❌ | ✅ | limit?, offset?, fetch_all? |
-| `pexip_list_gateway_rules` | List gateway routing rules | ✅ | ❌ | ✅ | name_contains?, enabled_only?, limit?, offset? |
-| `pexip_list_history_conferences` | List historical conferences | ✅ | ❌ | ✅ | start_time?, end_time?, name?, service_type?, tag?, limit?, offset?, fetch_all? |
-| `pexip_list_history_participants` | List historical participants | ✅ | ❌ | ✅ | start_time?, end_time?, conference_name?, call_direction?, call_quality?, protocol?, disconnect_reason?, location?, service_tag?, limit?, offset?, fetch_all? |
+| `pexip_list_gateway_rules` | List gateway routing rules | ✅ | ❌ | ✅ | name_contains?, enabled_only?, limit?, offset?, response_format?, fields? |
+| `pexip_list_history_conferences` | List historical conferences | ✅ | ❌ | ✅ | start_time?, end_time?, name?, service_type?, tag?, limit?, offset?, fetch_all?, response_format?, fields? |
+| `pexip_list_history_participants` | List historical participants | ✅ | ❌ | ✅ | start_time?, end_time?, conference_name?, call_direction?, call_quality?, protocol?, disconnect_reason?, location?, service_tag?, limit?, offset?, fetch_all?, response_format?, fields? |
 | `pexip_list_ivr_themes` | List IVR themes | ✅ | ❌ | ✅ | name_contains?, limit?, offset? |
-| `pexip_list_ldap_sources` | List LDAP sync sources | ✅ | ❌ | ✅ | name_contains?, limit?, offset? |
-| `pexip_list_location_status` | List location status | ✅ | ❌ | ✅ | name_contains?, limit?, offset?, fetch_all? |
-| `pexip_list_locations` | List system locations | ✅ | ❌ | ✅ | name_contains?, limit?, offset? |
+| `pexip_list_ldap_sources` | List LDAP sync sources | ✅ | ❌ | ✅ | name_contains?, limit?, offset?, response_format?, fields? |
+| `pexip_list_location_status` | List location status | ✅ | ❌ | ✅ | name_contains?, limit?, offset?, fetch_all?, response_format?, fields? |
+| `pexip_list_locations` | List system locations | ✅ | ❌ | ✅ | name_contains?, limit?, offset?, response_format?, fields? |
 | `pexip_list_management_node_status` | List management node status | ✅ | ❌ | ✅ | limit?, offset? |
 | `pexip_list_mjx_endpoint_status` | List MJX endpoint status | ✅ | ❌ | ✅ | name_contains?, limit?, offset?, fetch_all? |
 | `pexip_list_mjx_meeting_status` | List MJX meeting status | ✅ | ❌ | ✅ | limit?, offset?, fetch_all? |
 | `pexip_list_node_event_history` | List node event history | ✅ | ❌ | ✅ | start_time?, end_time?, limit?, offset?, fetch_all? |
-| `pexip_list_node_status` | List node status | ✅ | ❌ | ✅ | location?, name_contains?, limit?, offset?, fetch_all? |
-| `pexip_list_registration_aliases` | List registered aliases | ✅ | ❌ | ✅ | alias_contains?, limit?, offset?, fetch_all? |
+| `pexip_list_node_status` | List node status | ✅ | ❌ | ✅ | location?, name_contains?, limit?, offset?, fetch_all?, response_format?, fields? |
+| `pexip_list_registration_aliases` | List registered aliases | ✅ | ❌ | ✅ | alias_contains?, limit?, offset?, fetch_all?, response_format?, fields? |
 | `pexip_list_registration_history` | List registration history | ✅ | ❌ | ✅ | alias_contains?, limit?, offset?, fetch_all? |
-| `pexip_list_registrations` | List current registrations | ✅ | ❌ | ✅ | alias_contains?, protocol?, limit?, offset?, fetch_all? |
-| `pexip_list_resources` | List configuration resources | ✅ | ❌ | ✅ | resource, name_contains?, filters?, limit?, offset? |
+| `pexip_list_registrations` | List current registrations | ✅ | ❌ | ✅ | alias_contains?, protocol?, limit?, offset?, fetch_all?, response_format?, fields? |
+| `pexip_list_resources` | List configuration resources | ✅ | ❌ | ✅ | resource, name_contains?, filters?, limit?, offset?, response_format?, fields? |
 | `pexip_list_teams_node_call_status` | List Teams Connector call status | ✅ | ❌ | ✅ | limit?, offset?, fetch_all? |
 | `pexip_list_teams_node_status` | List Teams Connector node status | ✅ | ❌ | ✅ | limit?, offset?, fetch_all? |
-| `pexip_list_vmrs` | List VMRs | ✅ | ❌ | ✅ | name?, name_contains?, tag?, limit?, offset? |
+| `pexip_list_vmrs` | List VMRs | ✅ | ❌ | ✅ | name?, name_contains?, tag?, limit?, offset?, response_format?, fields? |
 | `pexip_lock_conference` | Lock a conference | ❌ | ✅ | ✅ | conference |
 | `pexip_mute_guests` | Mute all guests in a conference | ❌ | ✅ | ✅ | conference |
 | `pexip_mute_participant` | Audio-mute a participant | ❌ | ✅ | ✅ | participant, conference? |

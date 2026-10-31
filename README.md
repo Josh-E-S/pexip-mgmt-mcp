@@ -163,6 +163,19 @@ registry. That keeps the catalog at 122 tools, which lowers per-request token us
 and improves the agent's tool selection (verified by the
 [eval suite](#quality-the-eval-suite)).
 
+## Responses
+
+List tools return Pexip's own `{objects, meta}` envelope, with additions an agent
+can act on:
+
+- `meta.has_more` and `meta.next_offset` say whether to page and from where.
+- `response_format="concise"` (the default on the high-traffic list tools) returns
+  each record's high-signal fields; `"detailed"` returns every field Pexip stores;
+  `fields=[...]` picks exactly the fields you want. The choice is echoed in `meta`.
+- Any result over `PEXIP_MAX_RESPONSE_BYTES` is cut to fit, with `meta.truncated`
+  and a `meta.hint` that names the filters to narrow with.
+- Secret-bearing fields (passwords, PINs, keys, tokens) are masked on every read.
+
 ## How it fits together
 
 <!-- Diagram source: .github/architecture.mmd
@@ -232,6 +245,7 @@ environment). See [.env.example](.env.example) for an annotated template.
 | `PEXIP_VERIFY_TLS` | `true` | Set `false` for self-signed lab nodes |
 | `PEXIP_TIMEOUT` | `30` | HTTP timeout in seconds |
 | `PEXIP_MAX_RETRIES` | `3` | Retries on 429 rate-limit responses |
+| `PEXIP_MAX_RESPONSE_BYTES` | `100000` | Byte cap on any tool result; list results are cut to fit, with `meta.truncated` and a `meta.hint` on how to narrow |
 | `PEXIP_READ_ONLY` | `true` | Expose only read tools; remove all write/control tools. **On by default;** set `false` to enable writes |
 | `PEXIP_ALLOW_SECURITY_RESOURCES` | `false` | Allow generic CRUD to mutate security-critical resources (SSH keys, roles, auth, certs). Only relevant when writes are enabled |
 | `PEXIP_LEGACY_TOOL_NAMES` | `false` | Also register the pre-0.3 unprefixed tool names (`list_vmrs`) as aliases of the `pexip_*` names. Doubles the catalog; use only while migrating configs, skills, or eval cases |

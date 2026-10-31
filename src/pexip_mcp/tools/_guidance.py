@@ -280,6 +280,7 @@ GUIDANCE: dict[str, Guidance] = {
     "list_ldap_sources": _g(
         "the user asks which directories (AD/LDAP) sync users into Pexip.",
         "the user wants the synced users themselves (list_end_users).",
+        examples=[{}, {"name_contains": "corp", "response_format": "detailed"}],
     ),
     "get_ldap_source": _g(
         "the user names one LDAP sync source and wants its settings (bind password masked).",
@@ -315,6 +316,7 @@ GUIDANCE: dict[str, Guidance] = {
         "the user asks which system locations (data centres / regions) exist, or needs a "
         "location name for another tool.",
         "the user asks about current load per location (list_location_status).",
+        examples=[{}, {"name_contains": "EU", "fields": ["name", "description"]}],
     ),
     "get_location": _g(
         "the user names one system location and wants its configuration.",

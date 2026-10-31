@@ -19,6 +19,7 @@ from mcp.server.fastmcp import Context
 
 from pexip_mcp.client import PexipError, extract_id_from_uri
 from pexip_mcp.mcp_app import mcp
+from pexip_mcp.tools._shaping import ListResult, ResponseFormat, shape_list
 from pexip_mcp.tools._helpers import (
     create,
     delete,
@@ -52,7 +53,9 @@ async def list_gateway_rules(
     enabled_only: bool = False,
     limit: int = 20,
     offset: int = 0,
-) -> dict[str, Any]:
+    response_format: ResponseFormat = "concise",
+    fields: list[str] | None = None,
+) -> ListResult:
     """List dial plan gateway routing rules, ordered by priority ascending.
 
     Args:
@@ -60,13 +63,21 @@ async def list_gateway_rules(
         enabled_only: If true, returns only enabled rules.
         limit: Max results.
         offset: Pagination offset.
+        response_format: "concise" (default) returns the high-signal fields of each
+            record; "detailed" returns every field Pexip stores.
+        fields: Explicit list of field names to return (overrides response_format).
     """
     params: dict[str, Any] = {"limit": limit, "offset": offset, "order_by": "priority"}
     if name_contains:
         params["name__icontains"] = name_contains
     if enabled_only:
         params["enable"] = "True"
-    return await get_client(ctx).list("gateway_routing_rule", **params)
+    return shape_list(
+        await get_client(ctx).list("gateway_routing_rule", **params),
+        resource="gateway_routing_rule",
+        response_format=response_format,
+        fields=fields,
+    )
 
 
 @mcp.tool(annotations=read("Get gateway routing rule"))

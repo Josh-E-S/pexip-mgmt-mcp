@@ -15,6 +15,7 @@ from mcp.server.fastmcp import Context
 
 from pexip_mcp.client import extract_id_from_uri
 from pexip_mcp.mcp_app import mcp
+from pexip_mcp.tools._shaping import ListResult, ResponseFormat, shape_list
 from pexip_mcp.tools._helpers import create, delete, fk_uri, get_client, read, resolve_id_by_field
 
 
@@ -26,7 +27,9 @@ async def list_aliases(
     alias_contains: str | None = None,
     limit: int = 20,
     offset: int = 0,
-) -> dict[str, Any]:
+    response_format: ResponseFormat = "concise",
+    fields: list[str] | None = None,
+) -> ListResult:
     """List conference aliases, optionally scoped to one VMR.
 
     Args:
@@ -35,6 +38,9 @@ async def list_aliases(
         alias_contains: Case-insensitive substring match.
         limit: Max results.
         offset: Pagination offset.
+        response_format: "concise" (default) returns the high-signal fields of each
+            record; "detailed" returns every field Pexip stores.
+        fields: Explicit list of field names to return (overrides response_format).
     """
     client = get_client(ctx)
     params: dict[str, Any] = {"limit": limit, "offset": offset}
@@ -47,7 +53,12 @@ async def list_aliases(
         params["alias"] = alias
     if alias_contains:
         params["alias__icontains"] = alias_contains
-    return await client.list("conference_alias", **params)
+    return shape_list(
+        await client.list("conference_alias", **params),
+        resource="conference_alias",
+        response_format=response_format,
+        fields=fields,
+    )
 
 
 @mcp.tool(annotations=create("Add conference alias"))

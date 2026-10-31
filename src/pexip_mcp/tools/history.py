@@ -20,6 +20,7 @@ from mcp.server.fastmcp import Context
 
 from pexip_mcp.client import PexipError
 from pexip_mcp.mcp_app import mcp
+from pexip_mcp.tools._shaping import ListResult, ResponseFormat, shape_list
 from pexip_mcp.tools._helpers import (
     fk_uri,
     get_client,
@@ -48,7 +49,9 @@ async def list_history_conferences(
     limit: int = 20,
     offset: int = 0,
     fetch_all: bool = False,
-) -> dict[str, Any]:
+    response_format: ResponseFormat = "concise",
+    fields: list[str] | None = None,
+) -> ListResult:
     """List completed conference instances.
 
     Args:
@@ -59,6 +62,9 @@ async def list_history_conferences(
         service_type: "conference" / "lecture" / etc.
         tag: Filter by service tag.
         limit, offset, fetch_all: Pagination controls.
+        response_format: "concise" (default) returns the high-signal fields of each
+            record; "detailed" returns every field Pexip stores.
+        fields: Explicit list of field names to return (overrides response_format).
     """
     params: dict[str, Any] = {"limit": limit, "offset": offset, "order_by": "-start_time"}
     if start_time:
@@ -71,7 +77,12 @@ async def list_history_conferences(
         params["service_type"] = service_type
     if tag:
         params["tag"] = tag
-    return await _list(get_client(ctx), "conference", fetch_all, **params)
+    return shape_list(
+        await _list(get_client(ctx), "conference", fetch_all, **params),
+        resource="history/conference",
+        response_format=response_format,
+        fields=fields,
+    )
 
 
 @mcp.tool(annotations=read("Get historical conference"))
@@ -95,7 +106,9 @@ async def list_history_participants(
     limit: int = 20,
     offset: int = 0,
     fetch_all: bool = False,
-) -> dict[str, Any]:
+    response_format: ResponseFormat = "concise",
+    fields: list[str] | None = None,
+) -> ListResult:
     """List completed participant call legs (CDR-like records).
 
     Time bounds apply to participant.start_time. All times are UTC ISO 8601.
@@ -111,6 +124,9 @@ async def list_history_participants(
         location: system_location id or exact name.
         service_tag: Filter by tag carried from the parent conference.
         limit, offset, fetch_all: Pagination. fetch_all caps at 10,000.
+        response_format: "concise" (default) returns the high-signal fields of each
+            record; "detailed" returns every field Pexip stores.
+        fields: Explicit list of field names to return (overrides response_format).
     """
     client = get_client(ctx)
     params: dict[str, Any] = {"limit": limit, "offset": offset, "order_by": "-start_time"}
@@ -133,7 +149,12 @@ async def list_history_participants(
         params["system_location"] = fk_uri("system_location", loc_id)
     if service_tag:
         params["service_tag"] = service_tag
-    return await _list(client, "participant", fetch_all, **params)
+    return shape_list(
+        await _list(client, "participant", fetch_all, **params),
+        resource="history/participant",
+        response_format=response_format,
+        fields=fields,
+    )
 
 
 @mcp.tool(annotations=read("Get historical participant"))

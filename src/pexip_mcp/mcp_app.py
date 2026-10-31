@@ -25,6 +25,7 @@ it here breaks the cycle.
 
 from __future__ import annotations
 
+import functools
 import logging
 import os
 from collections.abc import AsyncIterator
@@ -37,6 +38,7 @@ from mcp.server.fastmcp import FastMCP
 from pexip_mcp.client import PexipClient
 from pexip_mcp.config import PexipSettings
 from pexip_mcp.tools._guidance import GUIDANCE, render_description
+from pexip_mcp.tools._shaping import finalize_result
 
 log = logging.getLogger(__name__)
 
@@ -98,6 +100,9 @@ class PexipMCP(FastMCP):
       description  the docstring plus the tool's GUIDANCE entry (use when / do
                    not use when / API reference), see tools/_guidance.py
       meta         `input_examples` from GUIDANCE, for hosts that read them
+      result       passed through tools/_shaping.finalize_result: list envelopes
+                   gain has_more / next_offset and are cut to the byte cap with
+                   a hint on how to narrow
       alias        the unprefixed name too, when PEXIP_LEGACY_TOOL_NAMES is on
 
     Python function names are untouched, so tests and the live suite keep
@@ -117,16 +122,23 @@ class PexipMCP(FastMCP):
             meta = dict(kwargs.pop("meta", None) or {})
             if guidance and guidance.get("examples"):
                 meta.setdefault("input_examples", guidance["examples"])
+
+            # functools.wraps keeps the signature, annotations and docstring, so
+            # FastMCP still builds the schema and injects Context from `fn`.
+            @functools.wraps(fn)
+            async def shaped(*args: Any, **kw: Any) -> Any:
+                return finalize_result(await fn(*args, **kw))
+
             registered = parent_tool(
                 name=published, description=description, meta=meta or None, **kwargs
-            )(fn)
+            )(shaped)
             if name is None and legacy_tool_names_enabled():
                 parent_tool(
                     name=base_name,
                     description=f"Deprecated alias of {published}. " + description,
                     meta={**meta, LEGACY_ALIAS_META_KEY: published},
                     **kwargs,
-                )(fn)
+                )(shaped)
             return registered
 
         return decorator

@@ -24,6 +24,7 @@ from mcp.server.fastmcp import Context
 
 from pexip_mcp.client import PexipError, extract_id_from_uri
 from pexip_mcp.mcp_app import mcp
+from pexip_mcp.tools._shaping import ListResult, ResponseFormat, shape_list
 from pexip_mcp.tools._helpers import (
     create,
     delete,
@@ -50,7 +51,9 @@ async def list_devices(
     tag: str | None = None,
     limit: int = 20,
     offset: int = 0,
-) -> dict[str, Any]:
+    response_format: ResponseFormat = "concise",
+    fields: list[str] | None = None,
+) -> ListResult:
     """List provisioned devices (registration records).
 
     Args:
@@ -59,6 +62,9 @@ async def list_devices(
         tag: Filter by tag.
         limit: Max results.
         offset: Pagination offset.
+        response_format: "concise" (default) returns the high-signal fields of each
+            record; "detailed" returns every field Pexip stores.
+        fields: Explicit list of field names to return (overrides response_format).
     """
     params: dict[str, Any] = {"limit": limit, "offset": offset}
     if alias_contains:
@@ -67,7 +73,12 @@ async def list_devices(
         params["primary_owner_email_address"] = owner_email
     if tag:
         params["tag"] = tag
-    return redact_secrets(await get_client(ctx).list("device", **params))
+    return shape_list(
+        redact_secrets(await get_client(ctx).list("device", **params)),
+        resource="device",
+        response_format=response_format,
+        fields=fields,
+    )
 
 
 @mcp.tool(annotations=read("Get device"))
@@ -178,7 +189,9 @@ async def list_registrations(
     limit: int = 20,
     offset: int = 0,
     fetch_all: bool = False,
-) -> dict[str, Any]:
+    response_format: ResponseFormat = "concise",
+    fields: list[str] | None = None,
+) -> ListResult:
     """List endpoints currently registered to the platform (live Status API read).
 
     This is the runtime counterpart to the device records: who is registered
@@ -188,6 +201,9 @@ async def list_registrations(
         alias_contains: Case-insensitive substring match on the registered alias.
         protocol: "sip" / "h323" / "mssip" / "webrtc".
         limit, offset, fetch_all: Pagination controls (fetch_all walks all pages).
+        response_format: "concise" (default) returns the high-signal fields of each
+            record; "detailed" returns every field Pexip stores.
+        fields: Explicit list of field names to return (overrides response_format).
     """
     client = get_client(ctx)
     params: dict[str, Any] = {}
@@ -199,4 +215,9 @@ async def list_registrations(
         return await paginate_all(client, "registration", api="status", **params)
     params["limit"] = limit
     params["offset"] = offset
-    return await client.list("registration", api="status", **params)
+    return shape_list(
+        await client.list("registration", api="status", **params),
+        resource="status/registration",
+        response_format=response_format,
+        fields=fields,
+    )

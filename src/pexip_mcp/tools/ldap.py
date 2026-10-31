@@ -17,6 +17,7 @@ from mcp.server.fastmcp import Context
 
 from pexip_mcp.client import PexipError, extract_id_from_uri
 from pexip_mcp.mcp_app import mcp
+from pexip_mcp.tools._shaping import ListResult, ResponseFormat, shape_list
 from pexip_mcp.tools._helpers import (
     create,
     delete,
@@ -40,12 +41,25 @@ async def list_ldap_sources(
     name_contains: str | None = None,
     limit: int = 20,
     offset: int = 0,
-) -> dict[str, Any]:
-    """List configured LDAP / Active Directory sync sources."""
+    response_format: ResponseFormat = "concise",
+    fields: list[str] | None = None,
+) -> ListResult:
+    """List configured LDAP / Active Directory sync sources.
+
+    Args:
+        response_format: "concise" (default) returns the high-signal fields of each
+            record; "detailed" returns every field Pexip stores.
+        fields: Explicit list of field names to return (overrides response_format).
+    """
     params: dict[str, Any] = {"limit": limit, "offset": offset}
     if name_contains:
         params["name__icontains"] = name_contains
-    return redact_secrets(await get_client(ctx).list("ldap_sync_source", **params))
+    return shape_list(
+        redact_secrets(await get_client(ctx).list("ldap_sync_source", **params)),
+        resource="ldap_sync_source",
+        response_format=response_format,
+        fields=fields,
+    )
 
 
 @mcp.tool(annotations=read("Get LDAP sync source"))

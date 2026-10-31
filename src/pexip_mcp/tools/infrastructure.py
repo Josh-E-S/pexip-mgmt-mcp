@@ -22,6 +22,7 @@ from typing import Any
 from mcp.server.fastmcp import Context
 
 from pexip_mcp.mcp_app import mcp
+from pexip_mcp.tools._shaping import ListResult, ResponseFormat, shape_list
 from pexip_mcp.tools._helpers import fk_uri, get_client, read, resolve_id_by_field
 
 
@@ -31,13 +32,26 @@ async def list_locations(
     name_contains: str | None = None,
     limit: int = 20,
     offset: int = 0,
-) -> dict[str, Any]:
+    response_format: ResponseFormat = "concise",
+    fields: list[str] | None = None,
+) -> ListResult:
     """List system locations (logical groupings of Conferencing Nodes,
-    typically per datacenter / region)."""
+    typically per datacenter / region).
+
+    Args:
+        response_format: "concise" (default) returns the high-signal fields of each
+            record; "detailed" returns every field Pexip stores.
+        fields: Explicit list of field names to return (overrides response_format).
+    """
     params: dict[str, Any] = {"limit": limit, "offset": offset}
     if name_contains:
         params["name__icontains"] = name_contains
-    return await get_client(ctx).list("system_location", **params)
+    return shape_list(
+        await get_client(ctx).list("system_location", **params),
+        resource="system_location",
+        response_format=response_format,
+        fields=fields,
+    )
 
 
 @mcp.tool(annotations=read("Get system location"))
@@ -56,7 +70,9 @@ async def list_conferencing_nodes(
     node_type: str | None = None,
     limit: int = 20,
     offset: int = 0,
-) -> dict[str, Any]:
+    response_format: ResponseFormat = "concise",
+    fields: list[str] | None = None,
+) -> ListResult:
     """List Conferencing Nodes (the worker_vm resource).
 
     Args:
@@ -65,6 +81,9 @@ async def list_conferencing_nodes(
         node_type: "CONFERENCING" or "PROXYING".
         limit: Max results.
         offset: Pagination offset.
+        response_format: "concise" (default) returns the high-signal fields of each
+            record; "detailed" returns every field Pexip stores.
+        fields: Explicit list of field names to return (overrides response_format).
     """
     client = get_client(ctx)
     params: dict[str, Any] = {"limit": limit, "offset": offset}
@@ -75,7 +94,12 @@ async def list_conferencing_nodes(
         params["name__icontains"] = name_contains
     if node_type:
         params["node_type"] = node_type
-    return await client.list("worker_vm", **params)
+    return shape_list(
+        await client.list("worker_vm", **params),
+        resource="worker_vm",
+        response_format=response_format,
+        fields=fields,
+    )
 
 
 @mcp.tool(annotations=read("Get conferencing node"))

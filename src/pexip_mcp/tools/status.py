@@ -20,6 +20,7 @@ from typing import Any
 from mcp.server.fastmcp import Context
 
 from pexip_mcp.mcp_app import mcp
+from pexip_mcp.tools._shaping import ListResult, ResponseFormat, shape_list
 from pexip_mcp.tools._helpers import (
     fk_uri,
     get_client,
@@ -47,7 +48,9 @@ async def list_active_conferences(
     limit: int = 20,
     offset: int = 0,
     fetch_all: bool = False,
-) -> dict[str, Any]:
+    response_format: ResponseFormat = "concise",
+    fields: list[str] | None = None,
+) -> ListResult:
     """List currently-running conference instances.
 
     Empty `objects` list = nothing is in progress right now.
@@ -59,6 +62,9 @@ async def list_active_conferences(
         limit: Per-page limit (ignored if fetch_all).
         offset: Pagination offset (ignored if fetch_all).
         fetch_all: Walk all pages and return up to 5,000 records combined.
+        response_format: "concise" (default) returns the high-signal fields of each
+            record; "detailed" returns every field Pexip stores.
+        fields: Explicit list of field names to return (overrides response_format).
     """
     params: dict[str, Any] = {"limit": limit, "offset": offset}
     if name:
@@ -67,7 +73,12 @@ async def list_active_conferences(
         params["service_type"] = service_type
     if tag:
         params["tag"] = tag
-    return await _list(get_client(ctx), "conference", fetch_all, **params)
+    return shape_list(
+        await _list(get_client(ctx), "conference", fetch_all, **params),
+        resource="status/conference",
+        response_format=response_format,
+        fields=fields,
+    )
 
 
 @mcp.tool(annotations=read("List active participants"))
@@ -80,7 +91,9 @@ async def list_active_participants(
     limit: int = 20,
     offset: int = 0,
     fetch_all: bool = False,
-) -> dict[str, Any]:
+    response_format: ResponseFormat = "concise",
+    fields: list[str] | None = None,
+) -> ListResult:
     """List currently-connected participants (active call legs).
 
     Args:
@@ -89,6 +102,9 @@ async def list_active_participants(
         protocol: "api" / "sip" / "h323" / "mssip" / "webrtc" / "rtmp" / "teams" / "gms".
         is_muted: Filter by mute state.
         limit, offset, fetch_all: Pagination controls.
+        response_format: "concise" (default) returns the high-signal fields of each
+            record; "detailed" returns every field Pexip stores.
+        fields: Explicit list of field names to return (overrides response_format).
     """
     params: dict[str, Any] = {"limit": limit, "offset": offset}
     if conference_name:
@@ -99,7 +115,12 @@ async def list_active_participants(
         params["protocol"] = protocol
     if is_muted is not None:
         params["is_muted"] = "True" if is_muted else "False"
-    return await _list(get_client(ctx), "participant", fetch_all, **params)
+    return shape_list(
+        await _list(get_client(ctx), "participant", fetch_all, **params),
+        resource="status/participant",
+        response_format=response_format,
+        fields=fields,
+    )
 
 
 @mcp.tool(annotations=read("Get active participant"))
@@ -128,13 +149,18 @@ async def list_alarms(
     limit: int = 20,
     offset: int = 0,
     fetch_all: bool = False,
-) -> dict[str, Any]:
+    response_format: ResponseFormat = "concise",
+    fields: list[str] | None = None,
+) -> ListResult:
     """List active platform alarms.
 
     Args:
         level: "error" / "warning" / "info".
         node_name: Restrict to one Conferencing Node by name.
         limit, offset, fetch_all: Pagination controls.
+        response_format: "concise" (default) returns the high-signal fields of each
+            record; "detailed" returns every field Pexip stores.
+        fields: Explicit list of field names to return (overrides response_format).
     """
     client = get_client(ctx)
     params: dict[str, Any] = {"limit": limit, "offset": offset}
@@ -143,7 +169,12 @@ async def list_alarms(
     if node_name:
         node_id = await resolve_id_by_field(client, "worker_vm", node_name, field="name")
         params["node"] = fk_uri("worker_vm", node_id)
-    return await _list(client, "alarm", fetch_all, **params)
+    return shape_list(
+        await _list(client, "alarm", fetch_all, **params),
+        resource="status/alarm",
+        response_format=response_format,
+        fields=fields,
+    )
 
 
 @mcp.tool(annotations=read("List node status"))
@@ -154,13 +185,18 @@ async def list_node_status(
     limit: int = 20,
     offset: int = 0,
     fetch_all: bool = False,
-) -> dict[str, Any]:
+    response_format: ResponseFormat = "concise",
+    fields: list[str] | None = None,
+) -> ListResult:
     """Live status (load, sync, version, boot time) for each Conferencing Node.
 
     Args:
         location: Filter to one system_location by name or id.
         name_contains: Case-insensitive substring match on node name.
         limit, offset, fetch_all: Pagination controls.
+        response_format: "concise" (default) returns the high-signal fields of each
+            record; "detailed" returns every field Pexip stores.
+        fields: Explicit list of field names to return (overrides response_format).
     """
     client = get_client(ctx)
     params: dict[str, Any] = {"limit": limit, "offset": offset}
@@ -169,7 +205,12 @@ async def list_node_status(
         params["system_location"] = fk_uri("system_location", loc_id)
     if name_contains:
         params["name__icontains"] = name_contains
-    return await _list(client, "worker_vm", fetch_all, **params)
+    return shape_list(
+        await _list(client, "worker_vm", fetch_all, **params),
+        resource="status/worker_vm",
+        response_format=response_format,
+        fields=fields,
+    )
 
 
 @mcp.tool(annotations=read("Get node status"))
@@ -261,17 +302,27 @@ async def list_registration_aliases(
     limit: int = 20,
     offset: int = 0,
     fetch_all: bool = False,
-) -> dict[str, Any]:
+    response_format: ResponseFormat = "concise",
+    fields: list[str] | None = None,
+) -> ListResult:
     """List currently registered aliases on the platform.
 
     Args:
         alias_contains: Case-insensitive substring match on the alias.
         limit, offset, fetch_all: Pagination controls.
+        response_format: "concise" (default) returns the high-signal fields of each
+            record; "detailed" returns every field Pexip stores.
+        fields: Explicit list of field names to return (overrides response_format).
     """
     params: dict[str, Any] = {"limit": limit, "offset": offset}
     if alias_contains:
         params["alias__icontains"] = alias_contains
-    return await _list(get_client(ctx), "registration_alias", fetch_all, **params)
+    return shape_list(
+        await _list(get_client(ctx), "registration_alias", fetch_all, **params),
+        resource="status/registration_alias",
+        response_format=response_format,
+        fields=fields,
+    )
 
 
 @mcp.tool(annotations=read("Get registered alias"))
@@ -290,17 +341,27 @@ async def list_location_status(
     limit: int = 20,
     offset: int = 0,
     fetch_all: bool = False,
-) -> dict[str, Any]:
+    response_format: ResponseFormat = "concise",
+    fields: list[str] | None = None,
+) -> ListResult:
     """List live status for system locations.
 
     Args:
         name_contains: Case-insensitive substring match on location name.
         limit, offset, fetch_all: Pagination controls.
+        response_format: "concise" (default) returns the high-signal fields of each
+            record; "detailed" returns every field Pexip stores.
+        fields: Explicit list of field names to return (overrides response_format).
     """
     params: dict[str, Any] = {"limit": limit, "offset": offset}
     if name_contains:
         params["name__icontains"] = name_contains
-    return await _list(get_client(ctx), "system_location", fetch_all, **params)
+    return shape_list(
+        await _list(get_client(ctx), "system_location", fetch_all, **params),
+        resource="status/system_location",
+        response_format=response_format,
+        fields=fields,
+    )
 
 
 @mcp.tool(annotations=read("Get location status"))

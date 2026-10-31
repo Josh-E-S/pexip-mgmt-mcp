@@ -212,6 +212,14 @@ Still to do for phase 0: run `--llm` three times and `--live` once against the l
 - Eval YAML, the error-handling function map, the live suite, TOOLS.md, README, `.env.example`, and the skills package (names, the UUID guidance, `.mcp.json` env passthrough) migrated.
 - Measured cost: the full catalog is ~29.4k estimated tokens, up from ~22.2k (`evals/baseline/2026-10-31-catalog-full-phase1.json`). The guidance block adds roughly 60 tokens per tool. Phases 3 and 4 recover this by cutting the tool count; the LLM eval run (phase 0, your lab) is what shows whether the guidance buys the accuracy it is meant to.
 
+### Phase 2 status (31 Oct 2026): done, except FK name resolution
+
+- `tools/_shaping.py`: `finalize_result` runs on every tool result via the `PexipMCP` wrapper (list envelopes gain `meta.has_more` / `meta.next_offset`; `paginate_all`'s top-level `truncated` moves into `meta`; results over `PEXIP_MAX_RESPONSE_BYTES` are cut to fit with `meta.truncated` and a narrowing `meta.hint`).
+- 19 high-traffic list tools take `response_format` (`concise` default, `detailed`) and `fields`, projected against per-resource `CONCISE_FIELDS`. Unknown resources fall back to detailed.
+- Those tools return `ListResult`, so they carry a real `outputSchema`. `ListMeta` is declared exhaustively because FastMCP drops unknown keys from structured output. Single-record `get_*` tools keep `dict[str, Any]` (free-form records); the full-coverage output-schema gate stays xfail until phase 4's generic tools land.
+- Not done: resolving foreign-key URIs to names in concise mode. It needs the phase 3 catalog (which field points at which resource) and an extra lookup per distinct FK; deferred to phase 3.
+- `docs/review/MANUAL-REVIEW-QUEUE.md` lists the 12 important-but-unverified tools for lab checks.
+
 ### Re-sequencing after the 31 Oct reviews (`docs/review/`)
 
 - **Pulled into phase 1 and done:** pure-ASGI auth gates replacing `BaseHTTPMiddleware`; OIDC sessions bound to the principal that opened them (closes the audit-attribution / session-riding finding); non-ASCII `Authorization` header is a 401 not a 500; `PEXIP_MCP_PUBLIC_URL` for the RFC 9728 challenge; `PEXIP_MCP_ALLOWED_HOSTS` / `_ORIGINS` for DNS-rebinding protection behind a tunnel; `create` preset carries `destructiveHint`; `list_resources` filter keys validated (no `format`/pagination overrides, no relation spans); redaction covers `keydata`, `*_token`, `api_key`, `psk`, `*_community`, `shared_secret`; device/LDAP/global-settings create and update returns redacted for parity with reads; eval scorecard emitter.

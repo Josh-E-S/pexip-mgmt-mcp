@@ -283,5 +283,5 @@ async def test_fetch_all_walks_pagination(ctx):
     result = await status.list_active_participants(ctx, fetch_all=True)
 
     assert len(result["objects"]) == 1500
-    assert result["truncated"] is False
+    assert result["meta"]["truncated"] is False
     assert route.call_count == 2
