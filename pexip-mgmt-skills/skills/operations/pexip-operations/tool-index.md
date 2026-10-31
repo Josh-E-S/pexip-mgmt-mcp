@@ -56,7 +56,7 @@ A curated, intent-grouped lookup for the pexip-mgmt MCP server's tools: find the
 | Tool | Description |
 |---|---|
 | `pexip_list_end_users` / `pexip_get_end_user` / `pexip_create_end_user` / `pexip_update_end_user` / `pexip_delete_end_user` | Directory CRUD. Handle is `primary_email_address`. |
-| `pexip_list_ldap_sources` / `pexip_get_ldap_source` / `pexip_create_ldap_source` / `pexip_update_ldap_source` / `pexip_delete_ldap_source` | LDAP / AD sync sources. `pexip_get_ldap_source` returns last sync status. |
+| `pexip_list_resources(resource="ldap_sync_source")` / `pexip_get_resource` / `pexip_create_resource` / `pexip_update_resource` / `pexip_delete_resource` | LDAP / AD sync sources. `pexip_get_ldap_source` returns last sync status. |
 
 ## Devices & registrations
 
@@ -78,7 +78,7 @@ A curated, intent-grouped lookup for the pexip-mgmt MCP server's tools: find the
 |---|---|
 | `pexip_list_locations` / `pexip_get_location` | System locations (datacenter / region groupings of nodes). |
 | `pexip_list_conferencing_nodes` / `pexip_get_conferencing_node` | Conferencing Node configuration (the `worker_vm` resource). |
-| `pexip_list_ivr_themes` / `pexip_get_ivr_theme` | Branding bundles assignable to VMRs. |
+| `pexip_list_resources(resource="ivr_theme")` / `pexip_get_resource(resource="ivr_theme", id=...)` | Branding bundles assignable to VMRs. |
 
 ## MJX — One-Touch Join
 
@@ -191,7 +191,7 @@ A curated, intent-grouped lookup for the pexip-mgmt MCP server's tools: find the
 
 | Tool | Description |
 |---|---|
-| `pexip_get_global_settings` / `pexip_update_global_settings` | Singleton at `/configuration/v1/global/1/`. Affects the whole platform. |
+| `pexip_get_resource(resource="global", id=1)` / `pexip_update_resource(resource="global", id=1, settings={...})` | Singleton at `/configuration/v1/global/1/`. Affects the whole platform. |
 | `pexip_get_resource_schema(resource=…)` | Fetch the live JSON schema for any resource. Use before guessing field names or enum values. |
 
 ## Not exposed

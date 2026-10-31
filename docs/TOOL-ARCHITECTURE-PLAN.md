@@ -230,6 +230,16 @@ Still to do for phase 0: run `--llm` three times and `--live` once against the l
 - Counts today: `all` 124, `default` 105, `rooms,live` 35. The default is still high because `health` holds the 33-tool status long tail; phase 4 folds it.
 - Not done: per-request toolset selection on the HTTP transport (`X-Pexip-Toolsets` header / `/x/{toolset}` path). FastMCP 1.x keeps one global tool registry per process, so this needs either one server instance per toolset combination or SDK v2's per-request listing; deferred to phase 6 with the SDK migration. Also deferred: `PEXIP_DENY_RESOURCES` for the generic CRUD registry, and per-toolset OIDC scopes.
 
+### Phase 4 status (31 Oct 2026): done
+
+- Catalog is 72 tools (from 124): Configuration 37, Status 11, History 7, Command 16, Discovery 1. Default toolsets about 60; `rooms,live` 31.
+- Status: 31 long-tail tools folded into `pexip_list_status` / `pexip_get_status` over STATUS_REGISTRY (sub-path statistics via `resource="worker_vm/{id}/statistics"`); typed keepers: active conferences/participants, participant quality, alarms, licensing, node status, registrations, platform health.
+- History: 9 folded into `pexip_list_history` / `pexip_get_history`; keepers: summarize_calls, conference and participant history.
+- Command: 7 platform commands became one gated `pexip_run_platform_command(command, params)`; the two provisioning emails became `pexip_send_provisioning_email(target, id)`.
+- Configuration: IVR themes, LDAP sources and global settings moved into the generic registry (`ivr_theme`, `ldap_sync_source`, `global` with id 1). The LDAP field-name question (manual review #4) is now the model's to get right from `pexip_get_resource_schema`, which is more honest than typed parameters we could not verify.
+- Eval cases migrated to the generic tools (these are the A/B cases: same prompts, new expected tools). The eval-coverage gap closed from 48 tools to the few new generic tools, which now have cases.
+- Not done, by design: `compact` mode (two tools per API) waits for the LLM eval numbers on `default`; FK name resolution in concise mode waits for a catalog of FK fields.
+
 ### Re-sequencing after the 31 Oct reviews (`docs/review/`)
 
 - **Pulled into phase 1 and done:** pure-ASGI auth gates replacing `BaseHTTPMiddleware`; OIDC sessions bound to the principal that opened them (closes the audit-attribution / session-riding finding); non-ASCII `Authorization` header is a 401 not a 500; `PEXIP_MCP_PUBLIC_URL` for the RFC 9728 challenge; `PEXIP_MCP_ALLOWED_HOSTS` / `_ORIGINS` for DNS-rebinding protection behind a tunnel; `create` preset carries `destructiveHint`; `list_resources` filter keys validated (no `format`/pagination overrides, no relation spans); redaction covers `keydata`, `*_token`, `api_key`, `psk`, `*_community`, `shared_secret`; device/LDAP/global-settings create and update returns redacted for parity with reads; eval scorecard emitter.

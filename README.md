@@ -15,7 +15,7 @@ MCP Server for Pexip Infinity
 
 MCP (Model Context Protocol) server for the **Pexip Infinity Management API**. It
 gives an LLM-based agent everything it needs to manage and operate a Pexip
-Infinity deployment, exposing **122 curated tools** and covering
+Infinity deployment, exposing **72 curated tools** (about 60 in the default toolsets) and covering
 all four admin API categories: Configuration, Status, History, and Command.
 
 > **Disclaimer:** This is an independent, community-built project. It is **not
@@ -145,21 +145,21 @@ See [Configuration](#configuration) for all options.
 
 | API | Tools | What it covers |
 |---|---|---|
-| **Configuration** | 46 | VMRs + aliases, end users, devices, gateway rules, automatic participants, IVR themes, LDAP sync, locations + Conferencing Nodes, global settings, schema introspection, plus **generic CRUD** (`pexip_list/get/create/update/delete_resource`) over ~70 registry resources: SIP/H.323/MS-SIP proxies, TURN/STUN, Teams Connectors, Azure tenants, Google Meet tokens, MJX (endpoints, integrations, deployments), DNS/NTP/SMTP/syslog/SNMP, certificates (CA/TLS/CSR), admin roles + identity providers, backups + upgrades, web app hosting, policy profiles, and more |
-| **Status** | 39 | Live conferences + per-node shards, participants + media streams, per-participant call quality, registrations, node/location status + load stats, backplanes, alarms, licensing, cloud overflow, Exchange scheduler, MJX endpoints + meetings, Teams Connector nodes + calls |
-| **History** | 14 | Conference + participant CDRs, server-side aggregation (`pexip_summarize_calls`), alarm history, backplane history, registration history, node event history |
-| **Command** | 23 | Active call control: dial, disconnect, mute/unmute (participant or all guests), set role, lock/unlock, transfer, layout, messages, LDAP sync, provisioning emails, backup create/restore, certificate import, snapshot, upgrade |
+| **Configuration** | 37 | Typed tools for VMRs + aliases + automatic participants, end users, devices, gateway rules, locations + Conferencing Nodes, schema introspection, plus **generic CRUD** (`pexip_list/get/create/update/delete_resource`) over ~80 registry resources: SIP/H.323/MS-SIP proxies, TURN/STUN, Teams Connectors, Azure tenants, Google Meet tokens, MJX, LDAP sync sources, IVR themes, global settings, DNS/NTP/SMTP/syslog/SNMP, certificates, admin roles + identity providers, backups + upgrades, web app hosting, policy profiles, and more |
+| **Status** | 11 | Typed: live conferences, participants, per-participant call quality, alarms, licensing, node status, registrations, plus `pexip_get_platform_health`; generic `pexip_list_status` / `pexip_get_status` over 24 further resources (shards, backplanes, cloud overflow, Exchange scheduler, MJX, Teams Connector, Management Node, location status and statistics) |
+| **History** | 7 | Conference + participant CDRs, server-side aggregation (`pexip_summarize_calls`), generic `pexip_list_history` / `pexip_get_history` over alarm, backplane, registration and node-event history |
+| **Command** | 16 | Live call control by name: dial, disconnect, mute/unmute (participant or all guests), set role, lock/unlock, transfer, layout, lobby unlock; LDAP template sync; provisioning emails; one gated `pexip_run_platform_command` for backup / restore / snapshot / certificates / upgrade / cloud node |
+| **Discovery** | 1 | `pexip_describe_resources`: searchable catalog of every resource with the tool that reaches it, and which toolsets are enabled; MCP resources `pexip://registry` and `pexip://schema/{resource}` |
 
-Every tool is named `pexip_<verb>_<resource>` (for example `pexip_list_vmrs`), so a host
-that aggregates several MCP servers can find all of ours with one search and nothing
-collides with another server's `list_*`. The full catalog with per-tool annotations and
+The full catalog with per-tool annotations and
 parameters is in
 [TOOLS.md](TOOLS.md) (regenerate with `uv run python scripts/generate_tools_md.py`).
 
 **This MCP server is designed to optimize tool use.** High-traffic resources
-(VMRs, users, devices, rules) get dedicated typed tools; the ~70 remaining
+(VMRs, users, devices, rules, live calls, CDRs) get dedicated typed tools; the ~80 remaining
 configuration resources share five generic CRUD tools backed by a resource
-registry. That keeps the catalog at 122 tools, which lowers per-request token use
+registry, and the status/history long tail goes through generic list/get tools over a
+registry. That keeps the catalog at 72 tools (about 60 in the default toolsets), which lowers per-request token use
 and improves the agent's tool selection (verified by the
 [eval suite](#quality-the-eval-suite)).
 
@@ -219,14 +219,18 @@ src/pexip_mcp/
 ├── __main__.py               # Entry point + --healthcheck + --http
 └── tools/
     ├── _helpers.py           # get_client, resolve_id_by_field, paginate_all, annotation presets
-    ├── command.py            # Active call control + name→UUID resolvers
-    ├── status.py             # Live state + per-participant quality
-    ├── history.py            # CDRs + summarize_calls aggregation
-    ├── resource_crud.py      # Generic CRUD + resource registry (~70 resources)
+    ├── _catalog.py           # Toolsets + status/history resource registries
+    ├── _guidance.py          # Per-tool use-when / do-not-use / examples
+    ├── _shaping.py           # Response envelopes, concise/detailed, byte cap
+    ├── discovery.py          # describe_resources + pexip:// MCP resources
+    ├── health.py             # get_platform_health workflow tool
+    ├── command.py            # Live call control by name + run_platform_command
+    ├── status.py / status_generic.py     # Typed hot paths + generic list/get
+    ├── history.py / history_generic.py   # CDRs + summarize_calls + generic list/get
+    ├── resource_crud.py      # Generic CRUD + resource registry (~80 resources)
     ├── schema.py             # Live schema introspection
     └── conference.py, end_user.py, device.py, gateway_rule.py, alias.py,
-        automatic_participant.py, infrastructure.py, ldap.py,
-        ivr_theme.py, global_settings.py   # dedicated typed CRUD per resource
+        automatic_participant.py, infrastructure.py   # dedicated typed CRUD per resource
 ```
 
 ## Examples

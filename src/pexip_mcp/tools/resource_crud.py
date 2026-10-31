@@ -58,6 +58,9 @@ RESOURCE_REGISTRY: dict[str, dict[str, str]] = {
     "telehealth_profile": {"label": "telehealth profile (Epic)", "lookup_field": "name"},
     "policy_server": {"label": "external policy server", "lookup_field": "name"},
     # ── Service configuration ──
+    "global": {"label": "global platform settings (singleton, id 1)", "lookup_field": "name"},
+    "ivr_theme": {"label": "IVR theme (branding bundle)", "lookup_field": "name"},
+    "ldap_sync_source": {"label": "LDAP / AD sync source", "lookup_field": "name"},
     "registration": {"label": "registration settings", "lookup_field": "name"},
     "conference_sync_template": {"label": "conference sync template", "lookup_field": "name"},
     "ldap_sync_field": {"label": "LDAP sync field mapping", "lookup_field": "name"},

@@ -42,7 +42,15 @@ from evals.catalog import (  # noqa: E402
     registry_to_api_tools,
 )
 
-CATEGORY_BY_MODULE = {"status": "Status", "history": "History", "command": "Command"}
+CATEGORY_BY_MODULE = {
+    "status": "Status",
+    "status_generic": "Status",
+    "history": "History",
+    "history_generic": "History",
+    "command": "Command",
+    "health": "Status",
+    "discovery": "Discovery",
+}
 CHARS_PER_TOKEN_ESTIMATE = 3.5
 
 

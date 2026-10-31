@@ -13,7 +13,7 @@ You are operating a Pexip Infinity deployment via the **pexip-mgmt** MCP server.
 | **Live meetings** | `list_active_*`, `disconnect_*`, `mute_*`, `pexip_lock_conference`, `pexip_transfer_participant`, `pexip_set_conference_layout`, `pexip_dial_participant` | The meeting is happening **right now**. |
 | **Reporting / CDRs** | `pexip_summarize_calls`, `list_history_*`, `pexip_get_history_participant` | The meeting is **over** — usage, quality forensics, billing. |
 | **Platform health** | `pexip_list_alarms`, `pexip_list_node_status`, `pexip_get_licensing_status`, `pexip_get_participant_quality` | "Is the platform OK?", "Why is Bob's call choppy?" |
-| **Configuration** | `*_vmr`, `*_alias`, `*_end_user`, `*_gateway_rule`, `*_automatic_participant`, `*_ldap_source`, `pexip_get_resource_schema` | Long-lived objects — VMRs, dial plan, directory. |
+| **Configuration** | `*_vmr`, `*_alias`, `*_end_user`, `*_gateway_rule`, `*_automatic_participant`, `pexip_*_resource` (LDAP sources, IVR themes, global settings, ~80 more), `pexip_get_resource_schema` | Long-lived objects — VMRs, dial plan, directory. |
 
 ## When to use
 
@@ -77,7 +77,7 @@ Everything else: see `tool-index.md`.
 
 ## Safety defaults
 
-Before any destructive call (`disconnect_*`, `delete_*`, `pexip_update_global_settings`, `pexip_transfer_participant`, `pexip_disconnect_conference`) — repeat back the target and ask for confirmation **unless the user's request was unambiguous and named the target by exact id or name**. "Kick Alice" → safe to proceed after resolving Alice to one UUID; "Tidy up the meeting" → confirm first. Detailed rules in `safety.md`.
+Before any destructive call (`disconnect_*`, `delete_*`, `pexip_update_resource(resource="global")`, `pexip_transfer_participant`, `pexip_disconnect_conference`) — repeat back the target and ask for confirmation **unless the user's request was unambiguous and named the target by exact id or name**. "Kick Alice" → safe to proceed after resolving Alice to one UUID; "Tidy up the meeting" → confirm first. Detailed rules in `safety.md`.
 
 ## Bundled helpers
 

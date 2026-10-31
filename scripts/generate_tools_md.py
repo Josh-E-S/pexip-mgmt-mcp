@@ -21,6 +21,8 @@ CATEGORY_BY_MODULE = {
     "history": "History",
     "command": "Command",
     "health": "Status",
+    "status_generic": "Status",
+    "history_generic": "History",
     "discovery": "Discovery",
 }
 

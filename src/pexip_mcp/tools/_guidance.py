@@ -277,40 +277,6 @@ GUIDANCE: dict[str, Guidance] = {
         "the user wants to disable temporarily (update_gateway_rule).",
     ),
     # ── LDAP (ldap.py) ───────────────────────────────────────────────────────
-    "list_ldap_sources": _g(
-        "the user asks which directories (AD/LDAP) sync users into Pexip.",
-        "the user wants the synced users themselves (list_end_users).",
-        examples=[{}, {"name_contains": "corp", "response_format": "detailed"}],
-    ),
-    "get_ldap_source": _g(
-        "the user names one LDAP sync source and wants its settings (bind password masked).",
-        "the user wants to change it (update_ldap_source).",
-    ),
-    "create_ldap_source": _g(
-        "the user wants Pexip to pull users from an AD/LDAP server on a schedule.",
-        "the user wants to add one person by hand (create_end_user).",
-        docs=CONFIG_API,
-        examples=[
-            {
-                "name": "Corp AD",
-                "ldap_server": "ldaps://dc1.example.com",
-                "ldap_base_dn": "DC=example,DC=com",
-                "bind_username": "CN=pexip-sync,OU=Service,DC=example,DC=com",
-                "bind_password": "s3cret",
-            }
-        ],
-    ),
-    "update_ldap_source": _g(
-        "the user wants to change an LDAP source's server, base DN, bind credentials or "
-        "filters; pass its name as `source`.",
-        "the user wants to trigger a sync now (sync_conference_ldap for conference templates).",
-        docs=CONFIG_API,
-        examples=[{"source": "Corp AD", "bind_password": "r0tated"}],
-    ),
-    "delete_ldap_source": _g(
-        "the user explicitly asks to stop syncing from a directory.",
-        "the user only wants to pause (update_ldap_source with a long interval).",
-    ),
     # ── Infrastructure (infrastructure.py) ───────────────────────────────────
     "list_locations": _g(
         "the user asks which system locations (data centres / regions) exist, or needs a "
@@ -334,26 +300,7 @@ GUIDANCE: dict[str, Guidance] = {
         "the user wants its live load (get_node_statistics) or status (get_node_status).",
     ),
     # ── IVR themes (ivr_theme.py) ────────────────────────────────────────────
-    "list_ivr_themes": _g(
-        "the user asks which branding/IVR themes exist, or needs a theme name to assign to a VMR.",
-        "the user wants to change a VMR's layout (update_vmr host_view/guest_view).",
-    ),
-    "get_ivr_theme": _g(
-        "the user names one theme and wants its details.",
-        "the user wants the list (list_ivr_themes).",
-    ),
     # ── Global settings (global_settings.py) ─────────────────────────────────
-    "get_global_settings": _g(
-        "the user asks about platform-wide defaults (bandwidth, PIN policy, media settings).",
-        "the setting belongs to one VMR, device or location (use that resource's get tool).",
-    ),
-    "update_global_settings": _g(
-        "the user wants to change a platform-wide default; call get_resource_schema('global') "
-        "first if unsure of the field name.",
-        "the change should apply to one resource only.",
-        docs=CONFIG_API,
-        examples=[{"updates": {"max_pixels_per_second": "fullhd"}}],
-    ),
     # ── Generic configuration CRUD (resource_crud.py) ────────────────────────
     "list_resources": _g(
         "the configuration resource has no dedicated tool (SIP/H.323 proxies, TURN/STUN, DNS/"
@@ -418,6 +365,72 @@ GUIDANCE: dict[str, Guidance] = {
         "the user wants one specific list (list_alarms, list_node_status, "
         "get_licensing_status) or historical health (list_alarm_history).",
     ),
+    # ── Generic status / history (status_generic.py, history_generic.py) ─────
+    "list_status": _g(
+        "the live-state question is about a resource with no dedicated tool: Teams Connector "
+        "nodes/calls, One-Touch Join endpoints/meetings, cloud overflow nodes, backplanes, "
+        "conference shards, conference sync, Exchange scheduler, Management Node, registered "
+        "aliases, or location status.",
+        "a dedicated tool exists: list_active_conferences, list_active_participants, "
+        "list_alarms, list_node_status, list_registrations, get_licensing_status.",
+        docs=STATUS_API,
+        examples=[
+            {"resource": "teamsnode"},
+            {"resource": "mjx_endpoint", "name_contains": "boardroom"},
+            {"resource": "conference_shard", "filters": {"conference": "All Hands"}},
+        ],
+    ),
+    "get_status": _g(
+        "the user wants one live status object by id, or a per-object statistics sub-resource "
+        "such as a node's load (worker_vm/{id}/statistics) or a location's.",
+        "the user wants a list (list_status) or one of the typed tools (get_node_status, "
+        "get_active_participant).",
+        docs=STATUS_API,
+        examples=[
+            {"resource": "worker_vm/{id}/statistics", "id": 3},
+            {"resource": "teamsnode", "id": "tc-01"},
+        ],
+    ),
+    "list_history": _g(
+        "the user asks about past alarms, past backplanes, registration/unregistration events, "
+        "or Conferencing Node up/down events.",
+        "the question is about calls (list_history_conferences, list_history_participants, "
+        "summarize_calls) or current state (list_alarms, list_status).",
+        docs=HISTORY_API,
+        examples=[
+            {
+                "resource": "alarm",
+                "start_time": _TS,
+                "end_time": _TS2,
+                "filters": {"level": "critical"},
+            },
+            {"resource": "registration_alias", "name_contains": "boardroom"},
+            {"resource": "workervm_status_event", "start_time": _TS, "end_time": _TS2},
+        ],
+    ),
+    "get_history": _g(
+        "the user wants one past alarm, backplane, registration event or node event by id, or a "
+        "past backplane's media streams (backplane/{id}/media_stream).",
+        "the record is a call (get_history_conference, get_history_participant).",
+        docs=HISTORY_API,
+    ),
+    "send_provisioning_email": _g(
+        "the user wants a VMR owner or a device owner emailed their provisioning details.",
+        "the user wants to change the owner (update_vmr / update_device).",
+        docs=COMMAND_API,
+    ),
+    "run_platform_command": _g(
+        "the user explicitly asks for a platform-lifecycle action: take a backup or diagnostic "
+        "snapshot, restore a backup, import certificates, start a cloud overflow node, upload a "
+        "software bundle, or start an upgrade.",
+        "anything that is not an explicit, confirmed request: these commands can replace or "
+        "compromise the whole deployment, and backups/bundles are listed with list_resources.",
+        docs=COMMAND_API,
+        examples=[
+            {"command": "backup_create"},
+            {"command": "backup_restore", "params": {"backup_id": 12}},
+        ],
+    ),
     # ── Schema (schema.py) ───────────────────────────────────────────────────
     "get_resource_schema": _g(
         "you are about to create or update a resource and are unsure of its field names, "
@@ -468,136 +481,6 @@ GUIDANCE: dict[str, Guidance] = {
         "the user names one Conferencing Node and asks if it is healthy.",
         "the user wants numeric load (get_node_statistics).",
     ),
-    "get_node_statistics": _g(
-        "the user wants CPU / media load / call counts for one Conferencing Node.",
-        "the user wants a yes/no health answer (get_node_status).",
-    ),
-    "list_location_status": _g(
-        "the user asks about live state per data centre / region.",
-        "the user wants location configuration (list_locations).",
-        examples=[{}, {"name_contains": "EU"}],
-    ),
-    "get_location_status": _g(
-        "the user names one location and asks about its live state.",
-        "the user wants load numbers (get_location_statistics).",
-    ),
-    "get_location_statistics": _g(
-        "the user wants call counts / port usage for one location.",
-        "the user wants a health summary (get_location_status).",
-    ),
-    "list_management_node_status": _g(
-        "the user asks whether the Management Node itself is healthy.",
-        "the question is about Conferencing Nodes (list_node_status).",
-    ),
-    "get_management_node_status": _g(
-        "the user asks for one Management Node's live status by id.",
-        "the user wants the list (list_management_node_status).",
-    ),
-    "list_registration_aliases": _g(
-        "the user asks which aliases are currently registered to the platform.",
-        "the user wants VMR dial aliases (list_aliases) or device records (list_devices).",
-        examples=[{"alias_contains": "@example.com"}],
-    ),
-    "get_registration_alias": _g(
-        "the user wants one currently registered alias by id.",
-        "the user wants the list (list_registration_aliases).",
-    ),
-    "list_conference_shards": _g(
-        "the user asks how a live conference is spread across Conferencing Nodes.",
-        "the user just wants the conference list (list_active_conferences).",
-        examples=[{"conference_name": "All Hands"}],
-    ),
-    "get_conference_shard": _g(
-        "the user wants one shard record by id.",
-        "the user wants the list (list_conference_shards).",
-    ),
-    "list_backplanes": _g(
-        "the user asks about inter-node media connections for live conferences.",
-        "the call has ended (list_backplane_history).",
-    ),
-    "get_backplane": _g(
-        "the user wants one live backplane by id.",
-        "the user wants its media statistics (get_backplane_media_streams).",
-    ),
-    "get_backplane_media_streams": _g(
-        "the user wants per-stream statistics for one live backplane.",
-        "the backplane is historical (get_backplane_history_media_streams).",
-    ),
-    "list_conference_sync_status": _g(
-        "the user asks about the state of conference synchronization.",
-        "the user asks about LDAP user sync (list_ldap_sources).",
-    ),
-    "get_conference_sync_status": _g(
-        "the user wants one conference sync entry by id.",
-        "the user wants the list (list_conference_sync_status).",
-    ),
-    "list_cloud_nodes": _g(
-        "the user asks which cloud overflow (bursting) nodes exist or are running.",
-        "the user asks about permanent Conferencing Nodes (list_node_status).",
-    ),
-    "get_cloud_node": _g(
-        "the user wants one cloud overflow node by id.",
-        "the user wants the list (list_cloud_nodes).",
-    ),
-    "list_cloud_overflow_locations": _g(
-        "the user asks which locations can burst into the cloud.",
-        "the user asks which locations are being monitored for bursting "
-        "(list_cloud_monitored_locations).",
-    ),
-    "get_cloud_overflow_location": _g(
-        "the user wants one cloud overflow location by id.",
-        "the user wants the list (list_cloud_overflow_locations).",
-    ),
-    "list_cloud_monitored_locations": _g(
-        "the user asks which locations are monitored to trigger cloud bursting.",
-        "the user asks where overflow nodes are placed (list_cloud_overflow_locations).",
-    ),
-    "get_cloud_monitored_location": _g(
-        "the user wants one cloud monitored location by id.",
-        "the user wants the list (list_cloud_monitored_locations).",
-    ),
-    "list_exchange_scheduler_status": _g(
-        "the user asks about the Secure Scheduler for Exchange integration state.",
-        "the question is about One-Touch Join (list_mjx_endpoint_status).",
-    ),
-    "get_exchange_scheduler_status": _g(
-        "the user wants one Exchange scheduler entry by id.",
-        "the user wants the list (list_exchange_scheduler_status).",
-    ),
-    "list_mjx_endpoint_status": _g(
-        "the user asks whether One-Touch Join room endpoints are connected.",
-        "the user asks about MJX meetings (list_mjx_meeting_status) or MJX configuration "
-        "(list_resources resource='mjx_endpoint').",
-        examples=[{}, {"name_contains": "boardroom"}],
-    ),
-    "get_mjx_endpoint_status": _g(
-        "the user wants one MJX endpoint's live status by id.",
-        "the user wants the list (list_mjx_endpoint_status).",
-    ),
-    "list_mjx_meeting_status": _g(
-        "the user asks which upcoming meetings One-Touch Join has detected.",
-        "the user asks about endpoints (list_mjx_endpoint_status).",
-    ),
-    "get_mjx_meeting_status": _g(
-        "the user wants one MJX meeting by id.",
-        "the user wants the list (list_mjx_meeting_status).",
-    ),
-    "list_teams_node_status": _g(
-        "the user asks whether Teams Connector nodes are healthy.",
-        "the user asks about Teams calls (list_teams_node_call_status).",
-    ),
-    "get_teams_node_status": _g(
-        "the user wants one Teams Connector node by id.",
-        "the user wants the list (list_teams_node_status).",
-    ),
-    "list_teams_node_call_status": _g(
-        "the user asks about calls currently going through Teams Connectors.",
-        "the user asks about the connector nodes themselves (list_teams_node_status).",
-    ),
-    "get_teams_node_call_status": _g(
-        "the user wants one Teams Connector call by id.",
-        "the user wants the list (list_teams_node_call_status).",
-    ),
     # ── History / CDRs (history.py) ──────────────────────────────────────────
     "summarize_calls": _g(
         "the user asks how many calls, total/average duration, or a breakdown by direction, "
@@ -637,45 +520,6 @@ GUIDANCE: dict[str, Guidance] = {
         "the user wants forensic detail on one past call leg, including bucketed call "
         "quality over the call.",
         "the call is live (get_participant_quality).",
-    ),
-    "list_alarm_history": _g(
-        "the user asks what alarms were raised in the past.",
-        "the user asks what is alarming now (list_alarms).",
-        examples=[{"start_time": _TS, "end_time": _TS2, "level": "critical"}],
-    ),
-    "get_alarm_history": _g(
-        "the user wants one past alarm by id.",
-        "the user wants the list (list_alarm_history).",
-    ),
-    "list_backplane_history": _g(
-        "the user asks about inter-node connections for past conferences.",
-        "the conference is live (list_backplanes).",
-    ),
-    "get_backplane_history": _g(
-        "the user wants one past backplane by id.",
-        "the user wants its stream statistics (get_backplane_history_media_streams).",
-    ),
-    "get_backplane_history_media_streams": _g(
-        "the user wants per-stream statistics for one past backplane.",
-        "the backplane is live (get_backplane_media_streams).",
-    ),
-    "list_registration_history": _g(
-        "the user asks when an endpoint registered or unregistered in the past.",
-        "the user asks what is registered now (list_registrations).",
-        examples=[{"alias_contains": "boardroom", "limit": 50}],
-    ),
-    "get_registration_history": _g(
-        "the user wants one past registration event by id.",
-        "the user wants the list (list_registration_history).",
-    ),
-    "list_node_event_history": _g(
-        "the user asks when Conferencing Nodes went up/down or changed state.",
-        "the user asks about node status now (list_node_status).",
-        examples=[{"start_time": _TS, "end_time": _TS2}],
-    ),
-    "get_node_event_history": _g(
-        "the user wants one node event by id.",
-        "the user wants the list (list_node_event_history).",
     ),
     # ── Command: live control (command.py) ───────────────────────────────────
     "dial_participant": _g(
@@ -753,56 +597,7 @@ GUIDANCE: dict[str, Guidance] = {
         "the user wants user directory sync (LDAP sources) rather than conference templates.",
         docs=COMMAND_API,
     ),
-    "send_conference_email": _g(
-        "the user wants the VMR owner emailed their room details; `vmr_id` is the VMR's "
-        "integer configuration id.",
-        "the recipient is a device owner (send_device_email).",
-        docs=COMMAND_API,
-    ),
-    "send_device_email": _g(
-        "the user wants a device owner emailed their provisioning details.",
-        "the recipient is a VMR owner (send_conference_email).",
-        docs=COMMAND_API,
-    ),
     # ── Command: platform lifecycle (gated by PEXIP_ALLOW_PLATFORM_TOOLS) ────
-    "backup_create": _g(
-        "the user explicitly asks for a platform backup to be taken now.",
-        "the user wants to see existing backups (list_resources resource='system_backup').",
-        docs=COMMAND_API,
-    ),
-    "backup_restore": _g(
-        "the user explicitly asks to restore a specific backup and has confirmed they "
-        "understand current state is replaced.",
-        "anything else; this replaces the whole platform configuration.",
-        docs=COMMAND_API,
-    ),
-    "certificates_import": _g(
-        "the user explicitly asks to import TLS/CA certificates and supplies the payload.",
-        "the user wants to see installed certificates (list_resources "
-        "resource='tls_certificate' or 'ca_certificate').",
-        docs=COMMAND_API,
-    ),
-    "start_cloud_node": _g(
-        "the user explicitly asks to start a cloud overflow (bursting) node now.",
-        "the user asks which cloud nodes exist (list_cloud_nodes).",
-        docs=COMMAND_API,
-    ),
-    "take_snapshot": _g(
-        "Pexip support asked for a diagnostic snapshot, or the user explicitly requests one.",
-        "the user wants a backup (backup_create).",
-        docs=COMMAND_API,
-    ),
-    "platform_upgrade": _g(
-        "the user explicitly asks to start a platform upgrade and the software bundle is "
-        "already uploaded.",
-        "anything else; this initiates a software upgrade of the whole deployment.",
-        docs=COMMAND_API,
-    ),
-    "upload_software_bundle": _g(
-        "the user explicitly asks to upload an upgrade bundle and supplies the payload.",
-        "the user wants to see uploaded bundles (list_resources resource='software_bundle').",
-        docs=COMMAND_API,
-    ),
 }
 
 

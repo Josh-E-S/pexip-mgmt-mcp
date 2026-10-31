@@ -101,8 +101,8 @@ def _server() -> PexipMCP:
     async def list_gateway_rules(ctx: Context) -> dict:  # pragma: no cover
         return {}
 
-    @server.tool(annotations=control("Create platform backup"))
-    async def backup_create(ctx: Context) -> dict:  # pragma: no cover
+    @server.tool(annotations=control("Run a platform lifecycle command"))
+    async def run_platform_command(ctx: Context) -> dict:  # pragma: no cover
         return {}
 
     @server.tool(annotations=read("Describe resources"))
@@ -120,7 +120,7 @@ def test_default_selection_drops_dialplan_and_platform():
     server = _server()
     enabled, removed = enforce_toolsets(server, _settings())
     assert "dialplan" not in enabled and "platform" not in enabled
-    assert removed == ["pexip_backup_create", "pexip_list_gateway_rules"]
+    assert removed == ["pexip_list_gateway_rules", "pexip_run_platform_command"]
     assert _names(server) == {
         "pexip_list_vmrs",
         "pexip_lock_conference",
@@ -133,13 +133,14 @@ def test_explicit_tools_add_back_and_deny_wins():
     enforce_toolsets(
         server,
         _settings(
-            tools="list_gateway_rules, pexip_backup_create", deny_tools="pexip_lock_conference"
+            tools="list_gateway_rules, pexip_run_platform_command",
+            deny_tools="pexip_lock_conference",
         ),
     )
     assert _names(server) == {
         "pexip_list_vmrs",
         "pexip_list_gateway_rules",
-        "pexip_backup_create",
+        "pexip_run_platform_command",
         "pexip_describe_resources",
     }
 
@@ -173,7 +174,11 @@ def test_startup_policy_applies_toolsets_on_a_real_shaped_registry(monkeypatch):
     apply_startup_policy(
         server, _settings(read_only=False, allow_platform_tools=True, toolsets="rooms,platform")
     )
-    assert _names(server) == {"pexip_list_vmrs", "pexip_backup_create", "pexip_describe_resources"}
+    assert _names(server) == {
+        "pexip_list_vmrs",
+        "pexip_run_platform_command",
+        "pexip_describe_resources",
+    }
 
 
 def test_platform_gate_set_is_defined_once_inside_the_platform_toolset():

@@ -145,7 +145,7 @@ def _server_with_platform_and_normal_tools() -> FastMCP:
     server = FastMCP("test-platform")
 
     @server.tool(annotations=control("backup restore"))
-    async def backup_restore(ctx: Context) -> dict:  # name matches PLATFORM_TOOLS
+    async def run_platform_command(ctx: Context) -> dict:  # name matches PLATFORM_TOOLS
         return {}
 
     @server.tool(annotations=control("mute participant"))
@@ -164,7 +164,7 @@ def test_enforce_platform_gate_removes_only_platform_tools():
 
     server = _server_with_platform_and_normal_tools()
     removed = enforce_platform_gate(server)
-    assert removed == ["backup_restore"]
+    assert removed == ["run_platform_command"]
     remaining = {t.name for t in server._tool_manager.list_tools()}
     assert remaining == {"mute_participant", "list_vmrs"}
 
@@ -177,7 +177,7 @@ def test_platform_tools_gated_by_default_when_writes_enabled():
     settings = PexipSettings(host="h", username="u", password="p", read_only=False)
     apply_startup_policy(server, settings)
     names = {t.name for t in server._tool_manager.list_tools()}
-    assert "backup_restore" not in names  # platform gated off by default
+    assert "run_platform_command" not in names  # platform gated off by default
     assert {"mute_participant", "list_vmrs"} <= names  # ordinary tools remain
 
 
@@ -196,7 +196,7 @@ def test_platform_tools_exposed_when_allowed():
     )
     apply_startup_policy(server, settings)
     names = {t.name for t in server._tool_manager.list_tools()}
-    assert "backup_restore" in names
+    assert "run_platform_command" in names
 
 
 def test_platform_tools_default_gated_in_config(clean_env):
@@ -217,12 +217,8 @@ def _prefixed_server(monkeypatch=None, legacy: bool = False):
         monkeypatch.setenv("PEXIP_LEGACY_TOOL_NAMES", "true" if legacy else "false")
     server = PexipMCP("t")
 
-    @server.tool(annotations=control("Restore platform backup", idempotent=False))
-    async def backup_restore(ctx: Context, backup_id: int) -> dict:  # pragma: no cover
-        return {}
-
-    @server.tool(annotations=control("Trigger platform upgrade", idempotent=False))
-    async def platform_upgrade(ctx: Context) -> dict:  # pragma: no cover
+    @server.tool(annotations=control("Run a platform lifecycle command", idempotent=False))
+    async def run_platform_command(ctx: Context, command: str) -> dict:  # pragma: no cover
         return {}
 
     @server.tool(annotations=control("Lock a conference"))
@@ -239,9 +235,9 @@ def _prefixed_server(monkeypatch=None, legacy: bool = False):
 def test_platform_gate_matches_prefixed_names():
     server = _prefixed_server()
     names = {t.name for t in server._tool_manager.list_tools()}
-    assert "pexip_backup_restore" in names  # registered under the published name
+    assert "pexip_run_platform_command" in names  # registered under the published name
     removed = enforce_platform_gate(server)
-    assert removed == ["pexip_backup_restore", "pexip_platform_upgrade"]
+    assert removed == ["pexip_run_platform_command"]
     remaining = {t.name for t in server._tool_manager.list_tools()}
     assert remaining == {"pexip_lock_conference", "pexip_list_vmrs"}
 
@@ -249,14 +245,9 @@ def test_platform_gate_matches_prefixed_names():
 def test_platform_gate_removes_legacy_aliases_too(monkeypatch):
     server = _prefixed_server(monkeypatch, legacy=True)
     names = {t.name for t in server._tool_manager.list_tools()}
-    assert {"backup_restore", "pexip_backup_restore"} <= names
+    assert {"run_platform_command", "pexip_run_platform_command"} <= names
     removed = enforce_platform_gate(server)
-    assert set(removed) == {
-        "backup_restore",
-        "pexip_backup_restore",
-        "platform_upgrade",
-        "pexip_platform_upgrade",
-    }
+    assert set(removed) == {"run_platform_command", "pexip_run_platform_command"}
 
 
 def test_platform_gate_on_the_real_catalog_names():

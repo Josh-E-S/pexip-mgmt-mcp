@@ -272,9 +272,9 @@
 
 - id: location-stats-by-name
   prompt: "Show current media load statistics for the 'Primary' location"
-  expected_tool: pexip_get_location_statistics
+  expected_tool: pexip_get_status
   expected_params:
-    location: "Primary"
+    resource: "system_location/{id}/statistics"
   tags: [status, monitoring, params]
 
 - id: nodes-filtered-by-location

@@ -136,13 +136,13 @@
 
 - id: global-settings
   prompt: "Show me the global platform settings"
-  expected_tools: [pexip_get_global_settings]
+  expected_tools: [pexip_get_resource]
   match: exact
   tags: [config, single-step]
 
 - id: list-ivr-themes
   prompt: "What IVR branding themes are available?"
-  expected_tools: [pexip_list_ivr_themes]
+  expected_tools: [pexip_list_resources]
   match: exact
   tags: [config, single-step]
 
@@ -241,7 +241,7 @@
 
 - id: alarm-history
   prompt: "What alarms have fired recently?"
-  expected_tools: [pexip_list_alarm_history]
+  expected_tools: [pexip_list_history]
   # subset: checking current alarms (pexip_list_alarms) alongside history is harmless.
   match: subset
   tags: [history, single-step]
@@ -391,13 +391,13 @@
 
 - id: send-vmr-welcome-email
   prompt: "Send the provisioning welcome email for VMR 42 to its owner"
-  expected_tools: [pexip_send_conference_email]
+  expected_tools: [pexip_send_provisioning_email]
   match: exact
   tags: [command, provisioning, single-step]
 
 - id: resend-device-email
   prompt: "Resend the device provisioning email for device 7"
-  expected_tools: [pexip_send_device_email]
+  expected_tools: [pexip_send_provisioning_email]
   match: exact
   tags: [command, provisioning, single-step]
 
@@ -532,7 +532,7 @@
 
 - id: registration-history
   prompt: "Show the endpoint registration history for the past day"
-  expected_tools: [pexip_list_registration_history]
+  expected_tools: [pexip_list_history]
   match: exact
   tags: [history, reporting, single-step]
 
@@ -542,7 +542,7 @@
 
 - id: location-statistics
   prompt: "How much capacity is in use in the 'Primary' location right now?"
-  expected_tools: [pexip_get_location_statistics]
+  expected_tools: [pexip_get_status]
   match: exact
   tags: [status, monitoring, single-step]
 
@@ -554,19 +554,19 @@
 
 - id: management-node-status
   prompt: "Is the Management Node healthy?"
-  expected_tools: [pexip_list_management_node_status]
+  expected_tools: [pexip_list_status]
   match: exact
   tags: [status, monitoring, single-step]
 
 - id: cloud-node-inventory
   prompt: "Show me the dynamic cloud bursting nodes"
-  expected_tools: [pexip_list_cloud_nodes]
+  expected_tools: [pexip_list_status]
   match: exact
   tags: [status, monitoring, single-step]
 
 - id: teams-node-status
   prompt: "What's the status of the Teams Connector nodes?"
-  expected_tools: [pexip_list_teams_node_status]
+  expected_tools: [pexip_list_status]
   match: exact
   tags: [status, monitoring, integrations, single-step]
 
@@ -582,13 +582,13 @@
 
 - id: create-ldap-source
   prompt: "Set up an LDAP sync source called 'Corp AD' against ldap://ad.corp.local with base DN dc=corp,dc=local"
-  expected_tools: [pexip_create_ldap_source]
+  expected_tools: [pexip_create_resource]
   match: exact
   tags: [config, ldap, single-step]
 
 - id: list-ldap-sources
   prompt: "What LDAP sync sources are configured?"
-  expected_tools: [pexip_list_ldap_sources]
+  expected_tools: [pexip_list_resources]
   match: exact
   tags: [config, ldap, single-step]
 
@@ -604,13 +604,13 @@
 
 - id: mjx-endpoint-status
   prompt: "Are the One-Touch Join room endpoints online?"
-  expected_tools: [pexip_list_mjx_endpoint_status]
+  expected_tools: [pexip_list_status]
   match: exact
   tags: [status, mjx, single-step]
 
 - id: mjx-meeting-status
   prompt: "Show today's One-Touch Join scheduled meetings"
-  expected_tools: [pexip_list_mjx_meeting_status]
+  expected_tools: [pexip_list_status]
   match: exact
   tags: [status, mjx, single-step]
 
@@ -624,13 +624,13 @@
 
 - id: create-backup
   prompt: "Take a configuration backup of the platform"
-  expected_tools: [pexip_backup_create]
+  expected_tools: [pexip_run_platform_command]
   match: exact
   tags: [command, maintenance, single-step]
 
 - id: take-diagnostic-snapshot
   prompt: "Grab a diagnostic system snapshot for support"
-  expected_tools: [pexip_take_snapshot]
+  expected_tools: [pexip_run_platform_command]
   match: exact
   tags: [command, maintenance, single-step]
 
@@ -665,3 +665,41 @@
   expected_tools: [pexip_describe_resources]
   match: subset
   tags: [discovery, single-step]
+
+- id: past-alarm-by-id
+  prompt: "Show me the details of historical alarm 4711"
+  expected_tools: [pexip_get_history]
+  match: exact
+  tags: [history, monitoring, single-step]
+
+# --- Single-record getters (coverage) ---
+
+- id: delete-dns-server
+  prompt: "Remove the DNS server entry for 10.0.0.53"
+  expected_tools: [pexip_delete_resource]
+  match: subset
+  tags: [config, destructive, single-step]
+
+- id: get-conferencing-node-config
+  prompt: "Show me the configuration of the conferencing node called conf-node-1"
+  expected_tools: [pexip_get_conferencing_node]
+  match: exact
+  tags: [config, single-step]
+
+- id: get-gateway-rule-by-name
+  prompt: "What does the gateway routing rule 'PSTN out' match and where does it send calls?"
+  expected_tools: [pexip_get_gateway_rule]
+  match: exact
+  tags: [config, routing, single-step]
+
+- id: get-location-details
+  prompt: "Show the details of the system location named London"
+  expected_tools: [pexip_get_location]
+  match: exact
+  tags: [config, single-step]
+
+- id: node-health-by-name
+  prompt: "Is the conferencing node conf-node-1 up and in sync right now?"
+  expected_tools: [pexip_get_node_status, pexip_list_node_status]
+  match: any_of
+  tags: [status, monitoring, single-step]

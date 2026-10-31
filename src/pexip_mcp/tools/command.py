@@ -6,8 +6,8 @@ Three scopes:
   - **participant** — dial, disconnect, mute, unmute, unlock, transfer, role
   - **conference** — disconnect, lock/unlock, mute/unmute guests, transform_layout,
     LDAP sync, provisioning emails
-  - **platform** — backup create/restore, certificate import, cloud node start,
-    snapshot, upgrade, software bundle upload
+  - **platform** — one gated tool, run_platform_command, for backup create/restore,
+    certificate import, cloud node start, snapshot, upgrade, software bundle upload
 
 Conference-scoped tools accept the conference's **name or alias** (e.g.
 "All Hands") as well as its runtime UUID — the server resolves a name to the
@@ -22,7 +22,7 @@ not be unique.
 from __future__ import annotations
 
 import re
-from typing import Any
+from typing import Any, Literal
 
 from mcp.server.fastmcp import Context
 
@@ -427,94 +427,73 @@ async def sync_conference_ldap(ctx: Context, template_id: int) -> dict[str, Any]
     return await get_client(ctx).command("conference", "sync", {"conference_id": template_id})
 
 
-# ---------- Conference: provisioning emails ----------
+# ---------- Provisioning emails ----------
 
 
-@mcp.tool(annotations=control("Send VMR provisioning email", idempotent=False))
-async def send_conference_email(ctx: Context, vmr_id: int) -> dict[str, Any]:
-    """Send a provisioning email to the owner of a VMR.
-
-    Args:
-        vmr_id: Integer id of the conference/VMR (Configuration API id).
-    """
-    return await get_client(ctx).command(
-        "conference", "send_conference_email", {"conference_id": vmr_id}
-    )
-
-
-@mcp.tool(annotations=control("Send device provisioning email", idempotent=False))
-async def send_device_email(ctx: Context, vmr_id: int) -> dict[str, Any]:
-    """Send a provisioning email to the owner of a device.
+@mcp.tool(annotations=control("Send provisioning email", idempotent=False))
+async def send_provisioning_email(
+    ctx: Context, target: Literal["vmr", "device"], target_id: int
+) -> dict[str, Any]:
+    """Email the owner of a VMR or a device their provisioning details.
 
     Args:
-        vmr_id: Integer id of the conference/VMR (Configuration API id).
+        target: "vmr" emails the VMR owner (Command API conference/send_conference_email);
+            "device" emails the device owner (conference/send_device_email).
+        target_id: The VMR's or device's integer configuration id. Note: the device
+            variant currently sends the id as `conference_id`, which is under
+            verification against the Command API schema (see
+            docs/review/MANUAL-REVIEW-QUEUE.md #9).
     """
-    return await get_client(ctx).command(
-        "conference", "send_device_email", {"conference_id": vmr_id}
-    )
+    action = "send_conference_email" if target == "vmr" else "send_device_email"
+    return await get_client(ctx).command("conference", action, {"conference_id": target_id})
 
 
-# ---------- Platform commands ----------
+# ---------- Platform commands (gated by PEXIP_ALLOW_PLATFORM_TOOLS) ----------
+
+PlatformCommand = Literal[
+    "backup_create",
+    "backup_restore",
+    "certificates_import",
+    "start_cloud_node",
+    "snapshot",
+    "upgrade",
+    "upload_software_bundle",
+]
+
+# Our command name -> Pexip Command API action under /command/v1/platform/.
+_PLATFORM_ACTIONS: dict[str, str] = {
+    "backup_create": "backup_create",
+    "backup_restore": "backup_restore",
+    "certificates_import": "certificates_import",
+    "start_cloud_node": "start_cloudnode",
+    "snapshot": "snapshot",
+    "upgrade": "upgrade",
+    "upload_software_bundle": "software_bundle",
+}
 
 
-@mcp.tool(annotations=control("Create platform backup", idempotent=False))
-async def backup_create(ctx: Context) -> dict[str, Any]:
-    """Create a system backup of the Pexip platform."""
-    return await get_client(ctx).command("platform", "backup_create")
-
-
-@mcp.tool(annotations=control("Restore platform backup", idempotent=False))
-async def backup_restore(ctx: Context, backup_id: int) -> dict[str, Any]:
-    """Restore a system backup. DESTRUCTIVE — replaces current platform state.
+@mcp.tool(annotations=control("Run a platform lifecycle command", idempotent=False))
+async def run_platform_command(
+    ctx: Context, command: PlatformCommand, params: dict[str, Any] | None = None
+) -> dict[str, Any]:
+    """Run one platform-lifecycle command. Every one of these can replace or
+    compromise the whole deployment, so this tool is removed from the catalog
+    unless the server was started with PEXIP_ALLOW_PLATFORM_TOOLS=true, and the
+    user must have asked for the action explicitly.
 
     Args:
-        backup_id: Integer id of the backup to restore.
+        command: "backup_create" (take a backup now), "backup_restore"
+            (params: {"backup_id": <int>}; replaces current platform state),
+            "certificates_import" (params: certificate payload), "start_cloud_node"
+            (start an overflow node; optional params), "snapshot" (diagnostic
+            snapshot for support), "upgrade" (start a platform upgrade; optional
+            params), "upload_software_bundle" (params: bundle payload).
+        params: Command payload; discover fields from the Command API schema at
+            /api/admin/command/v1/platform/<action>/schema/.
     """
-    return await get_client(ctx).command("platform", "backup_restore", {"backup_id": backup_id})
-
-
-@mcp.tool(annotations=control("Import certificates", idempotent=False))
-async def certificates_import(ctx: Context, settings: dict[str, Any]) -> dict[str, Any]:
-    """Upload and import TLS/CA certificates.
-
-    Args:
-        settings: Certificate import payload. Discover fields with the
-            command schema at /api/admin/command/v1/platform/certificates_import/schema/.
-    """
-    return await get_client(ctx).command("platform", "certificates_import", settings)
-
-
-@mcp.tool(annotations=control("Start cloud overflow node", idempotent=False))
-async def start_cloud_node(ctx: Context, settings: dict[str, Any] | None = None) -> dict[str, Any]:
-    """Start an overflow Conferencing Node (dynamic bursting).
-
-    Args:
-        settings: Optional cloud node parameters.
-    """
-    return await get_client(ctx).command("platform", "start_cloudnode", settings or {})
-
-
-@mcp.tool(annotations=control("Take system snapshot", idempotent=False))
-async def take_snapshot(ctx: Context) -> dict[str, Any]:
-    """Take a system snapshot of the Pexip platform for diagnostics."""
-    return await get_client(ctx).command("platform", "snapshot")
-
-
-@mcp.tool(annotations=control("Trigger platform upgrade", idempotent=False))
-async def platform_upgrade(ctx: Context, settings: dict[str, Any] | None = None) -> dict[str, Any]:
-    """Trigger a platform upgrade. DESTRUCTIVE — initiates software upgrade.
-
-    Args:
-        settings: Optional upgrade parameters.
-    """
-    return await get_client(ctx).command("platform", "upgrade", settings or {})
-
-
-@mcp.tool(annotations=control("Upload software bundle", idempotent=False))
-async def upload_software_bundle(ctx: Context, settings: dict[str, Any]) -> dict[str, Any]:
-    """Upload a software bundle to the platform.
-
-    Args:
-        settings: Software bundle upload payload.
-    """
-    return await get_client(ctx).command("platform", "software_bundle", settings)
+    action = _PLATFORM_ACTIONS.get(command)
+    if action is None:
+        raise PexipError(
+            400, {"command": [f"Unknown command {command!r}. Valid: {sorted(_PLATFORM_ACTIONS)}"]}
+        )
+    return await get_client(ctx).command("platform", action, params or {})

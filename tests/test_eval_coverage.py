@@ -6,7 +6,7 @@ Two tests:
   shrink. Adding a tool without a case, or deleting the only case that covers
   a tool, fails CI. Removing entries from KNOWN_UNCOVERED as cases are added
   is the expected maintenance.
-- the GOAL, xfail(strict) until KNOWN_UNCOVERED is empty.
+- the GOAL, every registered tool has a case (KNOWN_UNCOVERED is empty).
 
 "Covered" means the tool is named STRUCTURALLY by a case: under an
 `expected_tools` / `expected_tool` / `tool` key in evals/cases/*.yaml, or called
@@ -15,10 +15,8 @@ YAML comments do not count, so a "do NOT call X" note cannot mark X covered.
 Live-only coverage is accepted but reported separately, because CI never runs
 the --live suite.
 
-Baseline on 2026-10-31: 48 of 122 tools uncovered, nearly all the Status /
-History long tail that docs/TOOL-ARCHITECTURE-PLAN.md phase 4 folds into the
-generic status/history tools. Folding them removes the gap; alternatively each
-needs a case before it can leave this list.
+Baseline on 2026-10-31 was 48 of 122 tools uncovered. Phase 4 folded the Status /
+History long tail into generic tools and the remaining getters got a case each.
 """
 
 from __future__ import annotations
@@ -26,7 +24,6 @@ from __future__ import annotations
 import re
 from pathlib import Path
 
-import pytest
 import yaml
 
 from pexip_mcp.mcp_app import is_legacy_alias, mcp
@@ -37,57 +34,7 @@ REPO = Path(__file__).parent.parent
 CASE_FILES = sorted((REPO / "evals" / "cases").glob("*.yaml"))
 LIVE_FILE = REPO / "evals" / "test_live_integration.py"
 
-KNOWN_UNCOVERED: frozenset[str] = frozenset(
-    {
-        "pexip_backup_restore",
-        "pexip_certificates_import",
-        "pexip_delete_ldap_source",
-        "pexip_delete_resource",
-        "pexip_get_alarm_history",
-        "pexip_get_backplane",
-        "pexip_get_backplane_history",
-        "pexip_get_backplane_history_media_streams",
-        "pexip_get_backplane_media_streams",
-        "pexip_get_cloud_monitored_location",
-        "pexip_get_cloud_node",
-        "pexip_get_cloud_overflow_location",
-        "pexip_get_conference_shard",
-        "pexip_get_conference_sync_status",
-        "pexip_get_conferencing_node",
-        "pexip_get_exchange_scheduler_status",
-        "pexip_get_gateway_rule",
-        "pexip_get_ivr_theme",
-        "pexip_get_ldap_source",
-        "pexip_get_location",
-        "pexip_get_location_status",
-        "pexip_get_management_node_status",
-        "pexip_get_mjx_endpoint_status",
-        "pexip_get_mjx_meeting_status",
-        "pexip_get_node_event_history",
-        "pexip_get_node_statistics",
-        "pexip_get_node_status",
-        "pexip_get_registration_alias",
-        "pexip_get_registration_history",
-        "pexip_get_teams_node_call_status",
-        "pexip_get_teams_node_status",
-        "pexip_list_backplane_history",
-        "pexip_list_backplanes",
-        "pexip_list_cloud_monitored_locations",
-        "pexip_list_cloud_overflow_locations",
-        "pexip_list_conference_shards",
-        "pexip_list_conference_sync_status",
-        "pexip_list_exchange_scheduler_status",
-        "pexip_list_location_status",
-        "pexip_list_node_event_history",
-        "pexip_list_registration_aliases",
-        "pexip_list_teams_node_call_status",
-        "pexip_platform_upgrade",
-        "pexip_start_cloud_node",
-        "pexip_update_global_settings",
-        "pexip_update_ldap_source",
-        "pexip_upload_software_bundle",
-    }
-)
+KNOWN_UNCOVERED: frozenset[str] = frozenset()
 
 
 # Covered only by evals/test_live_integration.py, which CI does not run. Each
@@ -156,10 +103,5 @@ def test_live_only_coverage_is_acknowledged():
     assert KNOWN_LIVE_ONLY <= LIVE_ONLY_COVERED, sorted(KNOWN_LIVE_ONLY - LIVE_ONLY_COVERED)
 
 
-@pytest.mark.xfail(
-    strict=True,
-    raises=AssertionError,
-    reason="phase 4: fold the Status/History long tail into generic tools or add cases",
-)
 def test_every_tool_has_an_eval_case():
     assert not UNCOVERED, sorted(UNCOVERED)

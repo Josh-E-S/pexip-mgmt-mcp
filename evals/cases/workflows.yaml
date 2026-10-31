@@ -272,8 +272,8 @@
       params_contain:
         alias: "exec-briefing@company.com"
       returns: {id: 201, alias: "exec-briefing@company.com"}
-    - tool: pexip_send_conference_email
-      params_contain: {vmr_id: 77}
+    - tool: pexip_send_provisioning_email
+      params_contain: {target: "vmr", target_id: 77}
       returns: {status: "success"}
   tags: [config, provisioning, multi-step]
 
@@ -428,8 +428,8 @@
         objects:
           - {id: 1, name: "Primary"}
         meta: {total_count: 1}
-    - tool: pexip_get_location_statistics
-      params_contain: {location: ["Primary", "1"]}
+    - tool: pexip_get_status
+      params_contain: {resource: "system_location/{id}/statistics", id: ["Primary", "1", 1]}
       returns: {media_tokens_used: 20, media_tokens_total: 200}
   tags: [status, monitoring, multi-step]
 

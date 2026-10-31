@@ -19,15 +19,14 @@ from pexip_mcp.tools import (  # noqa: F401
     discovery,
     end_user,
     gateway_rule,
-    global_settings,
     health,
     history,
+    history_generic,
     infrastructure,
-    ivr_theme,
-    ldap,
     resource_crud,
     schema,
     status,
+    status_generic,
 )
 
 __all__ = ["mcp"]

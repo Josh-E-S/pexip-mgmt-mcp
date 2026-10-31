@@ -17,7 +17,16 @@ import pytest
 import pytest_asyncio
 
 from pexip_mcp.client import PexipError
-from pexip_mcp.tools import command, conference, end_user, history, resource_crud, schema, status
+from pexip_mcp.tools import (
+    command,
+    conference,
+    end_user,
+    history,
+    history_generic,
+    resource_crud,
+    schema,
+    status,
+)
 
 pytestmark = [pytest.mark.live, pytest.mark.asyncio(loop_scope="session")]
 
@@ -48,9 +57,8 @@ class TestReadOnlySmoke:
         assert "objects" in result
 
     async def test_get_global_settings(self, live_ctx):
-        from pexip_mcp.tools import global_settings
 
-        result = await global_settings.get_global_settings(live_ctx)
+        result = await resource_crud.get_resource(live_ctx, resource="global", id=1)
         assert isinstance(result, dict)
 
     async def test_list_alarms(self, live_ctx):
@@ -202,7 +210,7 @@ class TestHistoryAPI:
         assert isinstance(result, dict)
 
     async def test_list_alarm_history(self, live_ctx):
-        result = await history.list_alarm_history(live_ctx)
+        result = await history_generic.list_history(live_ctx, resource="alarm")
         assert "objects" in result
 
 

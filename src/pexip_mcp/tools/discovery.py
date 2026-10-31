@@ -74,14 +74,6 @@ CONFIG_DEDICATED: dict[str, dict[str, Any]] = {
         "update": "update_gateway_rule",
         "delete": "delete_gateway_rule",
     },
-    "ldap_sync_source": {
-        "label": "LDAP sync source",
-        "list": "list_ldap_sources",
-        "get": "get_ldap_source",
-        "create": "create_ldap_source",
-        "update": "update_ldap_source",
-        "delete": "delete_ldap_source",
-    },
     "system_location": {
         "label": "system location",
         "list": "list_locations",
@@ -91,12 +83,6 @@ CONFIG_DEDICATED: dict[str, dict[str, Any]] = {
         "label": "Conferencing Node",
         "list": "list_conferencing_nodes",
         "get": "get_conferencing_node",
-    },
-    "ivr_theme": {"label": "IVR theme", "list": "list_ivr_themes", "get": "get_ivr_theme"},
-    "global": {
-        "label": "global settings",
-        "get": "get_global_settings",
-        "update": "update_global_settings",
     },
 }
 
@@ -141,16 +127,26 @@ def _config_entries() -> list[dict[str, Any]]:
 
 
 def _spec_entry(spec: ResourceSpec) -> dict[str, Any]:
+    """Status/history entry: a dedicated tool where one exists, else the generic
+    list/get tool for that API (sub-path resources are get-only)."""
+    generic_list = _p(f"list_{spec.api}")
+    generic_get = _p(f"get_{spec.api}")
+    subpath = "{id}" in spec.name
     tools: dict[str, str] = {}
     if spec.dedicated_list_tool:
         tools["list"] = _p(spec.dedicated_list_tool)  # type: ignore[assignment]
+    elif not subpath:
+        tools["list"] = generic_list  # type: ignore[assignment]
     if spec.dedicated_get_tool:
         tools["get"] = _p(spec.dedicated_get_tool)  # type: ignore[assignment]
+    else:
+        tools["get"] = generic_get  # type: ignore[assignment]
     return {
         "api": spec.api,
         "resource": spec.name,
         "label": spec.label,
         "tools": tools,
+        "generic": not (spec.dedicated_list_tool or spec.dedicated_get_tool),
         "filters": list(spec.filters),
         "keywords": list(spec.keywords),
     }

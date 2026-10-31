@@ -8,7 +8,7 @@ Pexip operations have real-world side effects. A disconnected participant is boo
 |---|---|---|
 | **Read-only** | `list_*`, `get_*`, `pexip_summarize_calls`, `pexip_get_resource_schema` | No confirmation needed. Run freely. |
 | **Idempotent + reversible** | `pexip_mute_participant`, `pexip_lock_conference`, `spotlight_participant`, `pexip_set_participant_role`, `pexip_add_vmr_alias`, `create_*` | Confirm if the user's request was ambiguous about the target. Skip if the target was named explicitly. |
-| **Idempotent + DESTRUCTIVE** | `pexip_disconnect_participant`, `pexip_disconnect_conference`, `delete_*`, `pexip_update_global_settings` | Always state what you're about to do and the target, and proceed only if the request was unambiguous OR the user has confirmed in this turn. |
+| **Idempotent + DESTRUCTIVE** | `pexip_disconnect_participant`, `pexip_disconnect_conference`, `delete_*`, `pexip_update_resource(resource="global")` | Always state what you're about to do and the target, and proceed only if the request was unambiguous OR the user has confirmed in this turn. |
 | **Not idempotent** | `pexip_dial_participant`, `pexip_transfer_participant`, `create_*` (when a duplicate would matter) | Confirm before retrying after any error — repeats place real calls / create real duplicates. |
 
 ## The resolution rule
@@ -48,7 +48,7 @@ Exceptions where you can skip the prompt and act immediately:
 ## Configuration safety specifics
 
 - **`pexip_delete_vmr` does not affect in-progress conferences on that VMR** — running calls are Status-API objects, not Configuration-API objects. But it does break every dial string that pointed at the deleted VMR.
-- **`pexip_update_global_settings` affects the whole platform.** Bad values can lock out admins (session timeout), change default behavior for every meeting, or break LDAP / IVR. Read `pexip_get_resource_schema("global")` first to see valid types and ranges. Show the user the diff before applying.
+- **`pexip_update_resource(resource="global", id=1, ...)` affects the whole platform.** Bad values can lock out admins (session timeout), change default behavior for every meeting, or break LDAP / IVR. Read `pexip_get_resource_schema("global")` first to see valid types and ranges. Show the user the diff before applying.
 - **`pexip_delete_alias` is fast and irreversible.** Aliases re-created with the same string aren't the "same" alias — the integer id changes, which can matter for audit logs.
 - **`pexip_delete_gateway_rule` can leave a class of calls unrouted.** Prefer `pexip_update_gateway_rule(rule=…, enable=False)` for a removal you might want to reverse.
 

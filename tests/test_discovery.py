@@ -55,7 +55,7 @@ async def test_describe_filters_by_api_and_query_and_detail():
     out = await discovery.describe_resources(_ctx(), api="status", query="teams")
     assert out["count"] == 2
     assert {e["resource"] for e in out["resources"]} == {"teamsnode", "teamsnode_call"}
-    assert out["resources"][0]["tools"]["list"].startswith("pexip_list_teams")
+    assert out["resources"][0]["tools"] == {"list": "pexip_list_status", "get": "pexip_get_status"}
 
     names = await discovery.describe_resources(_ctx(), query="sip proxy", detail="names")
     assert set(names["resources"]) == {"configuration/sip_proxy", "configuration/mssip_proxy"}

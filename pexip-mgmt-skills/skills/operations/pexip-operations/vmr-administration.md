@@ -10,7 +10,7 @@ For long-lived platform configuration: VMRs (Virtual Meeting Rooms), the aliases
 | `*_alias` | `conference_alias` | One dial string pointing at a VMR (E.164, SIP URI, arbitrary). One VMR ↔ many aliases. |
 | `*_end_user` | `end_user` | A directory entry. Often LDAP-synced. Handle: `primary_email_address`. |
 | `*_automatic_participant` | `automatic_participant` | A participant Pexip auto-dials when a given VMR starts (recorder, streamer, …). |
-| `*_ldap_source` | `ldap_sync_source` | LDAP / AD server config for end-user sync. |
+| `pexip_*_resource(resource="ldap_sync_source")` | `ldap_sync_source` | LDAP / AD server config for end-user sync. |
 | `get/list_ivr_theme` | `ivr_theme` | Branding bundle (read-only — themes are uploaded via the admin UI). |
 | `*_global_settings` | `global` (singleton, id=1) | Platform-wide settings. |
 | `pexip_get_resource_schema` | any | Live schema for any resource — use before guessing fields. |
@@ -118,7 +118,8 @@ pexip_add_automatic_participant(
 ## Recipe: LDAP sync source
 
 ```
-pexip_create_ldap_source(
+# Field names: confirm with pexip_get_resource_schema("ldap_sync_source") first.
+pexip_create_resource(resource="ldap_sync_source", settings=dict(
     name="corp-ad",
     ldap_server="ldap.corp.example.com",
     ldap_base_dn="DC=corp,DC=example,DC=com",
@@ -126,10 +127,10 @@ pexip_create_ldap_source(
     bind_password="...",
     ldap_user_filter="(objectClass=user)",
     sync_interval_minutes=60,
-)
+))
 ```
 
-`pexip_get_ldap_source(source="corp-ad")` returns the last sync status / errors — useful for answering "is LDAP working?" without leaving the conversation.
+`pexip_get_resource(resource="ldap_sync_source", id="corp-ad")` returns the last sync status / errors — useful for answering "is LDAP working?" without leaving the conversation.
 
 ## Recipe: global platform settings
 
@@ -137,8 +138,8 @@ Singleton at `/configuration/v1/global/1/`. Discover fields first:
 
 ```
 pexip_get_resource_schema("global")        # → field types, enums, help text
-pexip_get_global_settings()                # → current values
-pexip_update_global_settings(updates={
+pexip_get_resource(resource="global", id=1)      # → current values
+pexip_update_resource(resource="global", id=1, settings={
     "management_session_timeout_secs": 1800,
     "guests_only_timeout": 300,
 })

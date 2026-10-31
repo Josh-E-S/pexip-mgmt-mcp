@@ -14,7 +14,7 @@ Three Pexip resources govern it:
 - `mjx_integration` — the calendar source (Exchange / Google) Pexip reads from
 - `mjx_meeting_processing_rule` — regex/transform rules that detect each meeting platform in the invite body and produce the dial string
 
-The `pexip-mgmt-mcp` server exposes 4 dedicated MJX **status** tools — `pexip_get_mjx_endpoint_status`, `pexip_list_mjx_endpoint_status`, `pexip_get_mjx_meeting_status`, `pexip_list_mjx_meeting_status` (in `src/pexip_mcp/tools/status.py`). The MJX **configuration** resources (`mjx_endpoint`, `mjx_integration`, `mjx_meeting_processing_rule`, …) are managed through the generic `*_resource` CRUD tools (`pexip_create_resource`, `pexip_get_resource`, `pexip_update_resource`, `pexip_delete_resource`, `pexip_list_resources`).
+The `pexip-mgmt-mcp` server reaches MJX **status** through the generic status tools: `pexip_list_status(resource="mjx_endpoint")`, `pexip_list_status(resource="mjx_meeting")`, and `pexip_get_status(resource="mjx_endpoint", id=...)` / `pexip_get_status(resource="mjx_meeting", id=...)`.
 
 ## When to use
 
