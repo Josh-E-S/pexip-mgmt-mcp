@@ -19,7 +19,7 @@
   },
   "catalog_tokens": {
     "exact_anthropic": null,
-    "estimate_chars_div_3_5": 20498,
+    "estimate_chars_div_3_5": 20542,
     "exact_unavailable_reason": "ANTHROPIC_API_KEY not set"
   },
   "by_module": {
@@ -30,7 +30,7 @@
     },
     "status": {
       "tools": 8,
-      "est_tokens": 2760,
+      "est_tokens": 2775,
       "category": "Status"
     },
     "history": {
@@ -40,7 +40,7 @@
     },
     "device": {
       "tools": 6,
-      "est_tokens": 2067,
+      "est_tokens": 2074,
       "category": "Configuration"
     },
     "conference": {
@@ -55,7 +55,7 @@
     },
     "end_user": {
       "tools": 5,
-      "est_tokens": 1490,
+      "est_tokens": 1499,
       "category": "Configuration"
     },
     "automatic_participant": {
@@ -65,17 +65,17 @@
     },
     "status_generic": {
       "tools": 2,
-      "est_tokens": 1000,
+      "est_tokens": 986,
       "category": "Status"
     },
     "history_generic": {
       "tools": 2,
-      "est_tokens": 961,
+      "est_tokens": 975,
       "category": "History"
     },
     "alias": {
       "tools": 3,
-      "est_tokens": 748,
+      "est_tokens": 755,
       "category": "Configuration"
     },
     "discovery": {
@@ -90,7 +90,7 @@
     },
     "health": {
       "tools": 1,
-      "est_tokens": 268,
+      "est_tokens": 274,
       "category": "Status"
     }
   },
@@ -105,11 +105,7 @@
     },
     {
       "name": "pexip_list_history",
-      "est_tokens": 690
-    },
-    {
-      "name": "pexip_list_status",
-      "est_tokens": 670
+      "est_tokens": 704
     },
     {
       "name": "pexip_summarize_calls",
@@ -118,6 +114,10 @@
     {
       "name": "pexip_list_resources",
       "est_tokens": 644
+    },
+    {
+      "name": "pexip_list_status",
+      "est_tokens": 632
     },
     {
       "name": "pexip_create_vmr",
@@ -139,7 +139,7 @@
   "description_chars": {
     "min": 190,
     "median": 627,
-    "max": 1488
+    "max": 1461
   },
   "params_per_tool": {
     "mean": 4.4,

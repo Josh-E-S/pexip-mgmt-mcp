@@ -56,7 +56,7 @@ A curated, intent-grouped lookup for the pexip-mgmt MCP server's tools: find the
 | Tool | Description |
 |---|---|
 | `pexip_list_end_users` / `pexip_get_end_user` / `pexip_create_end_user` / `pexip_update_end_user` / `pexip_delete_end_user` | Directory CRUD. Handle is `primary_email_address`. |
-| `pexip_list_resources(resource="ldap_sync_source")` / `pexip_get_resource` / `pexip_create_resource` / `pexip_update_resource` / `pexip_delete_resource` | LDAP / AD sync sources. `pexip_get_ldap_source` returns last sync status. |
+| `pexip_list_resources(resource="ldap_sync_source")` / `pexip_get_resource` / `pexip_create_resource` / `pexip_update_resource` / `pexip_delete_resource` | LDAP / AD sync sources. `pexip_get_resource(resource="ldap_sync_source", id=...)` returns last sync status. |
 
 ## Devices & registrations
 

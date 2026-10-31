@@ -112,7 +112,7 @@ GUIDANCE: dict[str, Guidance] = {
     "list_aliases": _g(
         "the user wants to know which dial strings reach a VMR, or to find the alias id "
         "before deleting one.",
-        "the user wants registered endpoint aliases (list_registration_aliases).",
+        "the user wants registered endpoint aliases (list_status(resource='registration_alias')).",
         examples=[{"vmr": "Boardroom"}, {"alias_contains": "@example.com", "limit": 50}],
     ),
     "add_vmr_alias": _g(
@@ -164,7 +164,7 @@ GUIDANCE: dict[str, Guidance] = {
     "create_end_user": _g(
         "the user asks to add a person to the Pexip directory; primary_email_address is the "
         "identity.",
-        "the user is managed by LDAP sync (create_ldap_source / sync) or is a device "
+        "the user is managed by LDAP sync (create_resource(resource='ldap_sync_source') / sync) or is a device "
         "(create_device).",
         examples=[
             {
@@ -200,7 +200,7 @@ GUIDANCE: dict[str, Guidance] = {
         "the user asks which endpoints are currently registered, or whether a specific room "
         "system is online.",
         "the user wants the provisioning records themselves (list_devices) or history "
-        "(list_registration_history).",
+        "(list_history(resource='registration_alias')).",
         examples=[{"alias_contains": "boardroom"}, {"protocol": "sip", "fetch_all": True}],
     ),
     "get_device": _g(
@@ -281,13 +281,13 @@ GUIDANCE: dict[str, Guidance] = {
     "list_locations": _g(
         "the user asks which system locations (data centres / regions) exist, or needs a "
         "location name for another tool.",
-        "the user asks about current load per location (list_location_status).",
+        "the user asks about current load per location (list_status(resource='system_location')).",
         examples=[{}, {"name_contains": "EU", "fields": ["name", "description"]}],
     ),
     "get_location": _g(
         "the user names one system location and wants its configuration.",
-        "the user wants live load or status for it (get_location_status / "
-        "get_location_statistics).",
+        "the user wants live load or status for it (get_status(resource='system_location') / "
+        "get_status(resource='system_location/{id}/statistics')).",
     ),
     "list_conferencing_nodes": _g(
         "the user asks which Conferencing Nodes exist, in which location, or of which type "
@@ -297,7 +297,7 @@ GUIDANCE: dict[str, Guidance] = {
     ),
     "get_conferencing_node": _g(
         "the user names one Conferencing Node and wants its configuration.",
-        "the user wants its live load (get_node_statistics) or status (get_node_status).",
+        "the user wants its live load (get_status(resource='worker_vm/{id}/statistics')) or status (get_node_status).",
     ),
     # ── IVR themes (ivr_theme.py) ────────────────────────────────────────────
     # ── Global settings (global_settings.py) ─────────────────────────────────
@@ -363,16 +363,15 @@ GUIDANCE: dict[str, Guidance] = {
         "the user asks whether the platform is OK, healthy, or has problems right now; it "
         "replaces four separate calls with one summary and a verdict.",
         "the user wants one specific list (list_alarms, list_node_status, "
-        "get_licensing_status) or historical health (list_alarm_history).",
+        "get_licensing_status) or historical health (list_history(resource='alarm')).",
     ),
     # ── Generic status / history (status_generic.py, history_generic.py) ─────
     "list_status": _g(
-        "the live-state question is about a resource with no dedicated tool: Teams Connector "
-        "nodes/calls, One-Touch Join endpoints/meetings, cloud overflow nodes, backplanes, "
-        "conference shards, conference sync, Exchange scheduler, Management Node, registered "
-        "aliases, or location status.",
-        "a dedicated tool exists: list_active_conferences, list_active_participants, "
-        "list_alarms, list_node_status, list_registrations, get_licensing_status.",
+        "the live-state question is about a resource with no dedicated tool: Teams Connector, "
+        "One-Touch Join, cloud overflow, backplanes, shards, conference sync, Exchange "
+        "scheduler, Management Node, registered aliases, or location status.",
+        "a dedicated tool exists (list_active_conferences, list_active_participants, "
+        "list_alarms, list_node_status, list_registrations, get_licensing_status).",
         docs=STATUS_API,
         examples=[
             {"resource": "teamsnode"},
@@ -465,7 +464,7 @@ GUIDANCE: dict[str, Guidance] = {
     ),
     "list_alarms": _g(
         "the user asks whether the platform is healthy or what is currently alarming.",
-        "the user asks what alarmed in the past (list_alarm_history).",
+        "the user asks what alarmed in the past (list_history(resource='alarm')).",
         examples=[{}, {"level": "critical"}, {"node_name": "conf-node-1"}],
     ),
     "get_licensing_status": _g(
@@ -479,7 +478,7 @@ GUIDANCE: dict[str, Guidance] = {
     ),
     "get_node_status": _g(
         "the user names one Conferencing Node and asks if it is healthy.",
-        "the user wants numeric load (get_node_statistics).",
+        "the user wants numeric load (get_status(resource='worker_vm/{id}/statistics')).",
     ),
     # ── History / CDRs (history.py) ──────────────────────────────────────────
     "summarize_calls": _g(

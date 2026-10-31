@@ -24,6 +24,8 @@ field names in the tool.
 | 10 | `pexip_take_snapshot`, `pexip_backup_create`, `pexip_backup_restore` | Snapshot and backup create send `{}`; a third-party rendering of the command reference says both require `name`. Restore sends `backup_id`; the UI flow is file + passphrase. | Platform tools; gated, but when enabled they should work. | command.py platform section; `/api/admin/command/v1/platform/*/schema/` |
 | 11 | `pexip_sync_conference_ldap` | Body field name for the conference sync template id is unconfirmed. | LDAP-driven VMR provisioning. | command.py sync_conference_ldap |
 | 12 | `pexip_list_history_participants` vs `pexip_summarize_calls` | History tools filter on `conference` but group on `conference_name`; Pexip's history participant record has `conference_name`. Confirm which filter key narrows results. | Per-room reporting. | history.py:121/215 vs 155/232 |
+| 13 | `pexip_list_history` (alarm, workervm_status_event) | The time-window fields are the ones the pre-consolidation tools sent: `time_raised__gte/__lt` for history alarms, `time__gte/__lt` for node status events. Neither was verified against a live node (tool-module review V30/V31). Call `pexip_list_history(resource="alarm", start_time=..., end_time=...)` and confirm the result set narrows. | Past-alarm and node-event reporting. | tools/_catalog.py HISTORY_REGISTRY time_field |
+| 14 | `pexip_send_provisioning_email(target="device")` | Same question as #9, now inside the merged tool: the device variant posts `{"conference_id": id}` to `conference/send_device_email`. The unit test pins this payload only as "current behaviour". | Device provisioning emails. | command.py send_provisioning_email |
 
 ## Already changed in code (no lab check needed, listed for awareness)
 

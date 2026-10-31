@@ -114,3 +114,30 @@ def test_every_registry_entry_has_a_label_and_valid_dedicated_tools():
         assert spec.label
         for t in (spec.dedicated_list_tool, spec.dedicated_get_tool):
             assert t is None or f"pexip_{t}" in names, t
+
+
+@respx.mock
+async def test_get_resolves_node_and_location_names(ctx):
+    """worker_vm / system_location based resources accept the configured name as
+    the id, as the deleted typed statistics tools did."""
+    respx.get(f"https://{PEXIP_HOST}/api/admin/configuration/v1/system_location/").mock(
+        return_value=httpx.Response(
+            200,
+            json={
+                "objects": [
+                    {
+                        "name": "Primary",
+                        "resource_uri": "/api/admin/configuration/v1/system_location/4/",
+                    }
+                ],
+                "meta": {"total_count": 1},
+            },
+        )
+    )
+    route = respx.get(f"{STATUS}/system_location/4/statistics/").mock(
+        return_value=_page([{"media_load": 7}])
+    )
+    out = await status_generic.get_status(
+        ctx, resource="system_location/{id}/statistics", id="Primary"
+    )
+    assert route.called and out["objects"][0]["media_load"] == 7

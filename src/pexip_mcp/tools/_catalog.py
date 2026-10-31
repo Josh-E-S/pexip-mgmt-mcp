@@ -231,14 +231,24 @@ class ResourceSpec:
     dedicated_list_tool: str | None = None
     dedicated_get_tool: str | None = None
     keywords: tuple[str, ...] = field(default_factory=tuple)
+    # Field searched by name_contains (None: the resource has no name field).
+    name_field: str | None = None
+    # Field bounded by start_time / end_time (None: no time window). These are
+    # the fields the pre-consolidation typed tools sent; see
+    # docs/review/MANUAL-REVIEW-QUEUE.md #13 for the ones still unverified.
+    time_field: str | None = None
 
 
-def _s(name, label, filters=(), lt=None, gt=None, kw=()):
-    return ResourceSpec(name, label, "status", tuple(filters), lt, gt, tuple(kw))
+def _s(name, label, filters=(), lt=None, gt=None, kw=(), name_field=None, time_field=None):
+    return ResourceSpec(
+        name, label, "status", tuple(filters), lt, gt, tuple(kw), name_field, time_field
+    )
 
 
-def _h(name, label, filters=(), lt=None, gt=None, kw=()):
-    return ResourceSpec(name, label, "history", tuple(filters), lt, gt, tuple(kw))
+def _h(name, label, filters=(), lt=None, gt=None, kw=(), name_field=None, time_field=None):
+    return ResourceSpec(
+        name, label, "history", tuple(filters), lt, gt, tuple(kw), name_field, time_field
+    )
 
 
 STATUS_REGISTRY: dict[str, ResourceSpec] = {
@@ -251,6 +261,7 @@ STATUS_REGISTRY: dict[str, ResourceSpec] = {
             "list_active_conferences",
             None,
             ("meeting", "running", "now"),
+            name_field="name",
         ),
         _s(
             "participant",
@@ -274,8 +285,17 @@ STATUS_REGISTRY: dict[str, ResourceSpec] = {
             ("conference",),
             None,
             None,
+            name_field="name",
         ),
-        _s("alarm", "active alarms", ("level", "node"), "list_alarms", None, ("alert", "warning")),
+        _s(
+            "alarm",
+            "active alarms",
+            ("level", "node"),
+            "list_alarms",
+            None,
+            ("alert", "warning"),
+            name_field="name",
+        ),
         _s(
             "licensing",
             "concurrent port usage vs entitlement",
@@ -291,6 +311,7 @@ STATUS_REGISTRY: dict[str, ResourceSpec] = {
             "list_node_status",
             "get_node_status",
             ("node", "load", "capacity"),
+            name_field="name",
         ),
         _s("worker_vm/{id}/statistics", "per-node load statistics", (), None, None),
         _s(
@@ -300,6 +321,7 @@ STATUS_REGISTRY: dict[str, ResourceSpec] = {
             None,
             None,
             ("datacentre", "region"),
+            name_field="name",
         ),
         _s(
             "system_location/{id}/statistics",
@@ -322,6 +344,7 @@ STATUS_REGISTRY: dict[str, ResourceSpec] = {
             "list_registrations",
             None,
             ("endpoint", "registered", "online"),
+            name_field="alias",
         ),
         _s(
             "registration_alias",
@@ -329,6 +352,7 @@ STATUS_REGISTRY: dict[str, ResourceSpec] = {
             ("alias",),
             None,
             None,
+            name_field="alias",
         ),
         _s("backplane", "inter-node media connections", (), None, None),
         _s(
@@ -382,6 +406,7 @@ STATUS_REGISTRY: dict[str, ResourceSpec] = {
             None,
             None,
             ("otj", "room system"),
+            name_field="name",
         ),
         _s(
             "mjx_meeting",
@@ -418,6 +443,8 @@ HISTORY_REGISTRY: dict[str, ResourceSpec] = {
             "list_history_conferences",
             "get_history_conference",
             ("past meetings", "when"),
+            name_field="name",
+            time_field="start_time",
         ),
         _h(
             "participant",
@@ -436,6 +463,8 @@ HISTORY_REGISTRY: dict[str, ResourceSpec] = {
             "list_history_participants",
             "get_history_participant",
             ("cdr", "call records", "billing"),
+            name_field="display_name",
+            time_field="start_time",
         ),
         _h(
             "alarm",
@@ -443,6 +472,8 @@ HISTORY_REGISTRY: dict[str, ResourceSpec] = {
             ("start_time", "end_time", "level"),
             None,
             None,
+            name_field="name",
+            time_field="time_raised",
         ),
         _h(
             "backplane",
@@ -464,6 +495,7 @@ HISTORY_REGISTRY: dict[str, ResourceSpec] = {
             ("alias",),
             None,
             None,
+            name_field="alias",
         ),
         _h(
             "workervm_status_event",
@@ -471,6 +503,7 @@ HISTORY_REGISTRY: dict[str, ResourceSpec] = {
             ("start_time", "end_time"),
             None,
             None,
+            time_field="time",
         ),
     )
 }

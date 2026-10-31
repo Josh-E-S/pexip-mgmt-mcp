@@ -29,7 +29,9 @@ async def test_unknown_resource_is_a_helpful_400(ctx):
 
 
 @respx.mock
-async def test_time_window_applies_only_where_the_resource_has_start_time(ctx):
+async def test_time_window_uses_each_resources_own_time_field(ctx):
+    """Alarms bound time_raised, node events bound time (what the deleted typed
+    tools sent); no ordering is imposed."""
     alarms = respx.get(f"{HISTORY}/alarm/").mock(
         return_value=_page([{"id": 1, "level": "critical"}])
     )
@@ -41,12 +43,39 @@ async def test_time_window_applies_only_where_the_resource_has_start_time(ctx):
         filters={"level": "critical"},
     )
     url = str(alarms.calls.last.request.url)
-    assert "start_time__gte=2026-10-01" in url and "start_time__lt=2026-10-02" in url
-    assert "order_by=-start_time" in url and "level=critical" in url
+    assert "time_raised__gte=2026-10-01" in url and "time_raised__lt=2026-10-02" in url
+    assert "order_by" not in url and "level=critical" in url
 
-    backplanes = respx.get(f"{HISTORY}/backplane/").mock(return_value=_page([]))
-    await history_generic.list_history(ctx, resource="backplane", start_time="2026-10-01T00:00:00")
-    assert "start_time" not in str(backplanes.calls.last.request.url)
+    events = respx.get(f"{HISTORY}/workervm_status_event/").mock(return_value=_page([]))
+    await history_generic.list_history(
+        ctx, resource="workervm_status_event", start_time="2026-10-01T00:00:00"
+    )
+    assert "time__gte=2026-10-01" in str(events.calls.last.request.url)
+
+
+async def test_time_window_refused_for_resources_without_a_time_field(ctx):
+    with pytest.raises(PexipError) as exc:
+        await history_generic.list_history(
+            ctx, resource="backplane", start_time="2026-10-01T00:00:00"
+        )
+    assert exc.value.status_code == 400 and "no time field" in str(exc.value)
+
+
+async def test_name_contains_refused_for_resources_without_a_name_field(ctx):
+    with pytest.raises(PexipError) as exc:
+        await history_generic.list_history(ctx, resource="workervm_status_event", name_contains="x")
+    assert exc.value.status_code == 400 and "no name field" in str(exc.value)
+
+
+async def test_filter_that_duplicates_a_computed_param_is_refused(ctx):
+    with pytest.raises(PexipError) as exc:
+        await history_generic.list_history(
+            ctx,
+            resource="alarm",
+            start_time="2026-10-01T00:00:00",
+            filters={"time_raised__gte": "2026-01-01T00:00:00"},
+        )
+    assert exc.value.status_code == 400 and "duplicate" in str(exc.value)
 
 
 @respx.mock

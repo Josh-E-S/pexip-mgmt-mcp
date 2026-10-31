@@ -230,3 +230,30 @@ def test_list_resources_points_at_discovery_and_catalog_names_every_resource():
     in_catalog = {e["resource"] for e in discovery.catalog_entries() if e["api"] == "configuration"}
     missing = [name for name in resource_crud.RESOURCE_REGISTRY if name not in in_catalog]
     assert not missing, f"catalog is missing: {missing}"
+
+
+# ── singleton / bundle resources via the generic tools ─────────────────────────
+
+
+async def test_global_settings_cannot_be_created_or_deleted(ctx):
+    with pytest.raises(PexipError) as exc:
+        await resource_crud.create_resource(ctx, resource="global", settings={"x": 1})
+    assert exc.value.status_code == 400 and "singleton" in str(exc.value)
+    with pytest.raises(PexipError):
+        await resource_crud.delete_resource(ctx, resource="global", id=1)
+
+
+async def test_ivr_themes_are_read_only_through_generic_crud(ctx):
+    for op in ("create", "update", "delete"):
+        with pytest.raises(PexipError) as exc:
+            if op == "create":
+                await resource_crud.create_resource(
+                    ctx, resource="ivr_theme", settings={"name": "x"}
+                )
+            elif op == "update":
+                await resource_crud.update_resource(
+                    ctx, resource="ivr_theme", id=1, settings={"name": "x"}
+                )
+            else:
+                await resource_crud.delete_resource(ctx, resource="ivr_theme", id=1)
+        assert exc.value.status_code == 400 and "bundle" in str(exc.value)

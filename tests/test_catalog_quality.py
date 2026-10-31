@@ -186,3 +186,19 @@ def test_no_near_duplicate_tool_names():
     so anything reported here is a real naming problem."""
     dupes = near_duplicate_names(NAMES)
     assert not dupes, dupes
+
+
+def test_descriptions_only_name_registered_tools():
+    """A description that says 'use pexip_foo instead' must point at a tool that
+    exists in this catalog; a folded or renamed tool left in prose sends the model
+    to an unknown-tool error."""
+    import re
+
+    registered = {t.name for t in TOOLS}
+    stale: dict[str, set[str]] = {}
+    for t in TOOLS:
+        names = set(re.findall(r"\bpexip_[a-z_]+", t.description or ""))
+        bad = {n for n in names if n not in registered and not n.startswith("pexip_mgmt")}
+        if bad:
+            stale[t.name] = bad
+    assert not stale, stale

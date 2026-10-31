@@ -58,6 +58,8 @@ def test_platform_command_is_the_only_gated_tool():
     "target, action", [("vmr", "send_conference_email"), ("device", "send_device_email")]
 )
 async def test_provisioning_email_targets(ctx, target, action):
+    """Pins the CURRENT payload. The device variant's conference_id key is under
+    verification (docs/review/MANUAL-REVIEW-QUEUE.md #14); change both when confirmed."""
     route = respx.post(f"{COMMAND}/conference/{action}/").mock(return_value=_ok())
     await command.send_provisioning_email(ctx, target=target, target_id=42)
     assert json.loads(route.calls.last.request.content) == {"conference_id": 42}

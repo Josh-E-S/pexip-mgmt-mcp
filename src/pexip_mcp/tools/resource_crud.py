@@ -233,6 +233,26 @@ def _validate_filters(filters: dict[str, Any]) -> dict[str, Any]:
     return filters
 
 
+# Resources the generic tools must not create or delete: the platform-wide
+# settings singleton (exactly one row, id 1) and IVR themes, which are binary
+# branding bundles managed through the admin UI, not JSON.
+_NO_CREATE_DELETE: frozenset[str] = frozenset({"global", "ivr_theme"})
+_NO_UPDATE: frozenset[str] = frozenset({"ivr_theme"})
+
+
+def _guard_operation(resource: str, op: str) -> None:
+    """Refuse create/delete on singletons and any write on binary-bundle resources."""
+    if (op in ("create", "delete") and resource in _NO_CREATE_DELETE) or (
+        op == "update" and resource in _NO_UPDATE
+    ):
+        how = (
+            "it is a singleton: read or update id 1"
+            if resource == "global"
+            else "it is managed as an uploaded bundle in the Pexip admin UI; read only here"
+        )
+        raise PexipError(400, {"resource": [f"Cannot {op} {resource!r} through this tool: {how}."]})
+
+
 def _guard_sensitive(resource: str, ctx: Context) -> None:
     """Refuse to mutate a security-critical resource unless explicitly allowed.
 
@@ -342,6 +362,7 @@ async def create_resource(
         settings: Field values for the new resource (must include required fields).
     """
     _validate_resource(resource)
+    _guard_operation(resource, "create")
     _guard_sensitive(resource, ctx)
     if not settings:
         raise PexipError(400, {"settings": ["At least one field is required"]})
@@ -366,6 +387,7 @@ async def update_resource(
         settings: Fields to update.
     """
     meta = _validate_resource(resource)
+    _guard_operation(resource, "update")
     _guard_sensitive(resource, ctx)
     if not settings:
         raise PexipError(400, {"settings": ["At least one field is required"]})
@@ -389,6 +411,7 @@ async def delete_resource(
             resolved automatically, so there is no need to list first.
     """
     meta = _validate_resource(resource)
+    _guard_operation(resource, "delete")
     _guard_sensitive(resource, ctx)
     client = get_client(ctx)
     resolved = await resolve_id_by_field(client, resource, id, field=meta["lookup_field"])
