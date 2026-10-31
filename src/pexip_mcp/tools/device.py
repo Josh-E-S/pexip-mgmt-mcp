@@ -212,11 +212,13 @@ async def list_registrations(
     if protocol:
         params["protocol"] = protocol
     if fetch_all:
-        return await paginate_all(client, "registration", api="status", **params)
-    params["limit"] = limit
-    params["offset"] = offset
+        result = await paginate_all(client, "registration", api="status", **params)
+    else:
+        params["limit"] = limit
+        params["offset"] = offset
+        result = await client.list("registration", api="status", **params)
     return shape_list(
-        await client.list("registration", api="status", **params),
+        result,
         resource="status/registration",
         response_format=response_format,
         fields=fields,

@@ -12,7 +12,8 @@ Two layers:
 1. `finalize_result` runs on EVERY tool result (wired in mcp_app.PexipMCP). It
    leaves non-list results alone. For a Pexip list envelope ({objects, meta}) it
    adds `meta.has_more` / `meta.next_offset`, folds a top-level `truncated` flag
-   from paginate_all into `meta`, and enforces PEXIP_MAX_RESPONSE_BYTES by
+   from paginate_all into `meta`, and enforces PEXIP_MAX_RESPONSE_BYTES (lists
+   only; single records are returned whole) by
    dropping trailing objects and setting `meta.truncated` plus a `meta.hint`
    that says how to ask for less.
 
@@ -33,9 +34,11 @@ from typing import Any, Literal, TypedDict
 
 ResponseFormat = Literal["concise", "detailed"]
 
-# Upper bound on a serialized tool result. Claude Code caps tool results at
-# ~25k tokens; 100 KB of JSON is comfortably under that for ASCII-heavy data.
-DEFAULT_MAX_RESPONSE_BYTES = 100_000
+# Upper bound on a LIST result, measured on the indented JSON text block FastMCP
+# emits. The wire also carries the same data again as structuredContent, so the
+# payload is roughly double this. 50 KB of indented text is about 12k tokens;
+# doubled it stays under the ~25k-token result budget of Claude Code.
+DEFAULT_MAX_RESPONSE_BYTES = 50_000
 
 
 def max_response_bytes() -> int:
@@ -195,6 +198,14 @@ CONCISE_FIELDS: dict[str, tuple[str, ...]] = {
     ),
     "status/alarm": ("name", "level", "node", "details", "time_raised", "instance"),
     "status/registration_alias": ("alias", "protocol", "remote_address", "node", "start_time"),
+    "status/registration": (
+        "alias",
+        "protocol",
+        "remote_address",
+        "node",
+        "start_time",
+        "is_natted",
+    ),
     "status/system_location": (
         "name",
         "media_load",
@@ -247,7 +258,8 @@ def project(obj: Any, fields: tuple[str, ...] | list[str] | None) -> Any:
 
 
 def _byte_size(value: Any) -> int:
-    return len(json.dumps(value, separators=(",", ":"), default=str).encode())
+    """Size of `value` as FastMCP serializes it for the text block (indent=2)."""
+    return len(json.dumps(value, indent=2, default=str).encode())
 
 
 def finalize_result(result: Any, *, max_bytes: int | None = None) -> Any:
@@ -271,11 +283,15 @@ def finalize_result(result: Any, *, max_bytes: int | None = None) -> Any:
     objects = result["objects"]
     total = meta.get("total_count")
     offset = meta.get("offset") or 0
+    limit = meta.get("limit")
     if "has_more" not in meta:
         if meta.get("next"):
             meta["has_more"] = True
         elif isinstance(total, int):
             meta["has_more"] = offset + len(objects) < total
+        elif isinstance(limit, int) and limit > 0:
+            # No total from the server: a full page probably has more behind it.
+            meta["has_more"] = len(objects) >= limit
         else:
             meta["has_more"] = False
     if meta.get("has_more") and "next_offset" not in meta:
@@ -283,20 +299,22 @@ def finalize_result(result: Any, *, max_bytes: int | None = None) -> Any:
 
     cap = max_bytes or max_response_bytes()
     if objects and _byte_size(result) > cap:
-        # Drop from the tail until it fits; keep at least one record.
-        lo, hi = 1, len(objects)
-        while lo < hi:
-            mid = (lo + hi + 1) // 2
-            trial = {**result, "objects": objects[:mid]}
-            if _byte_size(trial) <= cap:
-                lo = mid
-            else:
-                hi = mid - 1
-        kept = objects[:lo]
-        result["objects"] = kept
+        # One pass: envelope overhead plus a running sum of per-object sizes.
+        # Keep at least one record so the agent sees the shape and the hint.
+        overhead = _byte_size({**result, "objects": []})
+        budget = cap - overhead
+        kept = 0
+        running = 0
+        for obj in objects:
+            running += _byte_size(obj) + 4  # indent/separator slack per item
+            if running > budget and kept >= 1:
+                break
+            kept += 1
+        kept_objects = objects[:kept]
+        result["objects"] = kept_objects
         meta["truncated"] = True
         meta["has_more"] = True
-        meta["next_offset"] = offset + len(kept)
+        meta["next_offset"] = offset + len(kept_objects)
         meta["hint"] = NARROW_HINT
     return result
 
@@ -319,6 +337,13 @@ def shape_list(
         projected = [project(o, fields) for o in objects]
         meta["fields"] = list(fields)
         meta["response_format"] = "fields"
+        present = {k for o in objects if isinstance(o, dict) for k in o}
+        unknown = [f for f in fields if f not in present]
+        if unknown and objects:
+            meta["hint"] = (
+                f"Fields not present on any returned record: {unknown}. Check the "
+                'field name with pexip_get_resource_schema or use response_format="detailed".'
+            )
     elif response_format == "detailed" or resource not in CONCISE_FIELDS:
         projected = objects
         meta["response_format"] = "detailed"

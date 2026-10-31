@@ -217,6 +217,7 @@ Still to do for phase 0: run `--llm` three times and `--live` once against the l
 - `tools/_shaping.py`: `finalize_result` runs on every tool result via the `PexipMCP` wrapper (list envelopes gain `meta.has_more` / `meta.next_offset`; `paginate_all`'s top-level `truncated` moves into `meta`; results over `PEXIP_MAX_RESPONSE_BYTES` are cut to fit with `meta.truncated` and a narrowing `meta.hint`).
 - 19 high-traffic list tools take `response_format` (`concise` default, `detailed`) and `fields`, projected against per-resource `CONCISE_FIELDS`. Unknown resources fall back to detailed.
 - Those tools return `ListResult`, so they carry a real `outputSchema`. `ListMeta` is declared exhaustively because FastMCP drops unknown keys from structured output. Single-record `get_*` tools keep `dict[str, Any]` (free-form records); the full-coverage output-schema gate stays xfail until phase 4's generic tools land.
+- Known debt: the `response_format` / `fields` parameters and the `shape_list` call are repeated in 19 tools; a shared helper is worth doing when phase 4 rewrites those modules anyway.
 - Not done: resolving foreign-key URIs to names in concise mode. It needs the phase 3 catalog (which field points at which resource) and an extra lookup per distinct FK; deferred to phase 3.
 - `docs/review/MANUAL-REVIEW-QUEUE.md` lists the 12 important-but-unverified tools for lab checks.
 

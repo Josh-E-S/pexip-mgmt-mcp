@@ -142,6 +142,29 @@ def test_shape_list_fields_override_format():
     assert set(out["objects"][0]) == {"id", "resource_uri", "pin"}
 
 
+def test_shape_list_unknown_field_name_sets_hint():
+    out = shape_list(_page(2), resource="conference", fields=["name", "primary_owner_email"])
+    assert "primary_owner_email" in out["meta"]["hint"]
+    assert set(out["objects"][0]) == {"id", "resource_uri", "name"}
+
+
+def test_has_more_falls_back_to_full_page_when_no_total():
+    r = {"objects": [{"id": i} for i in range(20)], "meta": {"limit": 20, "offset": 0}}
+    assert finalize_result(r)["meta"]["has_more"] is True
+    r = {"objects": [{"id": i} for i in range(5)], "meta": {"limit": 20, "offset": 0}}
+    assert finalize_result(r)["meta"]["has_more"] is False
+
+
+def test_list_registrations_fetch_all_is_shaped():
+    """Both branches of list_registrations go through shape_list (review finding)."""
+    import inspect
+
+    from pexip_mcp.tools import device
+
+    src = inspect.getsource(device.list_registrations)
+    assert "return await paginate_all" not in src
+
+
 def test_shape_list_unknown_resource_falls_back_to_detailed():
     out = shape_list(_page(1), resource="no_such_resource")
     assert out["meta"]["response_format"] == "detailed"
