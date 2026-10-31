@@ -25,6 +25,8 @@ from dotenv import load_dotenv
 
 from pexip_mcp.client import PexipClient
 
+from evals.catalog import DEFAULT_EVAL_MODEL, registry_to_api_tools
+
 # Load .env into the process environment so the whole eval suite reads from a
 # single file: Pexip creds (PEXIP_*), ANTHROPIC_API_KEY, PEXIP_EVAL_MODEL, and
 # PEXIP_EVAL_DIAL_TARGET. Real environment variables still win (override=False),
@@ -37,7 +39,7 @@ CASES_DIR = Path(__file__).parent / "cases"
 # Model used for --llm scoring. Override with PEXIP_EVAL_MODEL to test a
 # different/newer model without editing the test files. Kept as a single
 # source of truth so all three LLM test modules stay in sync.
-EVAL_MODEL = os.environ.get("PEXIP_EVAL_MODEL", "claude-sonnet-5")
+EVAL_MODEL = DEFAULT_EVAL_MODEL
 
 
 # ---------------------------------------------------------------------------
@@ -113,25 +115,18 @@ def tool_names(tool_registry) -> set[str]:
 # ---------------------------------------------------------------------------
 
 def _registry_to_claude_tools(registry: dict[str, dict[str, Any]]) -> list[dict[str, Any]]:
-    """Convert the MCP tool registry to the Anthropic API tools format."""
+    """Convert the MCP tool registry to the Anthropic API tools format.
+
+    The catalog is ~36k tokens and identical for every request in a run.
+    cache_last=True puts a prompt-cache breakpoint on the final tool so all but
+    the first request read it from cache (10% of the input price); without it a
+    full --llm run costs ~10x more. UsageRecorder below verifies the hit rate.
+    """
     from pexip_mcp.mcp_app import mcp
 
     import pexip_mcp.server  # noqa: F401
 
-    tools = []
-    for tool in mcp._tool_manager.list_tools():
-        tool_def = {
-            "name": tool.name,
-            "description": tool.description or "",
-            "input_schema": tool.parameters or {"type": "object", "properties": {}},
-        }
-        tools.append(tool_def)
-    # The catalog is ~36k tokens and identical for every request in a run.
-    # Caching it turns all but the first request's tool block into cache reads
-    # (10% of the input price) — without this a full --llm run costs ~10x more.
-    if tools:
-        tools[-1]["cache_control"] = {"type": "ephemeral"}
-    return tools
+    return registry_to_api_tools(mcp._tool_manager.list_tools(), cache_last=True)
 
 
 @pytest.fixture(scope="session")
@@ -165,7 +160,10 @@ class UsageRecorder:
         self.cache_creation_input_tokens = 0
         self.cache_read_input_tokens = 0
         self.output_tokens = 0
-        self.cache_hits = 0  # requests with cache_read_input_tokens > 0
+        # Requests after the first that read from cache. The first request can
+        # at best hit a cache warmed by a previous run, so it is excluded from
+        # the hit-rate denominator and numerator alike.
+        self.cache_hits_after_first = 0
 
     def record(self, usage: Any) -> None:
         self.requests += 1
@@ -175,13 +173,16 @@ class UsageRecorder:
         read = getattr(usage, "cache_read_input_tokens", 0) or 0
         self.cache_creation_input_tokens += created
         self.cache_read_input_tokens += read
-        if read > 0:
-            self.cache_hits += 1
+        if read > 0 and self.requests > 1:
+            self.cache_hits_after_first += 1
 
     @property
-    def hit_rate(self) -> float:
-        eligible = max(self.requests - 1, 0)  # first request can only create
-        return self.cache_hits / eligible if eligible else 1.0
+    def hit_rate(self) -> float | None:
+        """Share of requests after the first that read from cache; None if only one request."""
+        eligible = self.requests - 1
+        if eligible <= 0:
+            return None
+        return self.cache_hits_after_first / eligible
 
     def as_dict(self) -> dict[str, Any]:
         return {
@@ -191,26 +192,33 @@ class UsageRecorder:
             "cache_creation_input_tokens": self.cache_creation_input_tokens,
             "cache_read_input_tokens": self.cache_read_input_tokens,
             "output_tokens": self.output_tokens,
-            "cache_hit_rate": round(self.hit_rate, 3),
+            "cache_hit_rate": None if self.hit_rate is None else round(self.hit_rate, 3),
         }
 
     def summary_lines(self) -> list[str]:
         if not self.requests:
             return []
         d = self.as_dict()
-        total_in = d["input_tokens_uncached"] + d["cache_creation_input_tokens"] + d["cache_read_input_tokens"]
+        total_in = (
+            d["input_tokens_uncached"]
+            + d["cache_creation_input_tokens"]
+            + d["cache_read_input_tokens"]
+        )
+        read_share = d["cache_read_input_tokens"] / total_in if total_in else 0.0
+        rate = self.hit_rate
+        rate_str = "n/a (single request)" if rate is None else f"{rate:.0%}"
         lines = [
             f"LLM eval usage ({EVAL_MODEL}): {d['requests']} requests, "
             f"{total_in:,} input tokens of which {d['cache_read_input_tokens']:,} "
-            f"({d['cache_read_input_tokens'] / total_in:.0%}) were cache reads; "
+            f"({read_share:.0%}) were cache reads; "
             f"{d['output_tokens']:,} output tokens; "
-            f"cache hit rate {d['cache_hit_rate']:.0%}",
+            f"cache hit rate {rate_str}",
         ]
-        if self.requests > 3 and self.hit_rate < self.MIN_CACHE_HIT_RATE:
+        if rate is not None and rate < self.MIN_CACHE_HIT_RATE:
             lines.append(
                 "WARNING: prompt cache hit rate is below "
                 f"{self.MIN_CACHE_HIT_RATE:.0%}. Check that the tool catalog still "
-                "carries cache_control (conftest._registry_to_claude_tools) and is "
+                "carries cache_control (evals/catalog.registry_to_api_tools) and is "
                 "byte-identical across requests; this run cost ~10x more than it should."
             )
         return lines

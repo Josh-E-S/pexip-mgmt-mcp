@@ -69,9 +69,10 @@ jobs:
         with:
           python-version: "3.12"
 
-      # Deliberately ignores uv.lock: this is what `pipx install .`, `uvx`, the
-      # Dockerfile and the MCPB bundle do. Catches an upstream release that
-      # breaks a fresh install even while the locked test job stays green.
+      # Deliberately ignores uv.lock: this is what `pipx install .` and `uvx`
+      # do (the Dockerfile and MCPB bundle install from the lock). Catches an
+      # upstream release that breaks a fresh install even while the locked test
+      # job stays green.
       - name: Install from pyproject (no lockfile)
         run: pip install .
 

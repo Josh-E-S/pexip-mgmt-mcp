@@ -18,16 +18,15 @@ Rubric sources:
   - Anthropic "Writing tools for agents": service prefix, unambiguous parameter
     names, input examples for tools with many optional parameters.
 """
-from __future__ import annotations
 
-import inspect
-from difflib import SequenceMatcher
+from __future__ import annotations
 
 import pytest
 
 from pexip_mcp.mcp_app import mcp
 
 import pexip_mcp.server  # noqa: F401 — registers all tools
+from evals.catalog import has_real_output_schema, near_duplicate_names
 
 TOOLS = sorted(mcp._tool_manager.list_tools(), key=lambda t: t.name)
 NAMES = [t.name for t in TOOLS]
@@ -109,7 +108,9 @@ def test_freeform_payload_tools_reference_pexip_api_docs():
 # ── Phase-1 acceptance criteria (xfail until the work lands) ────────────────
 
 
-@pytest.mark.xfail(strict=True, reason="phase 1: every tool gets the pexip_ prefix")
+@pytest.mark.xfail(
+    strict=True, raises=AssertionError, reason="phase 1: every tool gets the pexip_ prefix"
+)
 def test_every_tool_has_service_prefix():
     bad = [n for n in NAMES if not n.startswith("pexip_")]
     assert not bad, bad
@@ -117,6 +118,7 @@ def test_every_tool_has_service_prefix():
 
 @pytest.mark.xfail(
     strict=True,
+    raises=AssertionError,
     reason="phase 1: directory requires destructiveHint on tools that modify data; "
     "the `create` preset currently sets neither hint",
 )
@@ -129,25 +131,37 @@ def test_every_non_read_tool_declares_destructive():
     assert not bad, bad
 
 
-@pytest.mark.xfail(strict=True, reason="phase 1: description floor of 120 chars")
+@pytest.mark.xfail(
+    strict=True, raises=AssertionError, reason="phase 1: description floor of 120 chars"
+)
 def test_descriptions_meet_length_floor():
     short = [t.name for t in TOOLS if len((t.description or "").strip()) < 120]
     assert not short, short
 
 
-@pytest.mark.xfail(strict=True, reason="phase 3: describe_resources replaces inline registry")
+@pytest.mark.xfail(
+    strict=True,
+    raises=AssertionError,
+    reason="phase 3: describe_resources replaces inline registry",
+)
 def test_descriptions_meet_length_ceiling():
     long = [t.name for t in TOOLS if len(t.description or "") > 1500]
     assert not long, long
 
 
-@pytest.mark.xfail(strict=True, reason="phase 1: 'Use when' guidance in every description")
+@pytest.mark.xfail(
+    strict=True, raises=AssertionError, reason="phase 1: 'Use when' guidance in every description"
+)
 def test_descriptions_state_when_to_use():
     bad = [t.name for t in TOOLS if "use when" not in (t.description or "").lower()]
     assert not bad, bad
 
 
-@pytest.mark.xfail(strict=True, reason="phase 1: input_examples via tool meta for 4+ optional params")
+@pytest.mark.xfail(
+    strict=True,
+    raises=AssertionError,
+    reason="phase 1: input_examples via tool meta for 4+ optional params",
+)
 def test_tools_with_many_optional_params_have_input_examples():
     bad = [
         t.name
@@ -157,18 +171,19 @@ def test_tools_with_many_optional_params_have_input_examples():
     assert not bad, bad
 
 
-@pytest.mark.xfail(strict=True, reason="phase 2: typed return models produce outputSchema")
+@pytest.mark.xfail(
+    strict=True, raises=AssertionError, reason="phase 2: typed return models produce outputSchema"
+)
 def test_every_tool_has_output_schema():
-    bad = []
-    for t in TOOLS:
-        ret = inspect.signature(t.fn).return_annotation
-        if ret is inspect.Signature.empty or "Any" in str(ret):
-            bad.append(t.name)
+    """FastMCP emits a bare {additionalProperties: true} object for dict[str, Any]
+    returns; only a schema with declared properties counts."""
+    bad = [t.name for t in TOOLS if not has_real_output_schema(t)]
     assert not bad, bad
 
 
 @pytest.mark.xfail(
     strict=True,
+    raises=AssertionError,
     reason="phase 1: parameter names must not carry two meanings across tools "
     "(conference_id is a UUID in command tools and an int elsewhere)",
 )
@@ -186,18 +201,15 @@ def test_parameter_names_have_one_type_across_catalog():
     assert not conflicts, conflicts
 
 
+@pytest.mark.xfail(
+    strict=True,
+    raises=AssertionError,
+    reason="phase 4: the Teams Connector node/call status tools fold into the generic "
+    "status tools, which removes the only confusable pairs",
+)
 def test_no_near_duplicate_tool_names():
-    """Glama disambiguation: names within a high similarity ratio confuse agents.
-    Lock/unlock and mute/unmute pairs are intentional opposites and allowed."""
-    allowed_pairs = {("lock_conference", "unlock_conference"), ("mute_guests", "unmute_guests"),
-                     ("mute_participant", "unmute_participant"),
-                     ("list_backplane_history", "list_backplanes")}
-    dupes = []
-    for i, a in enumerate(NAMES):
-        for b in NAMES[i + 1 :]:
-            if (a, b) in allowed_pairs or (b, a) in allowed_pairs:
-                continue
-            if SequenceMatcher(None, a, b).ratio() >= 0.92:
-                dupes.append((a, b))
-    if dupes:
-        pytest.xfail(f"phase 1/4: disambiguate or consolidate {dupes}")
+    """Glama disambiguation: names an agent could confuse. Conventional pairs
+    (get_X/list_X, lock/unlock, mute/unmute) are excluded by the shared helper,
+    so anything reported here is a real naming problem."""
+    dupes = near_duplicate_names(NAMES)
+    assert not dupes, dupes

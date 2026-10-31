@@ -200,7 +200,7 @@ Done on branch `claude/determined-ride-dgr72l`:
 
 - `mcp>=1.2.0,<2` pinned; Dockerfile and `packaging/mcpb/build.sh` now install the locked dependency set via `uv export`; CI gained an unlocked-install smoke job. A fresh `pip install .` resolves mcp 1.30 and registers 122 tools. The Docker build was not verifiable in the authoring sandbox (no daemon) and needs one local `docker build .` to confirm.
 - `scripts/catalog_stats.py` is the baseline instrument. Baselines committed under `evals/baseline/`: full catalog 122 tools / ~22.2k est. tokens; read-only default 76 tools / ~12.0k est. tokens. Set `ANTHROPIC_API_KEY` to record the exact count.
-- `tests/test_catalog_quality.py` encodes the rubric. 7 properties pass today; 9 are `xfail(strict=True)` and become the phase-1/2/3 acceptance gates. Notable finding: the 8 `create_*` tools set neither `readOnlyHint` nor `destructiveHint`, which the Claude directory checklist treats as missing.
+- `tests/test_catalog_quality.py` encodes the rubric. 7 properties pass today; 10 are `xfail(strict=True, raises=AssertionError)` and become the phase-1/2/3/4 acceptance gates. Shared helpers (tool-list conversion, output-schema check, near-duplicate detection) live in `evals/catalog.py` so the baseline script, the harness, and the lint measure the same thing. Notable finding: the 8 `create_*` tools set neither `readOnlyHint` nor `destructiveHint`, which the Claude directory checklist treats as missing.
 
 Still to do for phase 0: run `--llm` three times and `--live` once against the lab and commit the scorecard; record the Glama tier.
 

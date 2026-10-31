@@ -1,4 +1,5 @@
 {
+  "catalog_scope": "full",
   "tool_count": 122,
   "by_category": {
     "Configuration": 46,
@@ -9,7 +10,7 @@
   "catalog_tokens": {
     "exact_anthropic": null,
     "estimate_chars_div_3_5": 22186,
-    "note": "exact uses messages.count_tokens when ANTHROPIC_API_KEY is set"
+    "exact_unavailable_reason": "ANTHROPIC_API_KEY not set"
   },
   "by_module": {
     "status": {
@@ -379,39 +380,14 @@
     ],
     "near_duplicate_names": [
       [
-        "get_conference_sync_status",
-        "list_conference_sync_status",
-        0.906
-      ],
-      [
-        "get_exchange_scheduler_status",
-        "list_exchange_scheduler_status",
-        0.915
-      ],
-      [
-        "get_management_node_status",
-        "list_management_node_status",
-        0.906
-      ],
-      [
         "get_teams_node_call_status",
+        "get_teams_node_status",
+        0.894
+      ],
+      [
         "list_teams_node_call_status",
-        0.906
-      ],
-      [
-        "lock_conference",
-        "unlock_conference",
-        0.938
-      ],
-      [
-        "mute_guests",
-        "unmute_guests",
-        0.917
-      ],
-      [
-        "mute_participant",
-        "unmute_participant",
-        0.941
+        "list_teams_node_status",
+        0.898
       ]
     ]
   }

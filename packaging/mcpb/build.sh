@@ -4,6 +4,7 @@
 #
 # Prereqs:
 #   - python (matching the platform you'll install on)
+#   - uv (exports the locked dependency set): https://docs.astral.sh/uv/
 #   - the mcpb CLI:  npm install -g @anthropic-ai/mcpb
 #
 # IMPORTANT: this bundle vendors native dependencies (cryptography, via

@@ -4,16 +4,20 @@ This is the phase-0 baseline instrument for docs/TOOL-ARCHITECTURE-PLAN.md. Run 
 before and after any change to the tool surface and diff the JSON.
 
 Usage:
-    uv run python scripts/catalog_stats.py                 # human-readable summary
+    uv run python scripts/catalog_stats.py                 # full catalog, summary
     uv run python scripts/catalog_stats.py --json out.json # also write the full report
+    uv run python scripts/catalog_stats.py --as-deployed   # apply PEXIP_READ_ONLY etc.
+
+By default the FULL catalog (every registered tool) is measured regardless of
+environment. With --as-deployed the startup policy is applied from PEXIP_*
+settings, so you measure what a given deployment actually exposes; this needs a
+complete PexipSettings (host + credentials) in the environment.
 
 Token counts: when ANTHROPIC_API_KEY is set, the catalog is measured with the
-Messages count_tokens endpoint (exact for Claude). Otherwise a chars/3.5 estimate
-is used and labelled as such in the output.
-
-Honors PEXIP_READ_ONLY / PEXIP_ALLOW_PLATFORM_TOOLS so you can measure the catalog
-a given deployment actually exposes; defaults here measure the FULL catalog.
+Messages count_tokens endpoint (exact for Claude). If that call fails for any
+reason, or no key is set, a chars/3.5 estimate is used and labelled as such.
 """
+
 from __future__ import annotations
 
 import argparse
@@ -22,29 +26,42 @@ import json
 import os
 import statistics
 import sys
-from difflib import SequenceMatcher
 from pathlib import Path
 from typing import Any
 
 REPO_ROOT = Path(__file__).parent.parent
 sys.path.insert(0, str(REPO_ROOT / "src"))
+sys.path.insert(0, str(REPO_ROOT))
+
+from evals.catalog import (  # noqa: E402
+    DEFAULT_EVAL_MODEL,
+    has_real_output_schema,
+    near_duplicate_names,
+    registry_to_api_tools,
+)
 
 CATEGORY_BY_MODULE = {"status": "Status", "history": "History", "command": "Command"}
 CHARS_PER_TOKEN_ESTIMATE = 3.5
 
 
-def _tool_defs() -> list[dict[str, Any]]:
+def _tool_defs(*, as_deployed: bool = False) -> tuple[list[dict[str, Any]], list[Any]]:
+    """Return (our per-tool records, the raw FastMCP Tool objects), sorted by name."""
     from pexip_mcp.mcp_app import apply_startup_policy, mcp
 
     import pexip_mcp.server  # noqa: F401 — registers all tools
 
-    if os.environ.get("PEXIP_HOST"):
+    if as_deployed:
         from pexip_mcp.config import PexipSettings
 
-        apply_startup_policy(mcp, PexipSettings())
+        try:
+            settings = PexipSettings()
+        except Exception as e:  # noqa: BLE001 - config error is the user's to fix
+            sys.exit(f"--as-deployed needs a complete PEXIP_* configuration: {e}")
+        apply_startup_policy(mcp, settings)
 
+    tools = sorted(mcp._tool_manager.list_tools(), key=lambda t: t.name)
     defs = []
-    for tool in sorted(mcp._tool_manager.list_tools(), key=lambda t: t.name):
+    for tool in tools:
         module = inspect.getmodule(tool.fn).__name__.rsplit(".", 1)[-1]
         ann = tool.annotations
         defs.append(
@@ -57,60 +74,54 @@ def _tool_defs() -> list[dict[str, Any]]:
                 "input_schema": tool.parameters or {"type": "object", "properties": {}},
                 "read_only": bool(ann and ann.readOnlyHint),
                 "destructive": bool(ann and ann.destructiveHint),
-                "has_output_schema": False,  # FastMCP 1.x: dict[str, Any] returns yield none
+                "has_output_schema": has_real_output_schema(tool),
             }
         )
-    return defs
-
-
-def _as_api_tools(defs: list[dict[str, Any]]) -> list[dict[str, Any]]:
-    return [
-        {"name": d["name"], "description": d["description"], "input_schema": d["input_schema"]}
-        for d in defs
-    ]
+    return defs, tools
 
 
 def _estimate_tokens(obj: Any) -> int:
     return int(len(json.dumps(obj, separators=(",", ":"))) / CHARS_PER_TOKEN_ESTIMATE)
 
 
-def _exact_tokens(tools: list[dict[str, Any]]) -> int | None:
-    """Count tokens with the Anthropic API when a key is available; None otherwise."""
+def _exact_tokens(tools: list[dict[str, Any]]) -> tuple[int | None, str | None]:
+    """Count tokens with the Anthropic API when a key is available.
+
+    Returns (count, None) on success, (None, reason) when the exact count is not
+    available so the caller can fall back to the estimate and say why.
+    """
     if not os.environ.get("ANTHROPIC_API_KEY"):
-        return None
+        return None, "ANTHROPIC_API_KEY not set"
     try:
         import anthropic
     except ImportError:
-        return None
-    client = anthropic.Anthropic()
-    model = os.environ.get("PEXIP_EVAL_MODEL", "claude-sonnet-5")
-    base = client.messages.count_tokens(
-        model=model, messages=[{"role": "user", "content": "hi"}]
-    ).input_tokens
-    with_tools = client.messages.count_tokens(
-        model=model, messages=[{"role": "user", "content": "hi"}], tools=tools
-    ).input_tokens
-    return with_tools - base
+        return None, "anthropic SDK not installed"
+    try:
+        client = anthropic.Anthropic()
+        probe = [{"role": "user", "content": "hi"}]
+        base = client.messages.count_tokens(model=DEFAULT_EVAL_MODEL, messages=probe).input_tokens
+        with_tools = client.messages.count_tokens(
+            model=DEFAULT_EVAL_MODEL, messages=probe, tools=tools
+        ).input_tokens
+        return with_tools - base, None
+    except Exception as e:  # noqa: BLE001 - any API failure falls back to the estimate
+        return None, f"count_tokens failed: {type(e).__name__}: {e}"
 
 
-def _near_duplicates(names: list[str], threshold: float = 0.9) -> list[tuple[str, str, float]]:
-    pairs = []
-    for i, a in enumerate(names):
-        for b in names[i + 1 :]:
-            ratio = SequenceMatcher(None, a, b).ratio()
-            if ratio >= threshold:
-                pairs.append((a, b, round(ratio, 3)))
-    return pairs
-
-
-def build_report(defs: list[dict[str, Any]]) -> dict[str, Any]:
-    api_tools = _as_api_tools(defs)
-    exact = _exact_tokens(api_tools)
+def build_report(
+    defs: list[dict[str, Any]], tools: list[Any], *, as_deployed: bool
+) -> dict[str, Any]:
+    # Same conversion the --llm evals use (minus the cache breakpoint), so the
+    # token count is measured on exactly what the harness sends.
+    api_tools = registry_to_api_tools(tools)
+    exact, exact_note = _exact_tokens(api_tools)
     est = _estimate_tokens(api_tools)
 
     by_module: dict[str, dict[str, Any]] = {}
     for d, t in zip(defs, api_tools):
-        m = by_module.setdefault(d["module"], {"tools": 0, "est_tokens": 0, "category": d["category"]})
+        m = by_module.setdefault(
+            d["module"], {"tools": 0, "est_tokens": 0, "category": d["category"]}
+        )
         m["tools"] += 1
         m["est_tokens"] += _estimate_tokens(t)
 
@@ -139,19 +150,18 @@ def build_report(defs: list[dict[str, Any]]) -> dict[str, Any]:
         "description_over_1500_chars": [d["name"] for d in defs if len(d["description"]) > 1500],
         "no_service_prefix": [d["name"] for d in defs if not d["name"].startswith("pexip_")],
         "no_output_schema": sum(1 for d in defs if not d["has_output_schema"]),
-        "four_plus_optional_params": [
-            d["name"] for d, n in zip(defs, optional_counts) if n >= 4
-        ],
-        "near_duplicate_names": _near_duplicates([d["name"] for d in defs]),
+        "four_plus_optional_params": [d["name"] for d, n in zip(defs, optional_counts) if n >= 4],
+        "near_duplicate_names": near_duplicate_names([d["name"] for d in defs]),
     }
 
     return {
+        "catalog_scope": "as_deployed (PEXIP_* policy applied)" if as_deployed else "full",
         "tool_count": len(defs),
         "by_category": by_category,
         "catalog_tokens": {
             "exact_anthropic": exact,
             "estimate_chars_div_3_5": est,
-            "note": "exact uses messages.count_tokens when ANTHROPIC_API_KEY is set",
+            "exact_unavailable_reason": exact_note,
         },
         "by_module": dict(sorted(by_module.items(), key=lambda kv: -kv[1]["est_tokens"])),
         "heaviest_tools": heaviest,
@@ -173,14 +183,17 @@ def print_summary(r: dict[str, Any]) -> None:
     tok_str = (
         f"{toks['exact_anthropic']} (exact)"
         if toks["exact_anthropic"] is not None
-        else f"~{toks['estimate_chars_div_3_5']} (estimate, set ANTHROPIC_API_KEY for exact)"
+        else f"~{toks['estimate_chars_div_3_5']} (estimate; exact unavailable: {toks['exact_unavailable_reason']})"
     )
+    print(f"catalog: {r['catalog_scope']}")
     print(f"tools: {r['tool_count']}  {r['by_category']}")
     print(f"catalog tokens: {tok_str}")
     print("by module:")
     for m, v in r["by_module"].items():
         print(f"  {m:24s} {v['tools']:3d} tools  ~{v['est_tokens']:6d} tok")
-    print("heaviest:", ", ".join(f"{h['name']}({h['est_tokens']})" for h in r["heaviest_tools"][:5]))
+    print(
+        "heaviest:", ", ".join(f"{h['name']}({h['est_tokens']})" for h in r["heaviest_tools"][:5])
+    )
     d = r["description_chars"]
     print(f"description chars: min {d['min']} / median {d['median']} / max {d['max']}")
     q = r["quality_signals"]
@@ -193,9 +206,16 @@ def print_summary(r: dict[str, Any]) -> None:
 def main() -> None:
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     ap.add_argument("--json", type=Path, help="Write the full report to this file")
+    ap.add_argument(
+        "--as-deployed",
+        action="store_true",
+        help="Apply the PEXIP_READ_ONLY / PEXIP_ALLOW_PLATFORM_TOOLS startup policy from the "
+        "environment and measure the catalog a deployment actually exposes.",
+    )
     args = ap.parse_args()
 
-    report = build_report(_tool_defs())
+    defs, tools = _tool_defs(as_deployed=args.as_deployed)
+    report = build_report(defs, tools, as_deployed=args.as_deployed)
     print_summary(report)
     if args.json:
         args.json.parent.mkdir(parents=True, exist_ok=True)
