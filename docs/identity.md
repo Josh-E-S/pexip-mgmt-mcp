@@ -86,12 +86,13 @@ The server also publishes a discovery document at
 `/.well-known/oauth-protected-resource` (RFC 9728) so spec-aware MCP clients can
 find your IdP, and returns a `WWW-Authenticate` challenge pointing at it on 401.
 
-**Sessions are bound to the principal that opened them.** The MCP streamable-HTTP
-transport identifies a session only by the `mcp-session-id` header. This server
-records which OIDC principal created each session and refuses (403) any request
-on that session that carries a different principal's token, so one admin cannot
-ride another admin's session or be audited under their identity. Closing the
-session (HTTP DELETE) releases the binding.
+**Sessions are bound to the credential that opened them.** The MCP streamable-HTTP
+transport identifies a session by the `mcp-session-id` header. The OIDC gate
+attaches the verified identity to each request in the form the MCP SDK's session
+manager expects, so the SDK records who created each session and answers any
+other principal's request on it with `404 Session not found`, exactly as if the
+session did not exist. One admin cannot ride another admin's session or be
+audited under their identity. The binding ends with the session.
 
 Set `PEXIP_MCP_PUBLIC_URL` to the URL clients use to reach the server; it is
 what the `WWW-Authenticate` challenge points at for RFC 9728 discovery (an

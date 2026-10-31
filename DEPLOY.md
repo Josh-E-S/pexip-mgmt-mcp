@@ -168,9 +168,9 @@ container's bind isn't loopback from its own perspective.
   and connector config.
 - **`421 Invalid Host header`**: the public hostname is not in
   `PEXIP_MCP_ALLOWED_HOSTS` (see step 4a).
-- **`403 mcp-session-id belongs to a different principal`** (OIDC mode): a
-  second user presented someone else's MCP session id. Sessions are bound to the
-  identity that opened them; the client should start its own session.
+- **`404 Session not found` on a session that exists** (OIDC mode): the request
+  carried a different user's token than the one that opened the session. Sessions
+  are bound to the credential that created them; the client should start its own.
 - **Claude can't see any tools**: check the server logs for the
   `tools/list` request landing. If it's not arriving, the URL or auth
   is wrong.

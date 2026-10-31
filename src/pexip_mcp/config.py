@@ -221,9 +221,19 @@ class PexipSettings(BaseSettings):
         """Configured extra Host values, each expanded to match any port."""
         out: list[str] = []
         for host in self._csv(self.mcp_allowed_hosts):
-            out.append(host)
-            if ":" not in host:
-                out.append(f"{host}:*")
+            if host.startswith("["):
+                # "[v6]" or "[v6]:port": bracketed IPv6 literal.
+                bare = host.split("]", 1)[0] + "]"
+                out.append(host)
+                if host == bare:
+                    out.append(f"{bare}:*")
+            elif host.count(":") > 1:
+                # Unbracketed IPv6 literal: the Host header carries it in brackets.
+                out.extend([f"[{host}]", f"[{host}]:*"])
+            else:
+                out.append(host)
+                if ":" not in host:
+                    out.append(f"{host}:*")
         return out
 
     @property

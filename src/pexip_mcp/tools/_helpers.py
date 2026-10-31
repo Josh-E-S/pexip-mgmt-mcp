@@ -72,12 +72,12 @@ _SECRET_KEY_SUFFIXES = (
     "private_key",
     "passphrase",
     "client_secret",
-    "token",  # access_token, refresh_token, gateway_token, ...
+    "_token",  # access_token, refresh_token, gateway_token, ... (not e.g. "notoken")
     "api_key",
-    "community",  # SNMP community strings
+    "_community",  # SNMP community strings
 )
 _SECRET_KEY_EXACT = frozenset(
-    {"token", "key_data", "keydata", "pin", "guest_pin", "psk", "shared_secret"}
+    {"token", "community", "key_data", "keydata", "pin", "guest_pin", "psk", "shared_secret"}
 )
 _REDACTED = "***REDACTED***"
 

@@ -191,6 +191,8 @@ async def test_create_vmr_with_pin_allowed(ctx):
         {"limit": 5},
         {"order_by": "name"},
         {"owner__role__name": "admin"},  # relation span
+        {"owner__role__exact": "admin"},  # relation span ending in a valid lookup
+        {"system_location__name__in": "x"},
         {"name__bogus": "x"},  # unknown lookup
         {"Name": "x"},  # not a field name
         {"name": {"nested": 1}},  # non-scalar value
@@ -236,3 +238,10 @@ def test_redact_secrets_covers_additional_secret_fields():
         assert out[key] == "***REDACTED***", key
     assert out["public_key_fingerprint"] == "ok-to-show"
     assert out["name"] == "n"
+
+
+def test_redact_secrets_suffixes_are_underscore_bounded():
+    out = redact_secrets({"notoken": "visible", "mycommunity_name": "visible", "token": "x"})
+    assert out["notoken"] == "visible"
+    assert out["mycommunity_name"] == "visible"
+    assert out["token"] == "***REDACTED***"

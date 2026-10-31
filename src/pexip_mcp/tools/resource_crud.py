@@ -115,7 +115,9 @@ RESOURCE_REGISTRY: dict[str, dict[str, str]] = {
 # owns, relation spans like `owner__role__name`) is refused, so the response is
 # always the JSON shape redact_secrets understands and never reaches beyond the
 # named resource.
-_FILTER_KEY_RE = re.compile(r"^[a-z][a-z0-9_]*?(?:__(?P<lookup>[a-z]+))?$")
+# Field part: single underscores only, so `owner__role__exact` is refused even
+# though its last segment is a valid lookup.
+_FILTER_KEY_RE = re.compile(r"^[a-z][a-z0-9]*(?:_[a-z0-9]+)*(?:__(?P<lookup>[a-z]+))?$")
 _FILTER_LOOKUPS = frozenset(
     {
         "exact", "iexact", "contains", "icontains", "startswith", "istartswith",

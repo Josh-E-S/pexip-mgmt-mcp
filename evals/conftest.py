@@ -311,7 +311,9 @@ def pytest_runtest_makereport(item, call):
     if report.when != "call" or "llm" not in item.keywords:
         return
     callspec = getattr(item, "callspec", None)
-    case = (callspec.params.get("case") if callspec else None) or {}
+    case = callspec.params.get("case") if callspec else None
+    if not isinstance(case, dict):
+        case = {}
     SCORECARD[item.nodeid] = {
         "layer": item.module.__name__.rsplit(".", 1)[-1].removeprefix("test_"),
         "case_id": case.get("id", item.name),

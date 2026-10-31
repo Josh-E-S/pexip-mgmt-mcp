@@ -1,7 +1,8 @@
 """Tests for the --http transport gates and transport-security wiring.
 
 Covers the 2026-10-31 security-review findings on `__main__.py`:
-  - H2/H3: pure-ASGI gates; OIDC sessions bound to the principal that opened them
+  - H2/H3: pure-ASGI gates; the OIDC gate sets scope["user"] so the SDK session
+    manager binds each session to the credential that created it
   - M1: a non-ASCII Authorization header is a 401, not a 500
   - M2: the RFC 9728 resource_metadata URL comes from PEXIP_MCP_PUBLIC_URL
   - M3: Host allow-list for DNS-rebinding protection from PEXIP_MCP_ALLOWED_HOSTS
@@ -21,6 +22,7 @@ from pexip_mcp.__main__ import (
     _prm_url,
     _transport_security,
 )
+
 from pexip_mcp.config import PexipSettings
 from pexip_mcp.oidc import OIDCValidationError
 
@@ -156,6 +158,9 @@ def test_oidc_401_challenge_points_at_public_prm_url():
 
 
 def test_oidc_session_is_bound_to_the_principal_that_opened_it(server_env):
+    """Bob presenting his own valid token with Alice's session id must not be able
+    to run inside (or be audited as) Alice's session. The SDK answers 404 "Session
+    not found", exactly as if the session did not exist."""
     app = _build_http_app(
         token=None, oidc_validator=_MapValidator("alice", "bob"), settings=_Settings()
     )
@@ -165,36 +170,57 @@ def test_oidc_session_is_bound_to_the_principal_that_opened_it(server_env):
         )
         assert opened.status_code == 200, opened.text
         sid = opened.headers["mcp-session-id"]
-        assert app._sessions[sid] == "alice@example.com"
 
         ping = {"jsonrpc": "2.0", "id": 2, "method": "ping"}
-        # Bob presents his own valid token with Alice's session: refused.
         riding = client.post(
             "/mcp",
             json=ping,
             headers={**MCP_HEADERS, "Authorization": "Bearer bob", "mcp-session-id": sid},
         )
-        assert riding.status_code == 403
-        assert "different principal" in riding.json()["error_description"]
+        assert riding.status_code == 404
+        assert "Session not found" in riding.text
 
-        # Alice continues on her own session.
         own = client.post(
             "/mcp",
             json=ping,
             headers={**MCP_HEADERS, "Authorization": "Bearer alice", "mcp-session-id": sid},
         )
-        assert own.status_code != 403
-
-        # Closing the session drops the binding.
-        client.delete(
-            "/mcp", headers={**MCP_HEADERS, "Authorization": "Bearer alice", "mcp-session-id": sid}
-        )
-        assert sid not in app._sessions
+        assert own.status_code == 200, own.text
 
 
-def test_oidc_unknown_session_id_is_not_blocked(server_env):
-    """A session id the gate has never seen (e.g. after a restart) is left to the
-    transport to reject; the gate only enforces bindings it recorded."""
+def test_oidc_gate_attaches_sdk_authenticated_user():
+    """The binding above works because the gate speaks the SDK's auth contract."""
+    import asyncio
+
+    from mcp.server.auth.middleware.bearer_auth import AuthenticatedUser
+
+    seen: dict = {}
+
+    async def inner(scope, receive, send):
+        seen.update(scope)
+
+    gate = _OIDCGate(inner, _MapValidator("alice"), prm_url="x")
+    scope = {
+        "type": "http",
+        "method": "POST",
+        "path": "/mcp",
+        "headers": [(b"authorization", b"Bearer alice")],
+    }
+
+    async def receive():
+        return {"type": "http.request", "body": b"", "more_body": False}
+
+    async def send(message):
+        pass
+
+    asyncio.run(gate(scope, receive, send))
+    assert isinstance(seen["user"], AuthenticatedUser)
+    assert seen["user"].access_token.client_id == "alice@example.com"
+    assert seen["user"].access_token.subject == "alice"
+    assert seen["pexip_principal"] == "alice@example.com"
+
+
+def test_oidc_unknown_session_id_is_rejected_by_transport(server_env):
     app = _build_http_app(token=None, oidc_validator=_MapValidator("alice"), settings=_Settings())
     with TestClient(app, base_url=BASE) as client:
         r = client.post(
@@ -202,17 +228,7 @@ def test_oidc_unknown_session_id_is_not_blocked(server_env):
             json={"jsonrpc": "2.0", "id": 1, "method": "ping"},
             headers={**MCP_HEADERS, "Authorization": "Bearer alice", "mcp-session-id": "ghost"},
         )
-    assert r.status_code != 403
-
-
-def test_oidc_session_table_is_bounded():
-    gate = _OIDCGate(app=None, validator=_MapValidator(), prm_url="x")
-    from pexip_mcp import __main__ as m
-
-    for i in range(m._MAX_BOUND_SESSIONS + 50):
-        gate._bind(f"s{i}", "p")
-    assert len(gate._sessions) == m._MAX_BOUND_SESSIONS
-    assert "s0" not in gate._sessions  # oldest evicted first
+    assert r.status_code in (400, 404)
 
 
 # ── PRM URL ──────────────────────────────────────────────────────────────────
@@ -254,12 +270,30 @@ def test_transport_security_loopback_plus_configured_hosts():
     assert "localhost:*" in sec.allowed_hosts
 
 
-def test_transport_security_non_loopback_without_hosts_keeps_sdk_default(capsys):
+def test_transport_security_non_loopback_without_hosts_is_explicitly_off(capsys):
+    """The SDK default would be loopback-only protection (421 for every real
+    client), so a non-loopback bind with no allow-list turns protection off and
+    says so."""
     assert "0.0.0.0" not in _LOOPBACK_HOSTS
-    assert _transport_security("0.0.0.0", _settings()) is None
+    sec = _transport_security("0.0.0.0", _settings())
+    assert sec.enable_dns_rebinding_protection is False
     assert "PEXIP_MCP_ALLOWED_HOSTS" in capsys.readouterr().err
 
 
 def test_transport_security_non_loopback_with_hosts_enables_protection():
-    sec = _transport_security("0.0.0.0", _settings(mcp_allowed_hosts="mcp.example.com"))
-    assert sec is not None and "mcp.example.com" in sec.allowed_hosts
+    sec = _transport_security("10.0.0.5", _settings(mcp_allowed_hosts="mcp.example.com"))
+    assert sec.enable_dns_rebinding_protection is True
+    assert "mcp.example.com:*" in sec.allowed_hosts
+    assert "10.0.0.5:*" in sec.allowed_hosts  # the specific bind address is allowed too
+
+
+def test_allowed_hosts_setting_handles_ipv6_literals():
+    s = _settings(mcp_allowed_hosts="2001:db8::5, [2001:db8::6]:8443")
+    assert "[2001:db8::5]:*" in s.mcp_allowed_hosts_list
+    assert "[2001:db8::6]:8443" in s.mcp_allowed_hosts_list
+
+
+def test_bind_guard_refuses_non_ascii_token():
+    from pexip_mcp.__main__ import _check_safe_to_bind
+
+    assert "non-ASCII" in (_check_safe_to_bind("127.0.0.1", token="\u20ac" + "a" * 40) or "")

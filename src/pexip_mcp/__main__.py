@@ -19,14 +19,15 @@ only. Binding to anything else without setting PEXIP_MCP_TOKEN is *refused* —
 MCP-over-HTTP has no built-in auth, so we won't accidentally expose an
 unauthenticated tool surface to the open internet. See `_check_safe_to_bind`.
 """
+
 from __future__ import annotations
 
 import argparse
 import asyncio
 import hmac
+import json
 import os
 import sys
-from collections import OrderedDict
 
 
 _LOOPBACK_HOSTS = {"127.0.0.1", "::1", "localhost"}
@@ -35,6 +36,7 @@ _LOOPBACK_HOSTS = {"127.0.0.1", "::1", "localhost"}
 # token, but a short/guessable one on a public bind defeats the whole point,
 # so we refuse to start with a weak one.
 _MIN_TOKEN_LEN = 32
+
 
 # Use _healthcheck to validate connectivity to the Management Node from CLI (--healthcheck).
 async def _healthcheck() -> int:
@@ -55,8 +57,10 @@ async def _healthcheck() -> int:
         return 1
 
     client = PexipClient.from_settings(settings)
-    identity = settings.username if settings.auth_mode == "basic" else (
-        f"oauth2 client {settings.oauth2_client_id}"
+    identity = (
+        settings.username
+        if settings.auth_mode == "basic"
+        else (f"oauth2 client {settings.oauth2_client_id}")
     )
     try:
         await client.schema("conference")
@@ -82,6 +86,12 @@ def _check_safe_to_bind(host: str, token: str | None, oauth: bool = False) -> st
     either a bearer token OR OIDC (oauth) mode, so we never expose an
     unauthenticated MCP server on a public-routable host.
     """
+    if token and not token.isascii():
+        return (
+            "REFUSING TO START: PEXIP_MCP_TOKEN contains non-ASCII characters, which "
+            "cannot be sent in an HTTP Authorization header.\n"
+            "  Generate a safe one:  pexip-mgmt-mcp --generate-token\n"
+        )
     if token and len(token) < _MIN_TOKEN_LEN:
         return (
             f"REFUSING TO START: PEXIP_MCP_TOKEN is too short "
@@ -122,10 +132,6 @@ def _generate_token() -> None:
 # RFC 9728 Protected Resource Metadata path — where MCP clients discover our IdP.
 _PRM_PATH = "/.well-known/oauth-protected-resource"
 
-# Upper bound on remembered (session id -> principal) bindings, so a client that
-# opens sessions without closing them cannot grow the table without limit.
-_MAX_BOUND_SESSIONS = 10_000
-
 
 def _header(scope: dict, name: bytes) -> str:
     """Return a request header decoded as latin-1 (never raises), or ''.
@@ -142,8 +148,6 @@ def _header(scope: dict, name: bytes) -> str:
 
 async def _send_json(send, status: int, body: dict, extra_headers: dict[str, str] | None = None):
     """Write a small JSON response straight to the ASGI send channel."""
-    import json
-
     payload = json.dumps(body).encode()
     headers = [
         (b"content-type", b"application/json"),
@@ -166,13 +170,20 @@ class _StaticTokenGate:
 
     def __init__(self, app, token: str) -> None:
         self.app = app
-        self._expected = f"Bearer {token}".encode("latin-1")
+        # Compared as raw bytes against the raw header bytes: no decoding step
+        # can fail, whatever the client sends. _check_safe_to_bind has already
+        # refused non-ASCII tokens, so utf-8 here equals the bytes on the wire.
+        self._expected = f"Bearer {token}".encode("utf-8")
 
     async def __call__(self, scope, receive, send):
         if scope["type"] != "http":
             await self.app(scope, receive, send)
             return
-        provided = _header(scope, b"authorization").encode("latin-1")
+        provided = b""
+        for key, value in scope.get("headers") or ():
+            if key == b"authorization":
+                provided = value
+                break
         if not hmac.compare_digest(provided, self._expected):
             await _send_json(send, 401, {"error": "unauthorized"})
             return
@@ -180,38 +191,43 @@ class _StaticTokenGate:
 
 
 class _OIDCGate:
-    """Pure-ASGI gate validating OIDC bearer JWTs and binding MCP sessions to a principal.
+    """Pure-ASGI gate validating OIDC bearer JWTs for the streamable-HTTP transport.
 
-    Two jobs:
+    On success it attaches the caller to the ASGI scope the way the MCP SDK's own
+    auth middleware does (`scope["user"]` as an `AuthenticatedUser`, `scope["auth"]`
+    with the token's scopes). That is what makes the SDK's session manager bind
+    each `mcp-session-id` to the credential that created it and answer any other
+    principal's request on that session with 404 "Session not found", exactly as
+    if the session did not exist. The binding lives and dies with the session
+    (terminate / idle timeout), with no table of our own to keep consistent.
 
-    1. Reject any HTTP request without a valid token (401 with an RFC 9728
-       `WWW-Authenticate` challenge pointing at the PRM document). The PRM
-       document itself is served unauthenticated so clients can discover the IdP.
+    On failure it answers 401 with an RFC 9728 `WWW-Authenticate` challenge that
+    points at the PRM document, which is served without a token so clients can
+    discover the IdP.
 
-    2. Bind each streamable-HTTP session to the identity that opened it. The MCP
-       transport keys sessions only by the `mcp-session-id` header, so without
-       this a second authenticated user could present their own token together
-       with someone else's session id and run tools inside, and be audited as,
-       that other user's session. The first response that mints a session id
-       records (session id -> principal); any later request on that session with
-       a different principal is refused with 403. A DELETE (session close) drops
-       the binding.
-
-    The caller's principal is also exposed on the ASGI scope and in the audit
-    contextvar for the duration of the request, for log attribution.
+    The principal is also exposed as `scope["pexip_principal"]` and set in the
+    audit contextvar for the duration of the request, for log attribution.
     """
 
     def __init__(self, app, validator, prm_url: str) -> None:
+        # Bound once here rather than imported per request on the hot path.
+        from mcp.server.auth.middleware.bearer_auth import AuthenticatedUser
+        from mcp.server.auth.provider import AccessToken
+        from starlette.authentication import AuthCredentials
+
+        from pexip_mcp import audit
+        from pexip_mcp.oidc import OIDCValidationError, _extract_scopes, principal_of
+
         self.app = app
         self._validator = validator
         self._prm_url = prm_url
-        self._sessions: OrderedDict[str, str] = OrderedDict()
-
-    def _bind(self, session_id: str, principal: str) -> None:
-        self._sessions[session_id] = principal
-        self._sessions.move_to_end(session_id)
-        while len(self._sessions) > _MAX_BOUND_SESSIONS:
-            self._sessions.popitem(last=False)
+        self._audit = audit
+        self._AuthenticatedUser = AuthenticatedUser
+        self._AccessToken = AccessToken
+        self._AuthCredentials = AuthCredentials
+        self._OIDCValidationError = OIDCValidationError
+        self._extract_scopes = _extract_scopes
+        self._principal_of = principal_of
 
     async def __call__(self, scope, receive, send):
         if scope["type"] != "http":
@@ -221,12 +237,10 @@ class _OIDCGate:
             await self.app(scope, receive, send)
             return
 
-        from pexip_mcp import audit
-        from pexip_mcp.oidc import OIDCValidationError, principal_of
-
+        header = _header(scope, b"authorization")
         try:
-            claims = self._validator.verify(_header(scope, b"authorization"))
-        except OIDCValidationError:
+            claims = self._validator.verify(header)
+        except self._OIDCValidationError:
             await _send_json(
                 send,
                 401,
@@ -234,40 +248,27 @@ class _OIDCGate:
                 {"WWW-Authenticate": f'Bearer realm="mcp", resource_metadata="{self._prm_url}"'},
             )
             return
-        principal = principal_of(claims)
 
-        session_id = _header(scope, b"mcp-session-id")
-        if session_id:
-            owner = self._sessions.get(session_id)
-            if owner is not None and owner != principal:
-                await _send_json(
-                    send,
-                    403,
-                    {
-                        "error": "forbidden",
-                        "error_description": "mcp-session-id belongs to a different principal",
-                    },
-                )
-                return
-            if scope.get("method") == "DELETE":
-                self._sessions.pop(session_id, None)
-
-        async def send_and_bind(message):
-            # Only a request that carried NO session id can mint one (initialize).
-            # Responses to later requests, including DELETE, echo the id back and
-            # must not re-create a binding that was just released.
-            if not session_id and message["type"] == "http.response.start":
-                for key, value in message.get("headers") or ():
-                    if key.lower() == b"mcp-session-id":
-                        self._bind(value.decode("latin-1"), principal)
-            await send(message)
-
+        principal = self._principal_of(claims)
+        scopes = sorted(self._extract_scopes(claims))
+        exp = claims.get("exp")
+        access_token = self._AccessToken(
+            token=header.split(" ", 1)[1].strip() if " " in header else header,
+            client_id=principal,
+            scopes=scopes,
+            expires_at=int(exp) if isinstance(exp, (int, float)) else None,
+            subject=str(claims["sub"]) if claims.get("sub") is not None else None,
+            claims=dict(claims),
+        )
+        scope["user"] = self._AuthenticatedUser(access_token)
+        scope["auth"] = self._AuthCredentials(scopes)
         scope["pexip_principal"] = principal
-        token = audit.current_principal.set(principal)
+
+        token = self._audit.current_principal.set(principal)
         try:
-            await self.app(scope, receive, send_and_bind)
+            await self.app(scope, receive, send)
         finally:
-            audit.current_principal.reset(token)
+            self._audit.current_principal.reset(token)
 
 
 def _prm_url(settings) -> str:
@@ -303,31 +304,41 @@ def _prm_endpoint(settings):
 def _transport_security(host: str, settings):
     """Host/Origin allow-list for the streamable-HTTP transport (DNS-rebinding protection).
 
-    Loopback Host values are always accepted. Anything else must be listed in
-    PEXIP_MCP_ALLOWED_HOSTS (a tunnel or reverse proxy forwards its public
-    hostname as Host, so that hostname belongs in the list). Returns None, which
-    leaves the SDK default in place, when binding to a non-loopback address with
-    no hosts configured: in that case the SDK keeps protection off, and we warn,
-    rather than silently breaking an existing Docker deployment reached by IP.
+    The FastMCP instance is created with the SDK default host (loopback), which
+    makes the SDK enable protection keyed to loopback Host values only. That is
+    right for a loopback bind. For any other bind the SDK default would reject
+    every request (421) because the Host clients send is never loopback, so:
+
+    - loopback bind: protection on; loopback hosts plus PEXIP_MCP_ALLOWED_HOSTS
+      (a tunnel or proxy forwards its public hostname as Host, list it there);
+    - non-loopback bind with PEXIP_MCP_ALLOWED_HOSTS: protection on; those hosts,
+      loopback, and the bind address itself when it is a specific one;
+    - non-loopback bind with nothing configured: protection explicitly OFF, with
+      a warning. Reaching the server by IP (the Docker quick start) keeps
+      working, and the operator is told how to turn protection on.
     """
     from mcp.server.transport_security import TransportSecuritySettings
 
     extra_hosts = settings.mcp_allowed_hosts_list if settings else []
     extra_origins = settings.mcp_allowed_origins_list if settings else []
-    if host not in _LOOPBACK_HOSTS and not extra_hosts:
+    loopback_bind = host in _LOOPBACK_HOSTS
+    if not loopback_bind and not extra_hosts:
         print(
             "  WARNING: non-loopback bind with no PEXIP_MCP_ALLOWED_HOSTS; Host-header "
             "(DNS-rebinding) protection is OFF. Set PEXIP_MCP_ALLOWED_HOSTS to the "
-            "hostname(s) clients use.",
+            "hostname(s) clients use to turn it on.",
             file=sys.stderr,
         )
-        return None
-    loopback_hosts = ["127.0.0.1", "127.0.0.1:*", "localhost", "localhost:*", "[::1]", "[::1]:*"]
-    loopback_origins = ["http://127.0.0.1:*", "http://localhost:*", "http://[::1]:*"]
+        return TransportSecuritySettings(enable_dns_rebinding_protection=False)
+    hosts = ["127.0.0.1", "127.0.0.1:*", "localhost", "localhost:*", "[::1]", "[::1]:*"]
+    if not loopback_bind and host not in ("0.0.0.0", "::"):
+        bind = f"[{host}]" if ":" in host else host
+        hosts += [bind, f"{bind}:*"]
+    origins = ["http://127.0.0.1:*", "http://localhost:*", "http://[::1]:*"]
     return TransportSecuritySettings(
         enable_dns_rebinding_protection=True,
-        allowed_hosts=loopback_hosts + extra_hosts,
-        allowed_origins=loopback_origins + extra_origins,
+        allowed_hosts=hosts + extra_hosts,
+        allowed_origins=origins + extra_origins,
     )
 
 
@@ -428,9 +439,7 @@ def _run_http(host: str, port: int) -> None:
 
     # Host/Origin allow-list must be set before streamable_http_app() builds the
     # session manager, which is what reads it.
-    security = _transport_security(host, _settings)
-    if security is not None:
-        _mcp.settings.transport_security = security
+    _mcp.settings.transport_security = _transport_security(host, _settings)
 
     is_loopback = host in _LOOPBACK_HOSTS
     if oauth_mode:
@@ -440,7 +449,9 @@ def _run_http(host: str, port: int) -> None:
     else:
         auth_desc = "disabled (relying on network layer)"
     print(f"pexip-mgmt-mcp HTTP transport starting on http://{host}:{port}", file=sys.stderr)
-    print(f"  Bind: {host}{' (loopback only)' if is_loopback else ' (non-loopback)'}", file=sys.stderr)
+    print(
+        f"  Bind: {host}{' (loopback only)' if is_loopback else ' (non-loopback)'}", file=sys.stderr
+    )
     print(f"  Downstream auth: {auth_desc}", file=sys.stderr)
     if _settings.mcp_allowed_hosts_list:
         print(f"  Allowed hosts: {', '.join(_settings.mcp_allowed_hosts_list)}", file=sys.stderr)
