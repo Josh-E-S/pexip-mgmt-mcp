@@ -58,3 +58,28 @@ jobs:
 
       - name: Audit dependencies for known vulnerabilities
         run: uvx pip-audit
+
+  install-smoke:
+    name: unlocked install smoke test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+
+      # Deliberately ignores uv.lock: this is what `pipx install .`, `uvx`, the
+      # Dockerfile and the MCPB bundle do. Catches an upstream release that
+      # breaks a fresh install even while the locked test job stays green.
+      - name: Install from pyproject (no lockfile)
+        run: pip install .
+
+      - name: Import the server and run the CLI
+        env:
+          PEXIP_HOST: example.invalid
+          PEXIP_USERNAME: smoke
+          PEXIP_PASSWORD: smoke
+        run: |
+          python -c "import pexip_mcp.server as s; n = len(s.mcp._tool_manager.list_tools()); assert n > 100, n; print(f'{n} tools registered')"
+          pexip-mgmt-mcp --help

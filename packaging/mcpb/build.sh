@@ -33,7 +33,17 @@ if [[ -z "$PYTHON" ]]; then
   echo "error: no python3/python on PATH — install Python 3 first" >&2
   exit 1
 fi
-"$PYTHON" -m pip install "$ROOT" --target "$BUILD/server/lib" --upgrade
+# Install the locked dependency set (from uv.lock) first, then the project
+# without deps, so the bundle ships exactly what CI tested rather than whatever
+# PyPI resolves on build day.
+if ! command -v uv >/dev/null 2>&1; then
+  echo "error: uv is required to export the locked dependency set (https://docs.astral.sh/uv/)" >&2
+  exit 1
+fi
+uv export --frozen --no-dev --no-emit-project --no-hashes --directory "$ROOT" -o "$BUILD/requirements.txt"
+"$PYTHON" -m pip install -r "$BUILD/requirements.txt" --target "$BUILD/server/lib" --upgrade
+"$PYTHON" -m pip install "$ROOT" --no-deps --target "$BUILD/server/lib" --upgrade
+rm -f "$BUILD/requirements.txt"
 
 cd "$BUILD"
 if command -v mcpb >/dev/null 2>&1; then

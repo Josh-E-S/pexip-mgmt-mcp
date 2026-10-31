@@ -18,9 +18,14 @@ FROM python:3.14-slim@sha256:d3400aa122fa42cf0af0dbe8ec3091b047eac5c8f7e3539f713
 RUN pip install --no-cache-dir uv
 
 WORKDIR /app
-COPY pyproject.toml uv.lock* README.md ./
+COPY pyproject.toml uv.lock README.md ./
 COPY src/ ./src/
-RUN uv pip install --system --no-cache .
+# Install the exact dependency set from uv.lock (same as CI's `uv sync --locked`)
+# rather than re-resolving, so a new upstream release can never change what
+# ships in the image. The project itself is then installed without deps.
+RUN uv export --frozen --no-dev --no-emit-project --no-hashes -o /tmp/requirements.txt \
+ && uv pip install --system --no-cache -r /tmp/requirements.txt \
+ && uv pip install --system --no-cache --no-deps .
 
 
 FROM python:3.14-slim@sha256:d3400aa122fa42cf0af0dbe8ec3091b047eac5c8f7e3539f7135e86d855dc015

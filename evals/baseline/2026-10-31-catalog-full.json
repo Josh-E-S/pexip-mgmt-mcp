@@ -1,0 +1,418 @@
+{
+  "tool_count": 122,
+  "by_category": {
+    "Configuration": 46,
+    "Command": 23,
+    "Status": 39,
+    "History": 14
+  },
+  "catalog_tokens": {
+    "exact_anthropic": null,
+    "estimate_chars_div_3_5": 22186,
+    "note": "exact uses messages.count_tokens when ANTHROPIC_API_KEY is set"
+  },
+  "by_module": {
+    "status": {
+      "tools": 39,
+      "est_tokens": 4837,
+      "category": "Status"
+    },
+    "command": {
+      "tools": 23,
+      "est_tokens": 3534,
+      "category": "Command"
+    },
+    "history": {
+      "tools": 14,
+      "est_tokens": 3027,
+      "category": "History"
+    },
+    "resource_crud": {
+      "tools": 5,
+      "est_tokens": 1609,
+      "category": "Configuration"
+    },
+    "device": {
+      "tools": 6,
+      "est_tokens": 1452,
+      "category": "Configuration"
+    },
+    "gateway_rule": {
+      "tools": 5,
+      "est_tokens": 1433,
+      "category": "Configuration"
+    },
+    "conference": {
+      "tools": 5,
+      "est_tokens": 1269,
+      "category": "Configuration"
+    },
+    "ldap": {
+      "tools": 5,
+      "est_tokens": 1259,
+      "category": "Configuration"
+    },
+    "end_user": {
+      "tools": 5,
+      "est_tokens": 1057,
+      "category": "Configuration"
+    },
+    "automatic_participant": {
+      "tools": 3,
+      "est_tokens": 960,
+      "category": "Configuration"
+    },
+    "infrastructure": {
+      "tools": 4,
+      "est_tokens": 531,
+      "category": "Configuration"
+    },
+    "alias": {
+      "tools": 3,
+      "est_tokens": 452,
+      "category": "Configuration"
+    },
+    "global_settings": {
+      "tools": 2,
+      "est_tokens": 311,
+      "category": "Configuration"
+    },
+    "ivr_theme": {
+      "tools": 2,
+      "est_tokens": 185,
+      "category": "Configuration"
+    },
+    "schema": {
+      "tools": 1,
+      "est_tokens": 185,
+      "category": "Configuration"
+    }
+  },
+  "heaviest_tools": [
+    {
+      "name": "list_resources",
+      "est_tokens": 793
+    },
+    {
+      "name": "summarize_calls",
+      "est_tokens": 696
+    },
+    {
+      "name": "add_automatic_participant",
+      "est_tokens": 640
+    },
+    {
+      "name": "list_history_participants",
+      "est_tokens": 578
+    },
+    {
+      "name": "create_gateway_rule",
+      "est_tokens": 554
+    },
+    {
+      "name": "create_ldap_source",
+      "est_tokens": 545
+    },
+    {
+      "name": "create_vmr",
+      "est_tokens": 516
+    },
+    {
+      "name": "dial_participant",
+      "est_tokens": 499
+    },
+    {
+      "name": "update_gateway_rule",
+      "est_tokens": 485
+    },
+    {
+      "name": "create_device",
+      "est_tokens": 452
+    }
+  ],
+  "description_chars": {
+    "min": 33,
+    "median": 133,
+    "max": 2196
+  },
+  "params_per_tool": {
+    "mean": 3.1,
+    "max": 12
+  },
+  "quality_signals": {
+    "missing_title": [],
+    "no_read_or_destructive_hint": [
+      "add_automatic_participant",
+      "add_vmr_alias",
+      "create_device",
+      "create_end_user",
+      "create_gateway_rule",
+      "create_ldap_source",
+      "create_resource",
+      "create_vmr"
+    ],
+    "description_under_120_chars": [
+      "backup_create",
+      "delete_alias",
+      "delete_automatic_participant",
+      "delete_device",
+      "delete_end_user",
+      "delete_ldap_source",
+      "get_alarm_history",
+      "get_backplane",
+      "get_backplane_history",
+      "get_backplane_media_streams",
+      "get_cloud_monitored_location",
+      "get_cloud_node",
+      "get_cloud_overflow_location",
+      "get_conference_shard",
+      "get_conference_sync_status",
+      "get_conferencing_node",
+      "get_device",
+      "get_end_user",
+      "get_exchange_scheduler_status",
+      "get_gateway_rule",
+      "get_history_conference",
+      "get_ivr_theme",
+      "get_licensing_status",
+      "get_location",
+      "get_location_statistics",
+      "get_location_status",
+      "get_management_node_status",
+      "get_mjx_endpoint_status",
+      "get_mjx_meeting_status",
+      "get_node_event_history",
+      "get_node_statistics",
+      "get_node_status",
+      "get_registration_alias",
+      "get_registration_history",
+      "get_teams_node_call_status",
+      "get_teams_node_status",
+      "get_vmr",
+      "list_backplane_history",
+      "list_backplanes",
+      "list_cloud_monitored_locations",
+      "list_cloud_nodes",
+      "list_cloud_overflow_locations",
+      "list_conference_sync_status",
+      "list_exchange_scheduler_status",
+      "list_ivr_themes",
+      "list_ldap_sources",
+      "list_locations",
+      "list_management_node_status",
+      "list_mjx_meeting_status",
+      "list_teams_node_call_status",
+      "list_teams_node_status",
+      "start_cloud_node",
+      "take_snapshot",
+      "unmute_guests",
+      "update_device",
+      "update_end_user",
+      "update_ldap_source",
+      "upload_software_bundle"
+    ],
+    "description_over_1500_chars": [
+      "list_resources",
+      "summarize_calls"
+    ],
+    "no_service_prefix": [
+      "add_automatic_participant",
+      "add_vmr_alias",
+      "backup_create",
+      "backup_restore",
+      "certificates_import",
+      "create_device",
+      "create_end_user",
+      "create_gateway_rule",
+      "create_ldap_source",
+      "create_resource",
+      "create_vmr",
+      "delete_alias",
+      "delete_automatic_participant",
+      "delete_device",
+      "delete_end_user",
+      "delete_gateway_rule",
+      "delete_ldap_source",
+      "delete_resource",
+      "delete_vmr",
+      "dial_participant",
+      "disconnect_conference",
+      "disconnect_participant",
+      "get_active_participant",
+      "get_alarm_history",
+      "get_backplane",
+      "get_backplane_history",
+      "get_backplane_history_media_streams",
+      "get_backplane_media_streams",
+      "get_cloud_monitored_location",
+      "get_cloud_node",
+      "get_cloud_overflow_location",
+      "get_conference_shard",
+      "get_conference_sync_status",
+      "get_conferencing_node",
+      "get_device",
+      "get_end_user",
+      "get_exchange_scheduler_status",
+      "get_gateway_rule",
+      "get_global_settings",
+      "get_history_conference",
+      "get_history_participant",
+      "get_ivr_theme",
+      "get_ldap_source",
+      "get_licensing_status",
+      "get_location",
+      "get_location_statistics",
+      "get_location_status",
+      "get_management_node_status",
+      "get_mjx_endpoint_status",
+      "get_mjx_meeting_status",
+      "get_node_event_history",
+      "get_node_statistics",
+      "get_node_status",
+      "get_participant_quality",
+      "get_registration_alias",
+      "get_registration_history",
+      "get_resource",
+      "get_resource_schema",
+      "get_teams_node_call_status",
+      "get_teams_node_status",
+      "get_vmr",
+      "list_active_conferences",
+      "list_active_participants",
+      "list_alarm_history",
+      "list_alarms",
+      "list_aliases",
+      "list_automatic_participants",
+      "list_backplane_history",
+      "list_backplanes",
+      "list_cloud_monitored_locations",
+      "list_cloud_nodes",
+      "list_cloud_overflow_locations",
+      "list_conference_shards",
+      "list_conference_sync_status",
+      "list_conferencing_nodes",
+      "list_devices",
+      "list_end_users",
+      "list_exchange_scheduler_status",
+      "list_gateway_rules",
+      "list_history_conferences",
+      "list_history_participants",
+      "list_ivr_themes",
+      "list_ldap_sources",
+      "list_location_status",
+      "list_locations",
+      "list_management_node_status",
+      "list_mjx_endpoint_status",
+      "list_mjx_meeting_status",
+      "list_node_event_history",
+      "list_node_status",
+      "list_registration_aliases",
+      "list_registration_history",
+      "list_registrations",
+      "list_resources",
+      "list_teams_node_call_status",
+      "list_teams_node_status",
+      "list_vmrs",
+      "lock_conference",
+      "mute_guests",
+      "mute_participant",
+      "platform_upgrade",
+      "send_conference_email",
+      "send_device_email",
+      "set_conference_layout",
+      "set_participant_role",
+      "start_cloud_node",
+      "summarize_calls",
+      "sync_conference_ldap",
+      "take_snapshot",
+      "transfer_participant",
+      "unlock_conference",
+      "unlock_participant",
+      "unmute_guests",
+      "unmute_participant",
+      "update_device",
+      "update_end_user",
+      "update_gateway_rule",
+      "update_global_settings",
+      "update_ldap_source",
+      "update_resource",
+      "update_vmr",
+      "upload_software_bundle"
+    ],
+    "no_output_schema": 122,
+    "four_plus_optional_params": [
+      "add_automatic_participant",
+      "create_device",
+      "create_end_user",
+      "create_gateway_rule",
+      "create_ldap_source",
+      "create_vmr",
+      "dial_participant",
+      "list_active_conferences",
+      "list_active_participants",
+      "list_alarm_history",
+      "list_alarms",
+      "list_aliases",
+      "list_automatic_participants",
+      "list_conference_shards",
+      "list_conferencing_nodes",
+      "list_devices",
+      "list_end_users",
+      "list_gateway_rules",
+      "list_history_conferences",
+      "list_history_participants",
+      "list_location_status",
+      "list_mjx_endpoint_status",
+      "list_node_event_history",
+      "list_node_status",
+      "list_registration_aliases",
+      "list_registration_history",
+      "list_registrations",
+      "list_resources",
+      "list_vmrs",
+      "summarize_calls",
+      "update_device",
+      "update_end_user",
+      "update_gateway_rule",
+      "update_ldap_source",
+      "update_vmr"
+    ],
+    "near_duplicate_names": [
+      [
+        "get_conference_sync_status",
+        "list_conference_sync_status",
+        0.906
+      ],
+      [
+        "get_exchange_scheduler_status",
+        "list_exchange_scheduler_status",
+        0.915
+      ],
+      [
+        "get_management_node_status",
+        "list_management_node_status",
+        0.906
+      ],
+      [
+        "get_teams_node_call_status",
+        "list_teams_node_call_status",
+        0.906
+      ],
+      [
+        "lock_conference",
+        "unlock_conference",
+        0.938
+      ],
+      [
+        "mute_guests",
+        "unmute_guests",
+        0.917
+      ],
+      [
+        "mute_participant",
+        "unmute_participant",
+        0.941
+      ]
+    ]
+  }
+}
