@@ -108,7 +108,7 @@ async def create_ldap_source(
         if v is not None:
             payload[f] = v
     location = await client.create("ldap_sync_source", payload)
-    return await client.get("ldap_sync_source", extract_id_from_uri(location))
+    return redact_secrets(await client.get("ldap_sync_source", extract_id_from_uri(location)))
 
 
 @mcp.tool(annotations=update("Update LDAP sync source"))
@@ -150,7 +150,7 @@ async def update_ldap_source(
     client = get_client(ctx)
     source_id = await _resolve_source_id(client, source)
     await client.update("ldap_sync_source", source_id, payload)
-    return await client.get("ldap_sync_source", source_id)
+    return redact_secrets(await client.get("ldap_sync_source", source_id))
 
 
 @mcp.tool(annotations=delete("Delete LDAP sync source"))

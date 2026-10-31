@@ -72,9 +72,12 @@ _SECRET_KEY_SUFFIXES = (
     "private_key",
     "passphrase",
     "client_secret",
+    "token",  # access_token, refresh_token, gateway_token, ...
+    "api_key",
+    "community",  # SNMP community strings
 )
 _SECRET_KEY_EXACT = frozenset(
-    {"token", "access_token", "gateway_token", "key_data", "pin", "guest_pin"}
+    {"token", "key_data", "keydata", "pin", "guest_pin", "psk", "shared_secret"}
 )
 _REDACTED = "***REDACTED***"
 
@@ -232,7 +235,7 @@ async def paginate_all(
 #
 #                   readOnly  destructive  idempotent
 #     read            ✅           ❌            ✅
-#     create          ❌           ❌            ❌    (POSTing twice makes two)
+#     create          ❌           ✅            ❌    (POSTing twice makes two)
 #     update          ❌           ✅            ✅    (PATCH same body = same state)
 #     delete          ❌           ✅            ✅    (deleting twice = same state)
 #     control         ❌           ✅           configurable
@@ -263,13 +266,15 @@ def create(title: str) -> ToolAnnotations:
     """Annotation preset for tools that create new resources.
 
     Marked non-idempotent on purpose: POSTing the same payload twice produces
-    two resources (or a 409 conflict). Marked non-destructive because nothing
-    pre-existing is changed.
+    two resources (or a 409 conflict). destructiveHint is True: it changes
+    deployment state, and clients (and the Claude connector directory) treat a
+    tool with neither readOnlyHint nor destructiveHint as unannotated. The MCP
+    spec's own default for destructiveHint is True for any non-read-only tool.
     """
     return ToolAnnotations(
         title=title,
         readOnlyHint=False,
-        destructiveHint=False,
+        destructiveHint=True,
         idempotentHint=False,
         openWorldHint=True,
     )

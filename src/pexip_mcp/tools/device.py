@@ -119,7 +119,7 @@ async def create_device(
 
     client = get_client(ctx)
     location = await client.create("device", payload)
-    return await client.get("device", extract_id_from_uri(location))
+    return redact_secrets(await client.get("device", extract_id_from_uri(location)))
 
 
 @mcp.tool(annotations=update("Update device"))
@@ -157,7 +157,7 @@ async def update_device(
     client = get_client(ctx)
     device_id = await _resolve_device_id(client, device)
     await client.update("device", device_id, payload)
-    return await client.get("device", device_id)
+    return redact_secrets(await client.get("device", device_id))
 
 
 @mcp.tool(annotations=delete("Delete device"))

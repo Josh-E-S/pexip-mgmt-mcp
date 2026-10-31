@@ -119,6 +119,26 @@ class PexipSettings(BaseSettings):
         "correctly-audienced token is accepted.",
     )
 
+    mcp_public_url: str | None = Field(
+        default=None,
+        description="Public base URL clients use to reach THIS server over --http (e.g. "
+        "https://pexip-mcp.example.com). Used to build the RFC 9728 protected-resource "
+        "metadata URL in the 401 challenge. Falls back to the audience when unset.",
+    )
+    mcp_allowed_hosts: str = Field(
+        default="",
+        description="Comma-separated Host header values accepted by the --http transport in "
+        "addition to loopback (DNS-rebinding protection), e.g. 'pexip-mcp.example.com'. "
+        "A bare hostname matches any port. Required when a reverse proxy or tunnel "
+        "forwards a public hostname to this server.",
+    )
+    mcp_allowed_origins: str = Field(
+        default="",
+        description="Comma-separated Origin header values accepted by the --http transport "
+        "in addition to loopback, e.g. 'https://claude.ai'. Requests without an Origin "
+        "header are always accepted.",
+    )
+
     allow_security_resources: bool = Field(
         default=False,
         description="When false (the default), the generic create/update/delete_resource "
@@ -191,6 +211,24 @@ class PexipSettings(BaseSettings):
     def token_url(self) -> str:
         """The OAuth2 token endpoint — explicit `oauth2_token_url` or https://<host>/oauth/token/."""
         return self.oauth2_token_url or f"https://{self.host}/oauth/token/"
+
+    @staticmethod
+    def _csv(value: str) -> list[str]:
+        return [v.strip() for v in value.split(",") if v.strip()]
+
+    @property
+    def mcp_allowed_hosts_list(self) -> list[str]:
+        """Configured extra Host values, each expanded to match any port."""
+        out: list[str] = []
+        for host in self._csv(self.mcp_allowed_hosts):
+            out.append(host)
+            if ":" not in host:
+                out.append(f"{host}:*")
+        return out
+
+    @property
+    def mcp_allowed_origins_list(self) -> list[str]:
+        return self._csv(self.mcp_allowed_origins)
 
     # Use oidc_required_scopes_list to get the required scopes as a parsed list.
     @property

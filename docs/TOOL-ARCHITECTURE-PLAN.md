@@ -202,7 +202,14 @@ Done on branch `claude/determined-ride-dgr72l`:
 - `scripts/catalog_stats.py` is the baseline instrument. Baselines committed under `evals/baseline/`: full catalog 122 tools / ~22.2k est. tokens; read-only default 76 tools / ~12.0k est. tokens. Set `ANTHROPIC_API_KEY` to record the exact count.
 - `tests/test_catalog_quality.py` encodes the rubric. 7 properties pass today; 10 are `xfail(strict=True, raises=AssertionError)` and become the phase-1/2/3/4 acceptance gates. Shared helpers (tool-list conversion, output-schema check, near-duplicate detection) live in `evals/catalog.py` so the baseline script, the harness, and the lint measure the same thing. Notable finding: the 8 `create_*` tools set neither `readOnlyHint` nor `destructiveHint`, which the Claude directory checklist treats as missing.
 
-Still to do for phase 0: run `--llm` three times and `--live` once against the lab and commit the scorecard; record the Glama tier.
+Still to do for phase 0: run `--llm` three times and `--live` once against the lab and commit the scorecard (`PEXIP_EVAL_SCORECARD_JSON`); record the Glama tier; diff `RESOURCE_REGISTRY` against the live node's `/api/admin/configuration/v1/` listing.
+
+### Re-sequencing after the 31 Oct reviews (`docs/review/`)
+
+- **Pulled into phase 1 and done:** pure-ASGI auth gates replacing `BaseHTTPMiddleware`; OIDC sessions bound to the principal that opened them (closes the audit-attribution / session-riding finding); non-ASCII `Authorization` header is a 401 not a 500; `PEXIP_MCP_PUBLIC_URL` for the RFC 9728 challenge; `PEXIP_MCP_ALLOWED_HOSTS` / `_ORIGINS` for DNS-rebinding protection behind a tunnel; `create` preset carries `destructiveHint`; `list_resources` filter keys validated (no `format`/pagination overrides, no relation spans); redaction covers `keydata`, `*_token`, `api_key`, `psk`, `*_community`, `shared_secret`; device/LDAP/global-settings create and update returns redacted for parity with reads; eval scorecard emitter.
+- **Promoted:** the toolset allow-list (phase 3) is now the primary write gate, not a convenience. The 14-entry `SENSITIVE_RESOURCES` deny-list stays as defense in depth, but the catalog's `toolset` field decides what a deployment can reach at all.
+- **Held for human verification before any code change** (see the reviews' "Needs human review" lists): FK-URI list filters, `set_conference_layout` layout codes, `enable_infinity_connect`, LDAP field prefixes, automatic-participant enums, platform command payloads, media-stream path form. Each is a field-name question a `get_resource_schema` call against the lab settles; the mocked tests pin today's names, so they must not be trusted as confirmation.
+- **Live suite requirement (phase 0/2):** assert on returned state, not just "no exception", or field-name errors that Pexip silently ignores stay invisible.
 
 ## 6. Risks and how the plan handles them
 

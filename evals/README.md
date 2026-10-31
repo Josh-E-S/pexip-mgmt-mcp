@@ -43,7 +43,11 @@ PEXIP_EVAL_DIAL_TARGET="sip:test@lab.local" uv run pytest evals/ --llm --live
 > section at the end (requests, cache-read share, hit rate). The hit rate counts
 > requests after the first, since only those can read what the first one cached.
 > Under 80% prints a warning; treat it as a broken run. Set `PEXIP_EVAL_USAGE_JSON=path` to
-> write the totals as JSON for the scorecard. Tool definitions are the first
+> write the totals as JSON. Set `PEXIP_EVAL_SCORECARD_JSON=path` to write the
+> **scorecard**: accuracy overall, by layer, and by case tag (persona), plus mean
+> tool calls and tokens per task and the per-case rows. The architecture plan's
+> before/after comparisons are made on these files; commit them under
+> `evals/baseline/` for a baseline run. Tool definitions are the first
 > block of the cached prefix, so the three test modules' slightly different
 > system prompts do not invalidate the catalog cache.
 

@@ -26,6 +26,7 @@ import asyncio
 import hmac
 import os
 import sys
+from collections import OrderedDict
 
 
 _LOOPBACK_HOSTS = {"127.0.0.1", "::1", "localhost"}
@@ -118,110 +119,170 @@ def _generate_token() -> None:
     )
 
 
-# Use _build_http_app to wrap the FastMCP streamable-http app with the chosen downstream auth.
-def _build_http_app(token: str | None, oidc_validator: object | None = None, settings=None):
-    """Return a Starlette app mounting the FastMCP streamable-http app at /.
-
-    FastMCP gives us the MCP protocol as a Starlette/ASGI app; we mount that
-    inside a thin Starlette wrapper so we can layer downstream auth on top:
-      - if `oidc_validator` is given, every request must carry a valid OIDC
-        bearer JWT (validated against the operator's IdP); a PRM discovery
-        document is also published so spec-aware MCP clients can find the IdP;
-      - else if `token` is set, a constant-time static bearer-token check runs;
-      - else no auth (only reached on a loopback bind).
-
-    Starlette does NOT run a mounted sub-app's lifespan, so we explicitly drive
-    the inner app's lifespan from the wrapper. That inner lifespan is what builds
-    the shared PexipClient and applies read-only / security-resource enforcement
-    (see mcp_app.lifespan); without this delegation the transport would 500 on
-    the first real call and the read-only gate would never run.
-    """
-    from contextlib import asynccontextmanager
-
-    from starlette.applications import Starlette
-    from starlette.middleware import Middleware
-    from starlette.middleware.base import BaseHTTPMiddleware
-    from starlette.responses import JSONResponse
-    from starlette.routing import Mount, Route
-
-    from pexip_mcp.server import mcp
-
-    inner = mcp.streamable_http_app()
-
-    @asynccontextmanager
-    async def lifespan(_app):
-        # Enter the mounted app's own lifespan so its startup/shutdown actually run.
-        async with inner.router.lifespan_context(inner):
-            yield
-
-    middleware = []
-    # PRM route (if any) must precede the catch-all Mount("/") so it isn't shadowed.
-    routes: list = []
-
-    if oidc_validator is not None:
-        from pexip_mcp import audit
-        from pexip_mcp.oidc import OIDCValidationError, principal_of
-
-        class OIDCAuth(BaseHTTPMiddleware):
-            async def dispatch(self, request, call_next):
-                # Let unauthenticated clients discover how to authenticate.
-                if request.url.path == _PRM_PATH:
-                    return await call_next(request)
-                header = request.headers.get("authorization", "")
-                try:
-                    claims = oidc_validator.verify(header)
-                except OIDCValidationError:
-                    # Point clients at the PRM document per RFC 9728.
-                    return JSONResponse(
-                        {"error": "unauthorized"},
-                        status_code=401,
-                        headers={
-                            "WWW-Authenticate": (
-                                'Bearer realm="mcp", '
-                                f'resource_metadata="{_prm_url(settings)}"'
-                            )
-                        },
-                    )
-                # Attribute the call: expose the principal on the scope and set the
-                # audit contextvar so PexipClient's audit lines carry the identity.
-                principal = principal_of(claims)
-                request.scope["pexip_principal"] = principal
-                token = audit.current_principal.set(principal)
-                try:
-                    return await call_next(request)
-                finally:
-                    audit.current_principal.reset(token)
-
-        middleware.append(Middleware(OIDCAuth))
-        routes.append(Route(_PRM_PATH, _prm_endpoint(settings), methods=["GET"]))
-
-    routes.append(Mount("/", inner))
-
-    if token and oidc_validator is None:
-        expected = f"Bearer {token}"
-
-        class BearerAuth(BaseHTTPMiddleware):
-            async def dispatch(self, request, call_next):
-                provided = request.headers.get("authorization", "")
-                # hmac.compare_digest, not ==, so token comparison is constant-time
-                # (defends against timing-based token-recovery attacks).
-                if not hmac.compare_digest(provided, expected):
-                    return JSONResponse({"error": "unauthorized"}, status_code=401)
-                return await call_next(request)
-
-        middleware.append(Middleware(BearerAuth))
-
-    return Starlette(middleware=middleware, routes=routes, lifespan=lifespan)
-
-
 # RFC 9728 Protected Resource Metadata path — where MCP clients discover our IdP.
 _PRM_PATH = "/.well-known/oauth-protected-resource"
 
+# Upper bound on remembered (session id -> principal) bindings, so a client that
+# opens sessions without closing them cannot grow the table without limit.
+_MAX_BOUND_SESSIONS = 10_000
+
+
+def _header(scope: dict, name: bytes) -> str:
+    """Return a request header decoded as latin-1 (never raises), or ''.
+
+    ASGI delivers headers as raw bytes. latin-1 maps every byte to one code point,
+    so a malformed or non-ASCII header value becomes a harmless string instead of
+    a decode error that would turn a 401 into a 500.
+    """
+    for key, value in scope.get("headers") or ():
+        if key == name:
+            return value.decode("latin-1")
+    return ""
+
+
+async def _send_json(send, status: int, body: dict, extra_headers: dict[str, str] | None = None):
+    """Write a small JSON response straight to the ASGI send channel."""
+    import json
+
+    payload = json.dumps(body).encode()
+    headers = [
+        (b"content-type", b"application/json"),
+        (b"content-length", str(len(payload)).encode()),
+    ]
+    for k, v in (extra_headers or {}).items():
+        headers.append((k.lower().encode("latin-1"), v.encode("latin-1")))
+    await send({"type": "http.response.start", "status": status, "headers": headers})
+    await send({"type": "http.response.body", "body": payload})
+
+
+class _StaticTokenGate:
+    """Pure-ASGI gate: every HTTP request must carry `Authorization: Bearer <token>`.
+
+    Pure ASGI (not Starlette's BaseHTTPMiddleware) so the streamable-HTTP app's
+    SSE responses pass through untouched and no cross-task context bridge is
+    introduced. The comparison is constant-time over bytes, so a non-ASCII or
+    malformed header is simply a mismatch (401), never a TypeError (500).
+    """
+
+    def __init__(self, app, token: str) -> None:
+        self.app = app
+        self._expected = f"Bearer {token}".encode("latin-1")
+
+    async def __call__(self, scope, receive, send):
+        if scope["type"] != "http":
+            await self.app(scope, receive, send)
+            return
+        provided = _header(scope, b"authorization").encode("latin-1")
+        if not hmac.compare_digest(provided, self._expected):
+            await _send_json(send, 401, {"error": "unauthorized"})
+            return
+        await self.app(scope, receive, send)
+
+
+class _OIDCGate:
+    """Pure-ASGI gate validating OIDC bearer JWTs and binding MCP sessions to a principal.
+
+    Two jobs:
+
+    1. Reject any HTTP request without a valid token (401 with an RFC 9728
+       `WWW-Authenticate` challenge pointing at the PRM document). The PRM
+       document itself is served unauthenticated so clients can discover the IdP.
+
+    2. Bind each streamable-HTTP session to the identity that opened it. The MCP
+       transport keys sessions only by the `mcp-session-id` header, so without
+       this a second authenticated user could present their own token together
+       with someone else's session id and run tools inside, and be audited as,
+       that other user's session. The first response that mints a session id
+       records (session id -> principal); any later request on that session with
+       a different principal is refused with 403. A DELETE (session close) drops
+       the binding.
+
+    The caller's principal is also exposed on the ASGI scope and in the audit
+    contextvar for the duration of the request, for log attribution.
+    """
+
+    def __init__(self, app, validator, prm_url: str) -> None:
+        self.app = app
+        self._validator = validator
+        self._prm_url = prm_url
+        self._sessions: OrderedDict[str, str] = OrderedDict()
+
+    def _bind(self, session_id: str, principal: str) -> None:
+        self._sessions[session_id] = principal
+        self._sessions.move_to_end(session_id)
+        while len(self._sessions) > _MAX_BOUND_SESSIONS:
+            self._sessions.popitem(last=False)
+
+    async def __call__(self, scope, receive, send):
+        if scope["type"] != "http":
+            await self.app(scope, receive, send)
+            return
+        if scope.get("path") == _PRM_PATH:
+            await self.app(scope, receive, send)
+            return
+
+        from pexip_mcp import audit
+        from pexip_mcp.oidc import OIDCValidationError, principal_of
+
+        try:
+            claims = self._validator.verify(_header(scope, b"authorization"))
+        except OIDCValidationError:
+            await _send_json(
+                send,
+                401,
+                {"error": "unauthorized"},
+                {"WWW-Authenticate": f'Bearer realm="mcp", resource_metadata="{self._prm_url}"'},
+            )
+            return
+        principal = principal_of(claims)
+
+        session_id = _header(scope, b"mcp-session-id")
+        if session_id:
+            owner = self._sessions.get(session_id)
+            if owner is not None and owner != principal:
+                await _send_json(
+                    send,
+                    403,
+                    {
+                        "error": "forbidden",
+                        "error_description": "mcp-session-id belongs to a different principal",
+                    },
+                )
+                return
+            if scope.get("method") == "DELETE":
+                self._sessions.pop(session_id, None)
+
+        async def send_and_bind(message):
+            # Only a request that carried NO session id can mint one (initialize).
+            # Responses to later requests, including DELETE, echo the id back and
+            # must not re-create a binding that was just released.
+            if not session_id and message["type"] == "http.response.start":
+                for key, value in message.get("headers") or ():
+                    if key.lower() == b"mcp-session-id":
+                        self._bind(value.decode("latin-1"), principal)
+            await send(message)
+
+        scope["pexip_principal"] = principal
+        token = audit.current_principal.set(principal)
+        try:
+            await self.app(scope, receive, send_and_bind)
+        finally:
+            audit.current_principal.reset(token)
+
 
 def _prm_url(settings) -> str:
-    """Best-effort absolute URL of the PRM document (used in WWW-Authenticate)."""
-    base = getattr(settings, "oidc_audience", None) or ""
-    return base.rstrip("/") + _PRM_PATH if base else _PRM_PATH
+    """Absolute URL of the PRM document for the WWW-Authenticate challenge.
+
+    Prefers PEXIP_MCP_PUBLIC_URL. Falls back to the OIDC audience only when it is
+    itself an http(s) URL; an `api://...` style audience is not fetchable, so in
+    that case the path alone is returned and operators should set the public URL.
+    """
+    base = (getattr(settings, "mcp_public_url", None) or "").rstrip("/")
+    if not base:
+        aud = getattr(settings, "oidc_audience", None) or ""
+        if aud.lower().startswith(("https://", "http://")):
+            base = aud.rstrip("/")
+    return base + _PRM_PATH if base else _PRM_PATH
 
 
 def _prm_endpoint(settings):
@@ -237,6 +298,90 @@ def _prm_endpoint(settings):
         return JSONResponse(body)
 
     return endpoint
+
+
+def _transport_security(host: str, settings):
+    """Host/Origin allow-list for the streamable-HTTP transport (DNS-rebinding protection).
+
+    Loopback Host values are always accepted. Anything else must be listed in
+    PEXIP_MCP_ALLOWED_HOSTS (a tunnel or reverse proxy forwards its public
+    hostname as Host, so that hostname belongs in the list). Returns None, which
+    leaves the SDK default in place, when binding to a non-loopback address with
+    no hosts configured: in that case the SDK keeps protection off, and we warn,
+    rather than silently breaking an existing Docker deployment reached by IP.
+    """
+    from mcp.server.transport_security import TransportSecuritySettings
+
+    extra_hosts = settings.mcp_allowed_hosts_list if settings else []
+    extra_origins = settings.mcp_allowed_origins_list if settings else []
+    if host not in _LOOPBACK_HOSTS and not extra_hosts:
+        print(
+            "  WARNING: non-loopback bind with no PEXIP_MCP_ALLOWED_HOSTS; Host-header "
+            "(DNS-rebinding) protection is OFF. Set PEXIP_MCP_ALLOWED_HOSTS to the "
+            "hostname(s) clients use.",
+            file=sys.stderr,
+        )
+        return None
+    loopback_hosts = ["127.0.0.1", "127.0.0.1:*", "localhost", "localhost:*", "[::1]", "[::1]:*"]
+    loopback_origins = ["http://127.0.0.1:*", "http://localhost:*", "http://[::1]:*"]
+    return TransportSecuritySettings(
+        enable_dns_rebinding_protection=True,
+        allowed_hosts=loopback_hosts + extra_hosts,
+        allowed_origins=loopback_origins + extra_origins,
+    )
+
+
+# Use _build_http_app to wrap the FastMCP streamable-http app with the chosen downstream auth.
+def _build_http_app(token: str | None, oidc_validator: object | None = None, settings=None):
+    """Return the ASGI app for the --http transport: FastMCP mounted at / behind a gate.
+
+    FastMCP gives us the MCP protocol as a Starlette/ASGI app; we mount that
+    inside a thin Starlette wrapper and layer downstream auth on top:
+      - if `oidc_validator` is given, every request must carry a valid OIDC
+        bearer JWT (validated against the operator's IdP), sessions are bound to
+        the principal that opened them, and a PRM discovery document is
+        published so spec-aware MCP clients can find the IdP;
+      - else if `token` is set, a constant-time static bearer-token check runs;
+      - else no auth (only reached on a loopback bind).
+
+    Both gates are pure ASGI callables (see _StaticTokenGate / _OIDCGate), not
+    Starlette BaseHTTPMiddleware, so streamed responses are passed through
+    natively and no cross-task context bridge sits between request and tool.
+
+    Starlette does NOT run a mounted sub-app's lifespan, so we explicitly drive
+    the inner app's lifespan from the wrapper. That inner lifespan is what builds
+    the shared PexipClient and applies read-only / security-resource enforcement
+    (see mcp_app.lifespan); without this delegation the transport would 500 on
+    the first real call and the read-only gate would never run.
+    """
+    from contextlib import asynccontextmanager
+
+    from starlette.applications import Starlette
+    from starlette.routing import Mount, Route
+
+    from pexip_mcp.server import mcp
+
+    inner = mcp.streamable_http_app()
+
+    @asynccontextmanager
+    async def lifespan(_app):
+        # Enter the mounted app's own lifespan so its startup/shutdown actually run.
+        async with inner.router.lifespan_context(inner):
+            yield
+
+    # PRM route (if any) must precede the catch-all Mount("/") so it isn't shadowed.
+    routes: list = []
+    if oidc_validator is not None:
+        routes.append(Route(_PRM_PATH, _prm_endpoint(settings), methods=["GET"]))
+    routes.append(Mount("/", inner))
+
+    app = Starlette(routes=routes, lifespan=lifespan)
+
+    if oidc_validator is not None:
+        return _OIDCGate(app, oidc_validator, _prm_url(settings))
+    if token:
+        return _StaticTokenGate(app, token)
+    return app
 
 
 # Use _run_http to start the server over streamable HTTP (instead of stdio) under uvicorn.
@@ -281,6 +426,12 @@ def _run_http(host: str, port: int) -> None:
     # would otherwise not be enforced on this transport.
     apply_startup_policy(_mcp, _settings)
 
+    # Host/Origin allow-list must be set before streamable_http_app() builds the
+    # session manager, which is what reads it.
+    security = _transport_security(host, _settings)
+    if security is not None:
+        _mcp.settings.transport_security = security
+
     is_loopback = host in _LOOPBACK_HOSTS
     if oauth_mode:
         auth_desc = f"OIDC (issuer {_settings.oidc_issuer})"
@@ -291,6 +442,8 @@ def _run_http(host: str, port: int) -> None:
     print(f"pexip-mgmt-mcp HTTP transport starting on http://{host}:{port}", file=sys.stderr)
     print(f"  Bind: {host}{' (loopback only)' if is_loopback else ' (non-loopback)'}", file=sys.stderr)
     print(f"  Downstream auth: {auth_desc}", file=sys.stderr)
+    if _settings.mcp_allowed_hosts_list:
+        print(f"  Allowed hosts: {', '.join(_settings.mcp_allowed_hosts_list)}", file=sys.stderr)
 
     uvicorn.run(
         _build_http_app(token, oidc_validator, _settings),

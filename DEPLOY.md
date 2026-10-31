@@ -107,6 +107,19 @@ If your Claude client also lets you set an `Authorization: Bearer …` header
 *and* you set `PEXIP_MCP_TOKEN` on the server, add that too. Otherwise rely on
 Cloudflare Access only.
 
+## 4a. Allow the tunnel hostname (required)
+
+The server validates the `Host` header (DNS-rebinding protection). Cloudflare
+Tunnel forwards the public hostname, so it must be allow-listed or every request
+is rejected with `421 Invalid Host header`:
+
+```bash
+export PEXIP_MCP_ALLOWED_HOSTS=pexip-mcp.example.com
+export PEXIP_MCP_PUBLIC_URL=https://pexip-mcp.example.com   # used in OIDC discovery
+```
+
+Loopback hosts (`localhost`, `127.0.0.1`, `[::1]`, any port) are always accepted.
+
 ## 5. (Recommended) Bearer token on the listener
 
 Set a bearer token so the listener itself authenticates every request, rather
@@ -153,6 +166,11 @@ container's bind isn't loopback from its own perspective.
   "CF-Access-Client-Secret: …" https://pexip-mcp.example.com/mcp/`.
 - **Claude connector returns 401**: `PEXIP_MCP_TOKEN` mismatch between server
   and connector config.
+- **`421 Invalid Host header`**: the public hostname is not in
+  `PEXIP_MCP_ALLOWED_HOSTS` (see step 4a).
+- **`403 mcp-session-id belongs to a different principal`** (OIDC mode): a
+  second user presented someone else's MCP session id. Sessions are bound to the
+  identity that opened them; the client should start its own session.
 - **Claude can't see any tools**: check the server logs for the
   `tools/list` request landing. If it's not arriving, the URL or auth
   is wrong.

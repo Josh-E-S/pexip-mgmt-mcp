@@ -6,17 +6,17 @@ Regenerate with: `uv run python scripts/generate_tools_md.py`
 
 | Tool | Title | Read-only | Destructive | Idempotent | Parameters |
 |---|---|---|---|---|---|
-| `add_automatic_participant` | Add automatic participant | ❌ | ❌ | ❌ | vmr, alias, protocol?, call_type?, role?, system_location?, dtmf_sequence?, streaming?, keep_conference_alive?, routing?, remote_display_name?, description? |
-| `add_vmr_alias` | Add conference alias | ❌ | ❌ | ❌ | vmr, alias, description? |
+| `add_automatic_participant` | Add automatic participant | ❌ | ✅ | ❌ | vmr, alias, protocol?, call_type?, role?, system_location?, dtmf_sequence?, streaming?, keep_conference_alive?, routing?, remote_display_name?, description? |
+| `add_vmr_alias` | Add conference alias | ❌ | ✅ | ❌ | vmr, alias, description? |
 | `backup_create` | Create platform backup | ❌ | ✅ | ❌ |  |
 | `backup_restore` | Restore platform backup | ❌ | ✅ | ❌ | backup_id |
 | `certificates_import` | Import certificates | ❌ | ✅ | ❌ | settings |
-| `create_device` | Create device | ❌ | ❌ | ❌ | alias, username?, password?, description?, primary_owner_email_address?, enable_sip?, enable_h323?, enable_infinity_connect?, tag? |
-| `create_end_user` | Create end user | ❌ | ❌ | ❌ | primary_email_address, first_name?, last_name?, display_name?, telephone_number?, mobile_number?, title?, department?, avatar_url? |
-| `create_gateway_rule` | Create gateway routing rule | ❌ | ❌ | ❌ | name, priority, match_string, replace_string?, called_device_type?, outgoing_protocol?, outgoing_location?, call_type?, crypto_mode?, enable?, description? |
-| `create_ldap_source` | Create LDAP sync source | ❌ | ❌ | ❌ | name, ldap_server, ldap_base_dn, bind_username?, bind_password?, ldap_user_filter?, ldap_user_search_dn?, ldap_user_search_filter?, ldap_permitted_users_regex?, sync_interval_minutes?, description? |
-| `create_resource` | Create configuration resource | ❌ | ❌ | ❌ | resource, settings |
-| `create_vmr` | Create VMR | ❌ | ❌ | ❌ | name, aliases?, pin?, guest_pin?, allow_guests?, description?, tag?, host_view?, guest_view?, allow_no_pin? |
+| `create_device` | Create device | ❌ | ✅ | ❌ | alias, username?, password?, description?, primary_owner_email_address?, enable_sip?, enable_h323?, enable_infinity_connect?, tag? |
+| `create_end_user` | Create end user | ❌ | ✅ | ❌ | primary_email_address, first_name?, last_name?, display_name?, telephone_number?, mobile_number?, title?, department?, avatar_url? |
+| `create_gateway_rule` | Create gateway routing rule | ❌ | ✅ | ❌ | name, priority, match_string, replace_string?, called_device_type?, outgoing_protocol?, outgoing_location?, call_type?, crypto_mode?, enable?, description? |
+| `create_ldap_source` | Create LDAP sync source | ❌ | ✅ | ❌ | name, ldap_server, ldap_base_dn, bind_username?, bind_password?, ldap_user_filter?, ldap_user_search_dn?, ldap_user_search_filter?, ldap_permitted_users_regex?, sync_interval_minutes?, description? |
+| `create_resource` | Create configuration resource | ❌ | ✅ | ❌ | resource, settings |
+| `create_vmr` | Create VMR | ❌ | ✅ | ❌ | name, aliases?, pin?, guest_pin?, allow_guests?, description?, tag?, host_view?, guest_view?, allow_no_pin? |
 | `delete_alias` | Delete conference alias | ❌ | ✅ | ✅ | alias_id |
 | `delete_automatic_participant` | Delete automatic participant | ❌ | ✅ | ✅ | participant_id |
 | `delete_device` | Delete device | ❌ | ✅ | ✅ | device |

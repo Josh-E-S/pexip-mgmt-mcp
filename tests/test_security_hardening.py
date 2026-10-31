@@ -9,6 +9,7 @@ Covers, in isolation:
   - _build_http_app lifespan delegation (F1): the mounted app's lifespan runs,
     which is what applies read-only enforcement on the --http transport.
 """
+
 from __future__ import annotations
 
 from types import SimpleNamespace
@@ -102,9 +103,7 @@ async def test_list_allows_legit_multi_segment_resource(client):
 def _ctx(client, *, allow_security: bool):
     return SimpleNamespace(
         request_context=SimpleNamespace(
-            lifespan_context=SimpleNamespace(
-                pexip=client, allow_security_resources=allow_security
-            )
+            lifespan_context=SimpleNamespace(pexip=client, allow_security_resources=allow_security)
         )
     )
 
@@ -113,9 +112,7 @@ async def test_create_sensitive_resource_refused_by_default(client):
     ctx = _ctx(client, allow_security=False)
     for resource in ("ssh_authorized_key", "role", "authentication", "ca_certificate"):
         with pytest.raises(PexipError) as exc:
-            await resource_crud.create_resource(
-                ctx, resource=resource, settings={"x": 1}
-            )
+            await resource_crud.create_resource(ctx, resource=resource, settings={"x": 1})
         assert exc.value.status_code == 403
 
 
@@ -154,9 +151,7 @@ async def test_non_sensitive_resource_not_gated(client):
 
 def test_security_resources_allowed_defaults_false_when_absent():
     # Older ctx shapes without the attribute fail closed.
-    ctx = SimpleNamespace(
-        request_context=SimpleNamespace(lifespan_context=SimpleNamespace())
-    )
+    ctx = SimpleNamespace(request_context=SimpleNamespace(lifespan_context=SimpleNamespace()))
     assert security_resources_allowed(ctx) is False
 
 
@@ -174,25 +169,70 @@ async def test_create_vmr_with_pin_allowed(ctx):
     respx.post(f"{BASE_URL}/conference/").mock(
         return_value=httpx.Response(201, headers={"Location": vmr_uri(7)})
     )
-    respx.get(f"{BASE_URL}/conference/7/").mock(
-        return_value=httpx.Response(200, json={"id": 7})
-    )
+    respx.get(f"{BASE_URL}/conference/7/").mock(return_value=httpx.Response(200, json={"id": 7}))
     result = await conference.create_vmr(ctx, name="Secure Room", pin="1234")
     assert result["id"] == 7
 
 
 # ── F1: --http lifespan delegation ───────────────────────────────────────────
+# Proven end-to-end in tests/test_http_transport.py::
+# test_static_token_accepts_correct_token_and_lifespan_runs — an initialize
+# only succeeds if the mounted app's lifespan (session manager) was entered.
 
 
-def test_build_http_app_wrapper_has_lifespan():
-    """The wrapper must carry a lifespan so the mounted app's startup runs.
+# ── list_resources filter-key guard (M6) ─────────────────────────────────────
 
-    Without this the PexipClient is never built and read-only enforcement never
-    applies on the --http transport (the bug this fixes).
-    """
-    from pexip_mcp.__main__ import _build_http_app
 
-    app = _build_http_app(token=None)
-    # Starlette stores the configured lifespan on the router; assert it's not the
-    # default no-op by confirming a lifespan context manager is wired up.
-    assert app.router.lifespan_context is not None
+@pytest.mark.parametrize(
+    "filters",
+    [
+        {"format": "xml"},
+        {"callback": "x"},
+        {"limit": 5},
+        {"order_by": "name"},
+        {"owner__role__name": "admin"},  # relation span
+        {"name__bogus": "x"},  # unknown lookup
+        {"Name": "x"},  # not a field name
+        {"name": {"nested": 1}},  # non-scalar value
+    ],
+)
+async def test_list_resources_rejects_unsafe_filter_keys(ctx, filters):
+    with pytest.raises(PexipError) as exc:
+        await resource_crud.list_resources(ctx, resource="dns_server", filters=filters)
+    assert exc.value.status_code == 400
+    assert exc.value.upstream is False
+
+
+@respx.mock
+async def test_list_resources_accepts_plain_and_lookup_filters(ctx):
+    route = respx.get(f"{BASE_URL}/dns_server/").mock(
+        return_value=httpx.Response(200, json={"objects": [], "meta": {"total_count": 0}})
+    )
+    await resource_crud.list_resources(
+        ctx,
+        resource="dns_server",
+        filters={"address__icontains": "10.", "enable": True, "id__in": [1, 2]},
+    )
+    assert route.called
+    assert "address__icontains=10." in str(route.calls.last.request.url)
+
+
+# ── redact_secrets coverage additions (M7) ───────────────────────────────────
+
+
+def test_redact_secrets_covers_additional_secret_fields():
+    data = {
+        "keydata": "ssh-ed25519 AAAA",
+        "api_key": "k",
+        "refresh_token": "r",
+        "psk": "p",
+        "snmp_community": "public",
+        "shared_secret": "s",
+        "public_key_fingerprint": "ok-to-show",
+        "name": "n",
+    }
+    out = redact_secrets(data)
+    for key in ("keydata", "api_key", "refresh_token", "psk", "snmp_community", "shared_secret"):
+        assert out[key] == "***REDACTED***", key
+    assert out["public_key_fingerprint"] == "ok-to-show"
+    assert out["name"] == "n"

@@ -116,12 +116,6 @@ def test_every_tool_has_service_prefix():
     assert not bad, bad
 
 
-@pytest.mark.xfail(
-    strict=True,
-    raises=AssertionError,
-    reason="phase 1: directory requires destructiveHint on tools that modify data; "
-    "the `create` preset currently sets neither hint",
-)
 def test_every_non_read_tool_declares_destructive():
     bad = [
         t.name

@@ -86,6 +86,17 @@ The server also publishes a discovery document at
 `/.well-known/oauth-protected-resource` (RFC 9728) so spec-aware MCP clients can
 find your IdP, and returns a `WWW-Authenticate` challenge pointing at it on 401.
 
+**Sessions are bound to the principal that opened them.** The MCP streamable-HTTP
+transport identifies a session only by the `mcp-session-id` header. This server
+records which OIDC principal created each session and refuses (403) any request
+on that session that carries a different principal's token, so one admin cannot
+ride another admin's session or be audited under their identity. Closing the
+session (HTTP DELETE) releases the binding.
+
+Set `PEXIP_MCP_PUBLIC_URL` to the URL clients use to reach the server; it is
+what the `WWW-Authenticate` challenge points at for RFC 9728 discovery (an
+`api://` style audience is not fetchable on its own).
+
 ## What OIDC does and doesn't give you here
 
 In the common shared-server setup the server holds **one** Infinity credential

@@ -10,6 +10,7 @@ used a generic ``settings: dict`` parameter.
 """
 from __future__ import annotations
 
+import re
 from typing import Any
 
 from mcp.server.fastmcp import Context
@@ -108,6 +109,22 @@ RESOURCE_REGISTRY: dict[str, dict[str, str]] = {
     "policy_profile": {"label": "policy profile", "lookup_field": "name"},
 }
 
+# Query-string filter keys the model may pass to list_resources. A key is a
+# field name, optionally followed by ONE tastypie lookup suffix. Anything else
+# (response-format overrides like `format`/`callback`, pagination keys the tool
+# owns, relation spans like `owner__role__name`) is refused, so the response is
+# always the JSON shape redact_secrets understands and never reaches beyond the
+# named resource.
+_FILTER_KEY_RE = re.compile(r"^[a-z][a-z0-9_]*?(?:__(?P<lookup>[a-z]+))?$")
+_FILTER_LOOKUPS = frozenset(
+    {
+        "exact", "iexact", "contains", "icontains", "startswith", "istartswith",
+        "endswith", "iendswith", "in", "gt", "gte", "lt", "lte", "isnull",
+        "regex", "iregex", "range",
+    }
+)
+_RESERVED_FILTER_KEYS = frozenset({"format", "callback", "limit", "offset", "order_by"})
+
 _RESOURCE_NAMES = sorted(RESOURCE_REGISTRY)
 _RESOURCE_LIST_STR = ", ".join(_RESOURCE_NAMES)
 
@@ -151,6 +168,43 @@ def _validate_resource(resource: str) -> dict[str, str]:
             },
         )
     return meta
+
+
+def _validate_filters(filters: dict[str, Any]) -> dict[str, Any]:
+    """Accept only plain field filters with scalar values; refuse anything else.
+
+    Raises PexipError(400) naming the offending key so the model can correct it.
+    """
+    for key, value in filters.items():
+        m = _FILTER_KEY_RE.match(str(key))
+        if key in _RESERVED_FILTER_KEYS or not m:
+            raise PexipError(
+                400,
+                {
+                    "filters": [
+                        f"Unsupported filter key {key!r}. Use a field name, optionally with "
+                        "one lookup suffix such as name__icontains or enable__exact. "
+                        "Pagination is controlled by limit/offset; "
+                        "ordering and format cannot be set here."
+                    ]
+                },
+            )
+        lookup = m.group("lookup")
+        if lookup and lookup not in _FILTER_LOOKUPS:
+            raise PexipError(
+                400,
+                {"filters": [f"Unsupported lookup {lookup!r} in filter key {key!r}."]},
+            )
+        scalar = (str, int, float, bool)
+        if not (
+            isinstance(value, scalar)
+            or (isinstance(value, list) and all(isinstance(v, scalar) for v in value))
+        ):
+            raise PexipError(
+                400,
+                {"filters": [f"Filter {key!r} must be a string, number, boolean, or list of those."]},
+            )
+    return filters
 
 
 def _guard_sensitive(resource: str, ctx: Context) -> None:
@@ -231,7 +285,7 @@ async def list_resources(
     if name_contains:
         params["name__icontains"] = name_contains
     if filters:
-        params.update(filters)
+        params.update(_validate_filters(filters))
     return redact_secrets(await get_client(ctx).list(resource, **params))
 
 

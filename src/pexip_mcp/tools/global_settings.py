@@ -49,4 +49,4 @@ async def update_global_settings(
         raise PexipError(400, {"updates": ["At least one field is required"]})
     client = get_client(ctx)
     await client.update("global", 1, updates)
-    return await client.get("global", 1)
+    return redact_secrets(await client.get("global", 1))

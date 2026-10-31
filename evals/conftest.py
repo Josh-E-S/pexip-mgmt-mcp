@@ -11,6 +11,7 @@ the pexip-mgmt-mcp tools. It operates in two layers:
 
   --live flag: runs integration tests against a real Pexip node.
 """
+
 from __future__ import annotations
 
 import os
@@ -46,9 +47,20 @@ EVAL_MODEL = DEFAULT_EVAL_MODEL
 # CLI flags
 # ---------------------------------------------------------------------------
 
+
 def pytest_addoption(parser):
-    parser.addoption("--llm", action="store_true", default=False, help="Run LLM-scored evals (needs ANTHROPIC_API_KEY)")
-    parser.addoption("--live", action="store_true", default=False, help="Run integration tests against the live Pexip lab node")
+    parser.addoption(
+        "--llm",
+        action="store_true",
+        default=False,
+        help="Run LLM-scored evals (needs ANTHROPIC_API_KEY)",
+    )
+    parser.addoption(
+        "--live",
+        action="store_true",
+        default=False,
+        help="Run integration tests against the live Pexip lab node",
+    )
 
 
 def pytest_configure(config):
@@ -72,6 +84,7 @@ def pytest_collection_modifyitems(config, items):
 # ---------------------------------------------------------------------------
 # Tool registry — the full tool catalog, built by importing the server
 # ---------------------------------------------------------------------------
+
 
 def _build_tool_registry() -> dict[str, dict[str, Any]]:
     """Import the MCP server (triggering tool registration) and extract the catalog."""
@@ -114,6 +127,7 @@ def tool_names(tool_registry) -> set[str]:
 # Claude API tools format — converts registry to Anthropic API tool schema
 # ---------------------------------------------------------------------------
 
+
 def _registry_to_claude_tools(registry: dict[str, dict[str, Any]]) -> list[dict[str, Any]]:
     """Convert the MCP tool registry to the Anthropic API tools format.
 
@@ -137,6 +151,7 @@ def claude_tools(tool_registry) -> list[dict[str, Any]]:
 # ---------------------------------------------------------------------------
 # Claude API client (gated on --llm)
 # ---------------------------------------------------------------------------
+
 
 class UsageRecorder:
     """Accumulates token usage across every Messages API call in a run.
@@ -164,8 +179,25 @@ class UsageRecorder:
         # at best hit a cache warmed by a previous run, so it is excluded from
         # the hit-rate denominator and numerator alike.
         self.cache_hits_after_first = 0
+        # Per-test accounting for the scorecard: nodeid -> counters. `current_case`
+        # is set by the autouse fixture below for the duration of each test.
+        self.current_case: str | None = None
+        self.cases: dict[str, dict[str, int]] = {}
 
-    def record(self, usage: Any) -> None:
+    def record(self, usage: Any, tool_calls: int = 0) -> None:
+        if self.current_case is not None:
+            c = self.cases.setdefault(
+                self.current_case,
+                {"requests": 0, "tool_calls": 0, "input_tokens": 0, "output_tokens": 0},
+            )
+            c["requests"] += 1
+            c["tool_calls"] += tool_calls
+            c["input_tokens"] += (
+                (getattr(usage, "input_tokens", 0) or 0)
+                + (getattr(usage, "cache_creation_input_tokens", 0) or 0)
+                + (getattr(usage, "cache_read_input_tokens", 0) or 0)
+            )
+            c["output_tokens"] += getattr(usage, "output_tokens", 0) or 0
         self.requests += 1
         self.input_tokens += getattr(usage, "input_tokens", 0) or 0
         self.output_tokens += getattr(usage, "output_tokens", 0) or 0
@@ -245,33 +277,135 @@ def claude_client():
         response = original_create(*args, **kwargs)
         usage = getattr(response, "usage", None)
         if usage is not None:
-            USAGE.record(usage)
+            tool_calls = sum(
+                1 for b in getattr(response, "content", []) if getattr(b, "type", "") == "tool_use"
+            )
+            USAGE.record(usage, tool_calls=tool_calls)
         return response
 
     client.messages.create = recording_create  # type: ignore[method-assign]
     return client
 
 
-def pytest_terminal_summary(terminalreporter, exitstatus, config):
-    """Print cache/usage totals after an --llm run and optionally dump them to JSON."""
-    lines = USAGE.summary_lines()
-    if not lines:
-        return
-    terminalreporter.section("prompt cache / token usage")
-    for line in lines:
-        terminalreporter.write_line(line)
-    out = os.environ.get("PEXIP_EVAL_USAGE_JSON")
-    if out:
-        import json
+# ---------------------------------------------------------------------------
+# Scorecard: per-case outcomes for every LLM-graded test, aggregated by layer
+# (tool_selection / parameters / workflows) and by case tag (persona). Written
+# as JSON with PEXIP_EVAL_SCORECARD_JSON=path; this is the artifact the
+# architecture plan's before/after comparisons are made on.
+# ---------------------------------------------------------------------------
 
+SCORECARD: dict[str, dict[str, Any]] = {}  # nodeid -> {layer, case_id, tags, outcome}
+
+
+@pytest.fixture(autouse=True)
+def _track_current_case(request):
+    USAGE.current_case = request.node.nodeid
+    yield
+    USAGE.current_case = None
+
+
+@pytest.hookimpl(hookwrapper=True)
+def pytest_runtest_makereport(item, call):
+    outcome = yield
+    report = outcome.get_result()
+    if report.when != "call" or "llm" not in item.keywords:
+        return
+    callspec = getattr(item, "callspec", None)
+    case = (callspec.params.get("case") if callspec else None) or {}
+    SCORECARD[item.nodeid] = {
+        "layer": item.module.__name__.rsplit(".", 1)[-1].removeprefix("test_"),
+        "case_id": case.get("id", item.name),
+        "tags": list(case.get("tags", [])),
+        "outcome": report.outcome,  # passed / failed / skipped
+    }
+
+
+def _accuracy(rows: list[dict[str, Any]]) -> dict[str, Any]:
+    graded = [r for r in rows if r["outcome"] in ("passed", "failed")]
+    passed = sum(1 for r in graded if r["outcome"] == "passed")
+    return {
+        "cases": len(graded),
+        "passed": passed,
+        "accuracy": round(passed / len(graded), 3) if graded else None,
+    }
+
+
+def build_scorecard() -> dict[str, Any]:
+    rows = list(SCORECARD.values())
+    by_layer = {
+        layer: _accuracy([r for r in rows if r["layer"] == layer])
+        for layer in sorted({r["layer"] for r in rows})
+    }
+    tags = sorted({t for r in rows for t in r["tags"]})
+    by_tag = {t: _accuracy([r for r in rows if t in r["tags"]]) for t in tags}
+    per_case = USAGE.cases
+    graded_ids = [n for n, r in SCORECARD.items() if r["outcome"] in ("passed", "failed")]
+    calls = [per_case[n]["tool_calls"] for n in graded_ids if n in per_case]
+    toks = [
+        per_case[n]["input_tokens"] + per_case[n]["output_tokens"]
+        for n in graded_ids
+        if n in per_case
+    ]
+    return {
+        "model": EVAL_MODEL,
+        "overall": _accuracy(rows),
+        "by_layer": by_layer,
+        "by_tag": by_tag,
+        "per_task": {
+            "mean_tool_calls": round(sum(calls) / len(calls), 2) if calls else None,
+            "mean_total_tokens": int(sum(toks) / len(toks)) if toks else None,
+        },
+        "usage": USAGE.as_dict(),
+        "cases": [{**SCORECARD[n], **per_case.get(n, {})} for n in SCORECARD],
+    }
+
+
+def pytest_terminal_summary(terminalreporter, exitstatus, config):
+    """Print cache/usage totals and the scorecard after an --llm run; optionally dump JSON."""
+    import json
+
+    lines = USAGE.summary_lines()
+    if lines:
+        terminalreporter.section("prompt cache / token usage")
+        for line in lines:
+            terminalreporter.write_line(line)
+    out = os.environ.get("PEXIP_EVAL_USAGE_JSON")
+    if out and lines:
         Path(out).parent.mkdir(parents=True, exist_ok=True)
         Path(out).write_text(json.dumps(USAGE.as_dict(), indent=2) + "\n")
         terminalreporter.write_line(f"usage written to {out}")
+
+    if not SCORECARD:
+        return
+    card = build_scorecard()
+    terminalreporter.section("eval scorecard")
+    o = card["overall"]
+    terminalreporter.write_line(
+        f"overall: {o['passed']}/{o['cases']} ({o['accuracy']})  "
+        f"mean tool calls/task {card['per_task']['mean_tool_calls']}  "
+        f"mean tokens/task {card['per_task']['mean_total_tokens']}"
+    )
+    for layer, a in card["by_layer"].items():
+        terminalreporter.write_line(f"  {layer:16s} {a['passed']}/{a['cases']} ({a['accuracy']})")
+    worst = sorted(
+        ((t, a) for t, a in card["by_tag"].items() if a["accuracy"] is not None),
+        key=lambda kv: kv[1]["accuracy"],
+    )[:5]
+    if worst:
+        terminalreporter.write_line(
+            "  weakest tags: " + ", ".join(f"{t} {a['accuracy']}" for t, a in worst)
+        )
+    out = os.environ.get("PEXIP_EVAL_SCORECARD_JSON")
+    if out:
+        Path(out).parent.mkdir(parents=True, exist_ok=True)
+        Path(out).write_text(json.dumps(card, indent=2) + "\n")
+        terminalreporter.write_line(f"scorecard written to {out}")
 
 
 # ---------------------------------------------------------------------------
 # Mock client / ctx — mirrors tests/conftest.py
 # ---------------------------------------------------------------------------
+
 
 @pytest_asyncio.fixture
 async def mock_client():
@@ -293,9 +427,11 @@ def mock_ctx(mock_client):
 # Live client (gated on --live)
 # ---------------------------------------------------------------------------
 
+
 @pytest_asyncio.fixture(scope="session")
 async def live_client():
     from pexip_mcp.config import PexipSettings
+
     try:
         settings = PexipSettings()
     except Exception:
@@ -317,6 +453,7 @@ def live_ctx(live_client):
 # ---------------------------------------------------------------------------
 # YAML case loading helpers
 # ---------------------------------------------------------------------------
+
 
 def load_cases(filename: str) -> list[dict[str, Any]]:
     path = CASES_DIR / filename
