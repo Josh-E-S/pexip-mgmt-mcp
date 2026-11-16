@@ -27,8 +27,11 @@ Rendered onto the description as:
 
 from __future__ import annotations
 
+import inspect
 import re
-from typing import Any, TypedDict
+from typing import Any
+
+from typing_extensions import TypedDict  # pydantic needs this on Python < 3.12
 
 CONFIG_API = "https://docs.pexip.com/api_manage/api_configuration.htm"
 STATUS_API = "https://docs.pexip.com/api_manage/api_status.htm"
@@ -628,7 +631,9 @@ def render_description(
     Sibling tool names in the docstring and guidance are rewritten with `prefix`
     so the model sees the names it can actually call.
     """
-    base = (docstring or "").rstrip()
+    # cleandoc: Python < 3.13 keeps docstring indentation, which would make the
+    # description (and its length) differ by interpreter version.
+    base = inspect.cleandoc(docstring or "")
     lines = [base]
     if guidance:
         lines += ["", f"Use when: {guidance['use_when']}", f"Do not use when: {guidance['avoid']}"]

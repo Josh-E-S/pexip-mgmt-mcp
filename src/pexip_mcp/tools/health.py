@@ -10,7 +10,9 @@ from __future__ import annotations
 
 import asyncio
 from collections import Counter
-from typing import Any, TypedDict
+from typing import Any
+
+from typing_extensions import TypedDict  # pydantic needs this on Python < 3.12
 
 from mcp.server.fastmcp import Context
 

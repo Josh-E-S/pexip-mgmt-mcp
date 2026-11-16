@@ -81,3 +81,22 @@ def vmr_uri(vmr_id: int) -> str:
 def fk(resource: str, obj_id: int) -> str:
     """Build the configuration-API FK URI for any resource by name and id."""
     return f"/api/admin/configuration/v1/{resource}/{obj_id}/"
+
+
+@pytest.fixture(autouse=True)
+def _hermetic_settings(monkeypatch):
+    """Keep a developer's local .env out of the unit tests.
+
+    PexipSettings reads `.env` from the working directory, and evals/conftest.py
+    loads the same file into os.environ when both suites run together. Either
+    would change defaults (read_only, auth_mode, ...) that these tests pin.
+    Tests that need a variable set it themselves with monkeypatch.setenv.
+    """
+    import os
+
+    from pexip_mcp.config import PexipSettings
+
+    for name in list(os.environ):
+        if name.startswith("PEXIP_") and not name.startswith("PEXIP_EVAL_"):
+            monkeypatch.delenv(name)
+    monkeypatch.setitem(PexipSettings.model_config, "env_file", None)

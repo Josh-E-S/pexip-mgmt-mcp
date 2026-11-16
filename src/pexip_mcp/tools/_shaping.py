@@ -30,7 +30,9 @@ from __future__ import annotations
 
 import json
 import os
-from typing import Any, Literal, TypedDict
+from typing import Any, Literal
+
+from typing_extensions import TypedDict  # pydantic needs this on Python < 3.12
 
 ResponseFormat = Literal["concise", "detailed"]
 
