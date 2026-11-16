@@ -1,0 +1,39 @@
+name: Bug report
+description: Something the server does wrong
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Do not report security vulnerabilities here; see SECURITY.md.
+        Remove hostnames, credentials and participant names from anything you paste.
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened, and what did you expect?
+    validations:
+      required: true
+  - type: textarea
+    id: repro
+    attributes:
+      label: Steps to reproduce
+      description: The tool called, its arguments, and the response or error.
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Server version and install method
+      placeholder: 0.2.0, MCPB / Docker / uvx / source
+    validations:
+      required: true
+  - type: input
+    id: infinity
+    attributes:
+      label: Pexip Infinity version
+      placeholder: v41
+  - type: dropdown
+    id: transport
+    attributes:
+      label: Transport
+      options: [stdio, HTTP with static token, HTTP with OIDC]

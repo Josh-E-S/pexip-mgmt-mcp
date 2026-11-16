@@ -334,13 +334,13 @@ Then set `PEXIP_AUTH_MODE=oauth2`, `PEXIP_OAUTH2_CLIENT_ID`, and
 ## Quality: the eval suite
 
 The [`evals/`](evals/) suite measures whether an LLM can drive these tools
-correctly from natural language. It defines **156 scenarios** written as real
+correctly from natural language. It defines **167 scenarios** written as real
 admin requests ("mute all the guests in AllHands", "point the syslog server at
 10.0.0.99"), graded automatically across three layers:
 
 | Layer | What runs | Cost |
 |---|---|---|
-| Deterministic (332 checks) | Every eval case is validated against the live tool registry (tools exist, parameter names match signatures) | free, in CI |
+| Deterministic (354 checks) | Every eval case is validated against the live tool registry (tools exist, parameter names match signatures) | free, in CI |
 | LLM-graded (`--llm`) | Each prompt goes to Claude with the full tool catalog; multi-turn conversations with mocked API responses; graded on tool choice, parameters, and chain order | ~$2 / full run (tool catalog is prompt-cached) |
 | Live (`--live`, 33 tests) | CRUD, status reads, and call commands against a real Infinity node, including auto-dialing a test call and moderating it by name | free (your lab) |
 
@@ -350,12 +350,11 @@ steps for chains where server-side name resolution makes a lookup legitimate
 but unnecessary. See [evals/README.md](evals/README.md) for the case format
 and how to add scenarios.
 
-Current state: the full suite passes: **698 passed, 12 skipped, 0 failures**
-across all four layers (208 unit + 332 deterministic eval checks + LLM-graded +
-33 live), 86% coverage. The 12 skips are env-gated live cases (e.g. no dial
-target set). Reproduce the full run with `uv run pytest tests/ evals/ --llm
---live`, or the free deterministic subset (540 checks) with
-`uv run pytest tests/ evals/`.
+Current state: the free deterministic subset passes in CI on Python 3.11 to
+3.14: **678 passed** (324 unit tests + 354 deterministic eval checks), 93%
+coverage; the 181 skips are the LLM-graded and live cases, which need
+credentials. Reproduce it with `uv run pytest tests/ evals/`, or run all layers
+with `uv run pytest tests/ evals/ --llm --live`.
 
 ## Skills SDK
 
@@ -391,13 +390,16 @@ Install both for full Pexip coverage.
 ## Testing
 
 ```bash
-uv run pytest                  # 208 unit + 332 deterministic eval checks, 86% coverage
-uv run pytest tests/           # 208 unit tests (mocked HTTP via respx), ~2s
-uv run pytest evals/           # 332 deterministic eval checks, free
+uv run pytest                  # unit tests + deterministic eval checks, 93% coverage
+uv run pytest tests/           # unit tests (mocked HTTP via respx), ~2s
+uv run pytest evals/           # deterministic eval checks, free
 uv run pytest evals/ --llm     # LLM-graded evals (needs ANTHROPIC_API_KEY, ~$2)
 uv run pytest evals/ --live    # integration against a real node (needs .env)
-uv run ruff check src tests evals
+uv run ruff check . && uv run ruff format --check . && uv run mypy
 ```
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for the rules a new tool has to meet and
+[CHANGELOG.md](CHANGELOG.md) for what changed between versions.
 
 Every run prints a coverage report, but the **80% gate is enforced only in CI on the
 full suite** (`--cov-fail-under=80` in `.github/workflows/ci.yml`), so subset runs

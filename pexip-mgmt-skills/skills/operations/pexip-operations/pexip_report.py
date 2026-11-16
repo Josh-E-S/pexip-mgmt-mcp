@@ -21,6 +21,7 @@ Examples:
 
 Output is Markdown — paste straight into a doc, ticket, or email.
 """
+
 from __future__ import annotations
 
 import json
@@ -71,9 +72,7 @@ def render(data: dict[str, Any]) -> str:
         out.append("| _(no matching calls)_ | 0 | 0% | 0s |")
     else:
         # Already sorted by count desc by the MCP tool, but re-sort defensively.
-        for key, vals in sorted(
-            groups.items(), key=lambda kv: kv[1]["count"], reverse=True
-        ):
+        for key, vals in sorted(groups.items(), key=lambda kv: kv[1]["count"], reverse=True):
             out.append(_row(key, vals["count"], total, vals["duration_seconds"]))
     return "\n".join(out)
 

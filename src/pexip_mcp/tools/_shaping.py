@@ -353,4 +353,4 @@ def shape_list(
         projected = [project(o, CONCISE_FIELDS[resource]) for o in objects]
         meta["response_format"] = "concise"
     shaped: dict[str, Any] = {**result, "objects": projected, "meta": meta}
-    return finalize_result(shaped)  # type: ignore[return-value]
+    return finalize_result(shaped)

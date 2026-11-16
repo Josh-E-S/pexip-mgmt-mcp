@@ -1,0 +1,8 @@
+# Default owner for everything in the repository.
+*                       @Josh-E-S
+
+# Changes here alter who can call the server or what it can reach.
+/src/pexip_mcp/oidc.py      @Josh-E-S
+/src/pexip_mcp/__main__.py  @Josh-E-S
+/src/pexip_mcp/client.py    @Josh-E-S
+/.github/workflows/         @Josh-E-S

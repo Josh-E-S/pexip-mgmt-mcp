@@ -19,7 +19,7 @@ import logging
 import re
 import secrets
 import time
-from collections.abc import AsyncIterator
+from collections.abc import AsyncGenerator
 from typing import TYPE_CHECKING, Any
 
 import httpx
@@ -452,7 +452,9 @@ class PexipOAuth2Auth(httpx.Auth):
         self._lock = asyncio.Lock()
 
     # Use async_auth_flow to inject the bearer token and retry once on a 401 with a fresh token.
-    async def async_auth_flow(self, request: httpx.Request) -> AsyncIterator[httpx.Request]:
+    async def async_auth_flow(
+        self, request: httpx.Request
+    ) -> AsyncGenerator[httpx.Request, httpx.Response]:
         """Attach the cached/fresh bearer token; on 401, refresh once and retry."""
         token = await self._get_token()
         request.headers["Authorization"] = f"Bearer {token}"

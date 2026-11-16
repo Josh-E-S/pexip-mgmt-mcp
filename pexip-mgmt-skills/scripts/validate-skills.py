@@ -16,6 +16,7 @@ Rules (see spec/pexip-conventions.md):
 
 Exit code: 0 = all clean, 1 = warnings only, 2 = errors.
 """
+
 from __future__ import annotations
 
 import re
@@ -88,9 +89,7 @@ def check(skill_md: Path) -> tuple[list[str], list[str]]:
     # 6. No host-specific keys.
     for key in fm:
         if key in HOST_SPECIFIC_KEYS:
-            errors.append(
-                f"frontmatter: `{key}` is host-specific — see spec/pexip-conventions.md"
-            )
+            errors.append(f"frontmatter: `{key}` is host-specific — see spec/pexip-conventions.md")
 
     # 2. Name matches directory.
     dir_name = skill_md.parent.name
@@ -101,17 +100,13 @@ def check(skill_md: Path) -> tuple[list[str], list[str]]:
 
     # 3. Name shape.
     if fm.get("name") and not NAME_RE.match(fm["name"]):
-        errors.append(
-            f"frontmatter: name={fm['name']!r} must be kebab-case and prefixed `pexip-`"
-        )
+        errors.append(f"frontmatter: name={fm['name']!r} must be kebab-case and prefixed `pexip-`")
 
     # 4. Description length.
     if "description" in fm:
         n = len(fm["description"])
         if n > DESCRIPTION_HARD_CAP:
-            errors.append(
-                f"frontmatter: description is {n} chars (cap {DESCRIPTION_HARD_CAP})"
-            )
+            errors.append(f"frontmatter: description is {n} chars (cap {DESCRIPTION_HARD_CAP})")
 
     # 5. License.
     if fm.get("license") and fm["license"] != "MIT":
@@ -120,9 +115,7 @@ def check(skill_md: Path) -> tuple[list[str], list[str]]:
     # 7. Reference source footer.
     body_lower = body.lower()
     if "## reference source" not in body_lower and "## authoritative docs" not in body_lower:
-        errors.append(
-            "body: missing '## Reference source' (or '## Authoritative docs') section"
-        )
+        errors.append("body: missing '## Reference source' (or '## Authoritative docs') section")
 
     # 8. Body line counts.
     lines = body.count("\n")

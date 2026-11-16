@@ -100,8 +100,7 @@ async def get_platform_health(ctx: Context) -> PlatformHealth:
     maintenance = sum(1 for n in nodes if n.get("maintenance_mode") in (True, "true", "True"))
     if maintenance:
         reasons.append(f"{maintenance} node(s) in maintenance mode")
-    loads = [(_num(n.get("media_load")), n) for n in nodes]
-    loads = [(load, n) for load, n in loads if load is not None]
+    loads = [(load, n) for n in nodes if (load := _num(n.get("media_load"))) is not None]
     max_load = max((load for load, _ in loads), default=None)
     if max_load is not None and max_load >= 90:
         reasons.append(f"a node is at {max_load:.0f}% media load")
