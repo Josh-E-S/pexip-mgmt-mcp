@@ -26,6 +26,7 @@ import argparse
 import asyncio
 import hmac
 import json
+import logging
 import os
 import sys
 
@@ -129,6 +130,8 @@ def _generate_token() -> None:
     )
 
 
+_oidc_log = logging.getLogger("pexip_mcp.oidc")
+
 # RFC 9728 Protected Resource Metadata path — where MCP clients discover our IdP.
 _PRM_PATH = "/.well-known/oauth-protected-resource"
 
@@ -209,7 +212,7 @@ class _OIDCGate:
     audit contextvar for the duration of the request, for log attribution.
     """
 
-    def __init__(self, app, validator, prm_url: str) -> None:
+    def __init__(self, app, validator, prm_url: str, scopes: list[str] | None = None) -> None:
         # Bound once here rather than imported per request on the hot path.
         from mcp.server.auth.middleware.bearer_auth import AuthenticatedUser
         from mcp.server.auth.provider import AccessToken
@@ -221,6 +224,10 @@ class _OIDCGate:
         self.app = app
         self._validator = validator
         self._prm_url = prm_url
+        challenge = f'Bearer realm="mcp", resource_metadata="{prm_url}"'
+        if scopes:
+            challenge += f', scope="{" ".join(scopes)}"'
+        self._challenge = challenge
         self._audit = audit
         self._AuthenticatedUser = AuthenticatedUser
         self._AccessToken = AccessToken
@@ -233,19 +240,24 @@ class _OIDCGate:
         if scope["type"] != "http":
             await self.app(scope, receive, send)
             return
-        if scope.get("path") == _PRM_PATH:
+        # RFC 9728 clients may probe the bare PRM path or a resource-suffixed one
+        # (.../oauth-protected-resource/mcp); both are public.
+        path = scope.get("path") or ""
+        if path == _PRM_PATH or path.startswith(_PRM_PATH + "/"):
             await self.app(scope, receive, send)
             return
 
         header = _header(scope, b"authorization")
         try:
             claims = self._validator.verify(header)
-        except self._OIDCValidationError:
+        except self._OIDCValidationError as e:
+            # The client only ever sees a generic 401; the concrete reason
+            # (audience, issuer, scope, expiry) goes to the server log so an
+            # OAuth setup can be debugged without guessing.
+            _oidc_log.warning("rejected bearer token: %s", e)
+            _log_rejected_token(header)
             await _send_json(
-                send,
-                401,
-                {"error": "unauthorized"},
-                {"WWW-Authenticate": f'Bearer realm="mcp", resource_metadata="{self._prm_url}"'},
+                send, 401, {"error": "unauthorized"}, {"WWW-Authenticate": self._challenge}
             )
             return
 
@@ -271,19 +283,80 @@ class _OIDCGate:
             self._audit.current_principal.reset(token)
 
 
+_MCP_PATH = "/mcp"
+_ENTRA_ISSUER_HOSTS = ("login.microsoftonline.com", "sts.windows.net")
+
+
+def _resource_id(settings) -> str:
+    """The OAuth `resource` identifier this server publishes (RFC 9728 / RFC 8707).
+
+    It must equal the MCP URL the client connects to (the value typed into a
+    claude.ai connector); a client that sees a different `resource` discards the
+    document. PEXIP_MCP_PUBLIC_URL may be given as the base URL or as the full
+    endpoint URL; a bare origin gets the `/mcp` path appended. Without a public
+    URL the token audience is used, which only works when it is that same URL.
+    """
+    from urllib.parse import urlsplit
+
+    public = (getattr(settings, "mcp_public_url", None) or "").strip()
+    if not public:
+        return getattr(settings, "oidc_audience", None) or ""
+    if urlsplit(public).path in ("", "/"):
+        return public.rstrip("/") + _MCP_PATH
+    return public
+
+
 def _prm_url(settings) -> str:
     """Absolute URL of the PRM document for the WWW-Authenticate challenge.
 
-    Prefers PEXIP_MCP_PUBLIC_URL. Falls back to the OIDC audience only when it is
-    itself an http(s) URL; an `api://...` style audience is not fetchable, so in
-    that case the path alone is returned and operators should set the public URL.
+    The document lives at the origin of the resource identifier. An `api://...`
+    style audience has no fetchable origin, so in that case the path alone is
+    returned and operators should set PEXIP_MCP_PUBLIC_URL.
     """
-    base = (getattr(settings, "mcp_public_url", None) or "").rstrip("/")
-    if not base:
-        aud = getattr(settings, "oidc_audience", None) or ""
-        if aud.lower().startswith(("https://", "http://")):
-            base = aud.rstrip("/")
-    return base + _PRM_PATH if base else _PRM_PATH
+    from urllib.parse import urlsplit
+
+    parts = urlsplit(_resource_id(settings))
+    if parts.scheme in ("http", "https") and parts.netloc:
+        return f"{parts.scheme}://{parts.netloc}{_PRM_PATH}"
+    return _PRM_PATH
+
+
+def _advertised_scopes(settings) -> list[str]:
+    """Scopes to advertise for clients to request.
+
+    Most IdPs take the bare scope names. Microsoft Entra issues an access token
+    for a custom API only when each scope is qualified as `<resource>/<scope>`
+    and matches the RFC 8707 `resource` parameter (otherwise AADSTS9010010), so
+    for an Entra issuer the scopes are qualified with the resource identifier.
+    """
+    from urllib.parse import urlsplit
+
+    scopes = list(settings.oidc_required_scopes_list)
+    issuer_host = urlsplit(getattr(settings, "oidc_issuer", None) or "").hostname or ""
+    base = _resource_id(settings).rstrip("/")
+    if base and issuer_host in _ENTRA_ISSUER_HOSTS:
+        return [s if "/" in s else f"{base}/{s}" for s in scopes]
+    return scopes
+
+
+def _log_rejected_token(authorization_header: str) -> None:
+    """Log a rejected token's UNVERIFIED aud/iss/scope claims, for diagnosis only.
+
+    Never affects the auth decision, and never logs the token itself.
+    """
+    import jwt
+
+    try:
+        token = authorization_header.split(" ", 1)[1].strip()
+        claims = jwt.decode(token, options={"verify_signature": False})
+    except Exception:  # noqa: BLE001 - best-effort diagnostics
+        return
+    _oidc_log.warning(
+        "rejected token claims (unverified): aud=%r iss=%r scp=%r",
+        claims.get("aud"),
+        claims.get("iss"),
+        claims.get("scp") or claims.get("scope"),
+    )
 
 
 def _prm_endpoint(settings):
@@ -292,9 +365,9 @@ def _prm_endpoint(settings):
 
     async def endpoint(_request):
         body = {
-            "resource": settings.oidc_audience,
+            "resource": _resource_id(settings),
             "authorization_servers": [settings.oidc_issuer],
-            "scopes_supported": settings.oidc_required_scopes_list,
+            "scopes_supported": _advertised_scopes(settings),
         }
         return JSONResponse(body)
 
@@ -383,13 +456,16 @@ def _build_http_app(token: str | None, oidc_validator: object | None = None, set
     # PRM route (if any) must precede the catch-all Mount("/") so it isn't shadowed.
     routes: list = []
     if oidc_validator is not None:
-        routes.append(Route(_PRM_PATH, _prm_endpoint(settings), methods=["GET"]))
+        prm = _prm_endpoint(settings)
+        routes.append(Route(_PRM_PATH, prm, methods=["GET"]))
+        # RFC 9728 also allows a resource-suffixed location; serve the same document.
+        routes.append(Route(_PRM_PATH + "/{rest:path}", prm, methods=["GET"]))
     routes.append(Mount("/", inner))
 
     app = Starlette(routes=routes, lifespan=lifespan)
 
     if oidc_validator is not None:
-        return _OIDCGate(app, oidc_validator, _prm_url(settings))
+        return _OIDCGate(app, oidc_validator, _prm_url(settings), _advertised_scopes(settings))
     if token:
         return _StaticTokenGate(app, token)
     return app

@@ -247,6 +247,89 @@ def test_prm_url_prefers_public_url_then_http_audience_then_path():
     assert _prm_url(S()) == "https://public.example.com/.well-known/oauth-protected-resource"
 
 
+# ── PRM document: resource identifier, scopes, locations ─────────────────────
+
+
+def _prm_settings(**over):
+    base = {
+        "mcp_public_url": None,
+        "oidc_issuer": "https://issuer.example.com",
+        "oidc_audience": "api://pexip-mcp",
+        "oidc_required_scopes_list": ["pexip.read"],
+    }
+    return type("S", (), {**base, **over})
+
+
+def test_resource_id_accepts_base_or_endpoint_url_and_falls_back_to_audience():
+    from pexip_mcp.__main__ import _resource_id
+
+    assert _resource_id(_prm_settings()) == "api://pexip-mcp"
+    for public in ("https://mcp.example.com", "https://mcp.example.com/"):
+        assert _resource_id(_prm_settings(mcp_public_url=public)) == "https://mcp.example.com/mcp"
+    full = "https://mcp.example.com/mcp"
+    assert _resource_id(_prm_settings(mcp_public_url=full)) == full
+
+
+def test_prm_url_is_at_the_origin_even_when_public_url_has_a_path():
+    s = _prm_settings(mcp_public_url="https://mcp.example.com/mcp")
+    assert _prm_url(s) == "https://mcp.example.com/.well-known/oauth-protected-resource"
+
+
+def test_advertised_scopes_are_qualified_only_for_entra():
+    from pexip_mcp.__main__ import _advertised_scopes
+
+    generic = _prm_settings(mcp_public_url="https://mcp.example.com")
+    assert _advertised_scopes(generic) == ["pexip.read"]
+
+    entra = _prm_settings(
+        mcp_public_url="https://mcp.example.com",
+        oidc_issuer="https://login.microsoftonline.com/tenant-id/v2.0",
+        oidc_required_scopes_list=["pexip.read", "api://app/pexip.write"],
+    )
+    assert _advertised_scopes(entra) == [
+        "https://mcp.example.com/mcp/pexip.read",
+        "api://app/pexip.write",  # already qualified: left alone
+    ]
+
+
+def test_prm_document_served_at_bare_and_resource_suffixed_paths_without_token():
+    s = _prm_settings(mcp_public_url="https://pexip-mcp.example.com")
+    app = _build_http_app(token=None, oidc_validator=_MapValidator(), settings=s)
+    client = TestClient(app, base_url=BASE)
+    for path in (
+        "/.well-known/oauth-protected-resource",
+        "/.well-known/oauth-protected-resource/mcp",
+    ):
+        r = client.get(path)
+        assert r.status_code == 200, path
+        assert r.json() == {
+            "resource": "https://pexip-mcp.example.com/mcp",
+            "authorization_servers": ["https://issuer.example.com"],
+            "scopes_supported": ["pexip.read"],
+        }
+    # A path that merely shares the prefix is not public.
+    assert client.get("/.well-known/oauth-protected-resource-x").status_code == 401
+
+
+def test_oidc_401_challenge_carries_scope_and_logs_the_reason(caplog):
+    import jwt
+
+    s = _prm_settings(mcp_public_url="https://pexip-mcp.example.com")
+    app = _build_http_app(token=None, oidc_validator=_MapValidator(), settings=s)
+    client = TestClient(app, base_url=BASE)
+    bad = jwt.encode({"aud": "wrong-aud", "iss": "https://other", "scp": "x"}, "k" * 32, "HS256")
+    with caplog.at_level("WARNING", logger="pexip_mcp.oidc"):
+        r = client.post(
+            "/mcp", json=INIT, headers={**MCP_HEADERS, "Authorization": f"Bearer {bad}"}
+        )
+    assert r.status_code == 401
+    assert r.json() == {"error": "unauthorized"}  # the reason never reaches the client
+    assert 'scope="pexip.read"' in r.headers["WWW-Authenticate"]
+    assert "rejected bearer token: nope" in caplog.text
+    assert "aud='wrong-aud'" in caplog.text
+    assert bad not in caplog.text  # the token itself is never logged
+
+
 # ── Transport security (Host allow-list) ─────────────────────────────────────
 
 

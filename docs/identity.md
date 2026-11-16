@@ -94,9 +94,24 @@ other principal's request on it with `404 Session not found`, exactly as if the
 session did not exist. One admin cannot ride another admin's session or be
 audited under their identity. The binding ends with the session.
 
-Set `PEXIP_MCP_PUBLIC_URL` to the URL clients use to reach the server; it is
-what the `WWW-Authenticate` challenge points at for RFC 9728 discovery (an
-`api://` style audience is not fetchable on its own).
+Set `PEXIP_MCP_PUBLIC_URL` to the URL clients use to reach the server, either
+the base URL or the full `.../mcp` endpoint. It does three things:
+
+- It is the `resource` in the discovery document. Clients such as claude.ai
+  custom connectors discard the document unless `resource` equals the URL typed
+  into the connector, so a bare base URL gets `/mcp` appended.
+- It locates the discovery document in the `WWW-Authenticate` challenge (an
+  `api://` style audience is not fetchable on its own). The document is served
+  at the bare well-known path and at the resource-suffixed one
+  (`/.well-known/oauth-protected-resource/mcp`).
+- For a Microsoft Entra issuer, the advertised scopes are qualified with it
+  (`https://host/mcp/pexip.read`), because Entra only issues an access token for
+  a custom API when the scope and the RFC 8707 `resource` name the same resource
+  (`AADSTS9010010` otherwise). Other IdPs get the bare scope names.
+
+A rejected token is answered with a generic 401. The reason, and the token's
+unverified `aud` / `iss` / `scp` claims, are logged at WARNING on the
+`pexip_mcp.oidc` logger; the token itself is never logged.
 
 ## What OIDC does and doesn't give you here
 

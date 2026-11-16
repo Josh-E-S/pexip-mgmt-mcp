@@ -287,7 +287,7 @@ environment). See [.env.example](.env.example) for an annotated template.
 | `PEXIP_OIDC_AUDIENCE` | unset | Expected token audience; required when `PEXIP_MCP_AUTH_MODE=oauth` |
 | `PEXIP_OIDC_REQUIRED_SCOPES` | unset | Space-separated scopes the JWT must carry (optional) |
 | `PEXIP_OIDC_JWKS_URI` | discovered | Override the JWKS endpoint (default: discovered from the issuer) |
-| `PEXIP_MCP_PUBLIC_URL` | unset | Public base URL clients use for `--http` (e.g. `https://pexip-mcp.example.com`). Used in the RFC 9728 discovery challenge; set it whenever the OIDC audience is not itself a URL |
+| `PEXIP_MCP_PUBLIC_URL` | unset | Public URL clients use for `--http`, as the base URL (`https://pexip-mcp.example.com`) or the full endpoint (`.../mcp`). It is the OAuth `resource` in the RFC 9728 discovery document and locates that document in the 401 challenge. Required for claude.ai custom connectors in OIDC mode |
 | `PEXIP_MCP_ALLOWED_HOSTS` | unset | Comma-separated `Host` values accepted by `--http` besides loopback (DNS-rebinding protection). **Required** when a tunnel or reverse proxy forwards a public hostname; a bare hostname matches any port |
 | `PEXIP_MCP_ALLOWED_ORIGINS` | unset | Comma-separated `Origin` values accepted by `--http` besides loopback (requests without an Origin header are always accepted) |
 

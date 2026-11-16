@@ -11,3 +11,5 @@ build/
 .coverage
 .claude/
 docs/superpowers/
+# Local, uncommitted working notes (setup runbooks, scratch)
+*.local.md

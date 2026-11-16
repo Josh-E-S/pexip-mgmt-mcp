@@ -120,9 +120,12 @@ class PexipSettings(BaseSettings):
 
     mcp_public_url: str | None = Field(
         default=None,
-        description="Public base URL clients use to reach THIS server over --http (e.g. "
-        "https://pexip-mcp.example.com). Used to build the RFC 9728 protected-resource "
-        "metadata URL in the 401 challenge. Falls back to the audience when unset.",
+        description="Public URL clients use to reach THIS server over --http, as the base "
+        "URL (https://pexip-mcp.example.com) or the full endpoint URL (.../mcp). It is the "
+        "OAuth 'resource' identifier in the RFC 9728 protected-resource metadata and "
+        "locates that document in the 401 challenge. Required for claude.ai custom "
+        "connectors in OIDC mode: the client discards the document unless its 'resource' "
+        "equals the connector URL. Falls back to the audience when unset.",
     )
     mcp_allowed_hosts: str = Field(
         default="",
